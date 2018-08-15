@@ -1,0 +1,414 @@
+<!doctype html>
+<!--[if lt IE 7]>
+<html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>
+<html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>
+<html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!-->
+<html class="no-js"> <!--<![endif]-->
+<head>
+    <meta charset="utf-8">
+    <title>Truck Milk</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width">
+    <link rel="stylesheet" href="pageResource?page=custompage_truckmilk&location=css/animate.css" />
+    <link rel="stylesheet" href="pageResource?page=custompage_truckmilk&location=css/bootstrap.min.css">
+	<link rel="stylesheet" href="pageResource?page=custompage_truckmilk&location=css/main.css">
+	<link rel="stylesheet" href="pageResource?page=custompage_truckmilk&location=css/style.css">
+	<link rel="stylesheet" href="pageResource?page=custompage_truckmilk&location=css/customPage.css">
+ 
+	<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+	<script type="text/javascript" src="https://www.google.com/uds/?file=visualization&amp;v=1&amp;hl=fr&amp;packages=corechart&amp;async=2"></script>
+	<link type="text/css" href="https://www.google.com/uds/api/visualization/1.0/ff67c3772da186a412ae3231c32409e9/ui+fr.css" rel="stylesheet">
+	<script type="text/javascript" src="https://www.google.com/uds/api/visualization/1.0/ff67c3772da186a412ae3231c32409e9/format+fr,default+fr,ui+fr,corechart+fr.I.js"></script>
+	<link href="https://ajax.googleapis.com/ajax/static/modules/gviz/1.0/core/tooltip.css" rel="stylesheet" type="text/css">
+		
+		
+</head>
+<body ng-app="truckmilk">
+
+<!--  Page Directory: @_PAGEDIRECTORY_@ -->
+
+
+<div class="container" id="accordion">
+
+
+	<div class="bs-component"  ng-controller="TruckMilkControler as ctrl">
+		
+		<center>
+		<table><tr><td><h1>Truck Milk</h1></td><td rowspan="2"><img src="pageResource?page=custompage_truckmilk&location=img/truckmilk.jpg" width="150" heigth="150" /></td></tr>
+			<tr><td style="font-size:0.8em"> <a href="" ng-click="ctrl.showhistory( ! ctrl.isshowhistory )">V1.0</a></td></tr>
+			<tr><td>
+				<div id="showHistory" ng-show="ctrl.isshowhistory" style="border-width:2px;border-style:ridge;border-color:blue">
+					1.0 June 15<br>					
+				</div>
+			</td></tr>
+		</table>
+		</center>
+	
+	
+	
+		<div class="col-lg-12">
+	
+				<legend class="text-primary"><span class="glyphicon glyphicon-th"></span>Tour</legend>
+	
+				<div ng-show="ctrl.inprogress">
+					<span class="Loading">.</span>Please wait, work in progress
+				</div>
+	
+				<div ng-bind-html="ctrl.getListEvents(ctrl.listevents )"></div>
+			
+				<div class="alert alert-danger" role="alert" ng-show="ctrl.timererror.length > 0">{{ctrl.timererror}}</div>
+				
+				<button ng-click="ctrl.refresh()" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress">Refresh</button>
+				
+				<table class="table table-striped table-hover table-condensed" >
+					<tr>
+						<th>State</th>
+						<th>Name</th>
+						<th>Plug in</th>
+						<th>Frequency</th>
+						<th>Next Execution</th>
+						<th>Last Execution</th>
+						<th></th>
+					</tr>
+					<tbody ng-repeat="plugtour in ctrl.getListPlugTour() track by $index">
+					<tr > 
+						<td style="{{ctrl.getTourStyle(plugtour)}}">
+							<div ng-show="plugtour.enable">
+								<label class="label label-success btn-xs" >
+									<span class="glyphicon glyphicon-ok-circle" > ACTIF
+								</label>
+								<button ng-click="ctrl.stopTour( plugtour )" class="btn btn-default btn-xs" ng-disabled="ctrl.inprogress">
+									deactivate
+								</button>
+							</div>
+							<div ng-show="! plugtour.enable">
+								<label class="label label-default btn-xs" >
+									<span class="glyphicon glyphicon-ban-circle"> INACTIF
+								</label>
+								<button ng-click="ctrl.startTour( plugtour )" class="btn btn-default btn-xs" ng-disabled="ctrl.inprogress">
+									activate
+								</button>
+							</div>
+						</td><td style="{{ctrl.getTourStyle(plugtour)}}">
+							<a  ng-click="ctrl.removeTour( plugtour )">
+								<span class="glyphicon glyphicon-trash" title="Delete the tour"></span>
+							</a>
+							{{plugtour.name}} ({{plugtour.id}})
+						</td><td style="{{ctrl.getTourStyle(plugtour)}}">
+							{{plugtour.plugindisplayname}}
+						</td><td style="{{ctrl.getTourStyle(plugtour)}}">							
+								<a  ng-click="ctrl.showSchedule( plugtour )">
+									<span class="glyphicon glyphicon-time" title="Show the schedule"></span>
+								</a>
+								{{plugtour.cron}}
+						</td><td style="{{ctrl.getTourStyle(plugtour)}}">
+								{{plugtour.nextexecutionst}}
+								<button ng-click="ctrl.immediateTour( plugtour )" class="{{ctrl.getNowStyle( plugtour)}}" ng-disabled="ctrl.inprogress" title="{{ctrl.getNowTitle( plugtour)}}">
+									Now
+								</button>	
+							
+						</td><td style="{{ctrl.getTourStyle(plugtour)}}">
+								{{plugtour.lastexecutionstatus}}
+																
+						</td><td style="{{ctrl.getTourStyle(plugtour)}}">
+								<a  ng-click="ctrl.showparameters( plugtour )">
+									<span class="glyphicon glyphicon-cog" title="Show parameters"></span>
+								</a>
+
+								<a  ng-click="ctrl.showreport( plugtour )">
+									<span class="glyphicon glyphicon-file" title="Show the report" ></span>
+								</a>
+						</td>
+					</tr>
+					
+					<tr ng-show="plugtour.show.schedule">
+						<td style="{{ctrl.getTourStyle(plugtour)}}"></td>
+						<td colspan="6" style="{{ctrl.getTourStyle(plugtour)}}">
+							<table width="100%">
+								<tr><td><h5>Schedule</h5></td><td style="width: 10px">
+									<a  ng-click="ctrl.hideall( plugtour )" >
+										<span class="glyphicon glyphicon-remove" ></span>
+									</a>
+								</td>
+								</tr>
+								<tr><td colspan="2">
+									<input ng-model="plugtour.cron" maxlength="30" style="width:100%;padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" />
+									<div class="alert alert-default">
+										Use a Cron definition string. Visit <a href="https://www.freeformatter.com/cron-expression-generator-quartz.html" target="blanck" style="color:black">Quartz Cron Editor</a><p>
+										Format is "second minute hour day month dayOfWeek week"<br>
+										<ul>
+										<li> <b>*</b>  means "every" : every minute is 0 * * * * *
+										<li> <b>/</b> give a frequency : every 10 minutes is 0 0/10 0 ? * * *
+										<li> <b>,</b> to give multiple value : at 3 and 4 in the morning is 0 0 3,4 * * * *
+										</ul>
+									</div>
+									<center>
+										<button ng-click="ctrl.updatePlugtour( plugtour)" class="btn btn-primary btn-xs" ng-disabled="ctrl.inprogress">Update</button>
+									</center>
+								</td>
+								</tr>
+							</table>
+								
+								
+						</td>
+					</tr>
+					<tr ng-show="plugtour.show.parameters">
+						<td style="{{ctrl.getTourStyle(plugtour)}}"></td>
+						<td colspan="6" style="{{ctrl.getTourStyle(plugtour)}}">
+							<table width="100%">
+								<tr>
+									<td colspan="2"><h4>Parameters</h4> <input ng-model="plugtour.show.parametersexpl" type="checkbox">explanation</td>
+								</td>
+									<td style="width: 10px">
+										<a  ng-click="ctrl.hideall( plugtour )" >
+											<span class="glyphicon glyphicon-remove" ></span>
+										</a>
+									</td>
+								</tr>
+							</table>
+							
+							<table width="100%">
+								<tr style="vertical-align: top; border-top: 1px solid #ddd;">
+									<td>Name</td>
+									<td><input ng-model="plugtour.newname" size="50"></input></td>
+								</tr>
+								<tr style="vertical-align: top; border-top: 1px solid #ddd;">
+									<td>Description</td>
+									<td><textarea rows="4" cols="50" ng-model="plugtour.description"></textarea></td>
+								</tr>
+								<!-- <td colspan="2">Parameters value = {{plugtour.parametersdef}}</td> -->
+								<tr ng-repeat="parameterdef in plugtour.parametersdef">
+									<td style="vertical-align: top; border-top: 1px solid #ddd;">{{parameterdef.name}}<br>
+									<div ng-show="plugtour.show.parametersexpl" style="font-size: small; font-style: italic;font-weight: bold">{{parameterdef.explanation}}</div>
+									</td>
+									<td style="vertical-align: top; border-top: 1px solid #ddd;">
+
+										<!--  STRING, TEXT, LONG, OBJECT, ARRAY, BOOLEAN -->
+										<div ng-show="parameterdef.type ==='STRING'">
+											<input ng-model="parameterdef.value" maxlength="30" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >
+										</div>
+										<div ng-show="parameterdef.type ==='TEXT'">
+											<textarea ng-model="parameterdef.value" maxlength="30" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" ></textarea>
+										</div>
+										<div ng-show="parameterdef.type ==='LONG'">
+											<input ng-model="parameterdef.value" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >
+										</div>
+										<div ng-show="parameterdef.type ==='ARRAY'">
+											<table>
+												<tr ng-repeat="paramarrayvalue in parameterdef.value track by $index">
+													<td>
+														<table> <!--  stay on the same line -->
+															<tr><td>
+															<input ng-model="paramarrayvalue" maxlength="30" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >&nbsp;
+															</td><td>
+															<button ng-click="ctrl.removeInArray( paramarrayvalue, parameterdef.value)" class="btn btn-danger btn-xs" ng-disabled="ctrl.inprogress">remove</button>
+															</td></tr>
+														</table>
+												</tr>
+											</table>
+											 
+											<button ng-click="ctrl.addInArray(parameterdef.value)" class="btn btn-success btn-xs" ng-disabled="ctrl.inprogress">Add</button>
+										</div>
+										
+										<div ng-show="parameterdef.type ==='BOOLEAN'">
+											<input ng-model="parameterdef.value" type="checkbox" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;">
+										</div>
+										 
+									</td>
+								</tr>
+
+								<!--<tr><td colspan="2">parameters=<div class="alert alert-primary">{{plugtour}}</div></td></tr> -->
+								<!--  <tr><td  colspan="2">parametersvalue=<div class="alert alert-primary">{{plugtour.parametersvalue}}</div></td></tr> -->
+							</table>
+							<center>
+								<button ng-click="ctrl.updatePlugtour( plugtour)" class="btn btn-primary btn-xs" ng-disabled="ctrl.inprogress">Update</button>
+							</center>
+						</td>
+					</tr>
+					<tr ng-show="plugtour.show.report">
+						<td style="{{ctrl.getTourStyle(plugtour)}}"></td>
+						<td colspan="6" style="{{ctrl.getTourStyle(plugtour)}}">
+							<table width="100%">
+								<tr><td><h5>Report</h5></td><td style="width: 10px">
+									<a  ng-click="ctrl.hideall( plugtour )" >
+										<span class="glyphicon glyphicon-remove" ></span>
+									</a>
+								</td></tr>
+							</table>
+							<table>
+								<tr><td>Last execution</td><td>{{plugtour.lastexecutionst}}</td></tr>
+								<tr><td>Next execution</td><td>{{plugtour.nextexecutionst}}</td></tr>
+								<tr><td>Status</td><td>{{plugtour.lastexecutionstatus}}</td></tr>
+								
+								<tr><td>Details</td><td><div ng-bind-html="ctrl.getListEvents(plugtour.lastexecutionlistevents)"></div></td></tr>
+							</table>
+						</td>
+					</tr>
+					<!-- -->
+					<tr><td colspan="7">
+					<!-- <div class="alert alert-primary">{{plugtour}}</div> -->
+					</td></tr>
+					<!--  -->
+					<tr >
+					<td colspan="5"> <div ng-bind-html="ctrl.getListEvents(plugtour.listevents )"></div>
+					</td>
+					</tr>
+					
+					</tbody>
+				</table>
+			
+			<div class="panel panel-info"   >
+				<div class="panel-heading">
+					Register a new tour
+				</div>
+				<div>
+					<table style="width:100%">
+						<tr><td style="padding: 10px;">Plug in:</td><td>
+							<select ng-model="ctrl.registerPlugin"  >
+								<option ng-repeat="item in ctrl.getListPlugIn()" value="{{item.name}}">{{item.displayname}}</option>
+							</select>
+						</td></tr>
+						<tr><td style="padding: 10px;">Name:</td><td>
+							<input  type="text" ng-model="ctrl.registerName"	size="50">
+						</td></tr>
+						<tr><td colspan="2" style="padding: 10px;">
+							<center>
+								<button class="btn btn-info btn-xs" ng-click="ctrl.addTour(ctrl.registerPlugin, ctrl.registerName)" ng-disabled="ctrl.inprogress" >Register a new Tour</button>
+							</center>
+						</td></tr>
+					</table>
+					<!--<div class="alert alert-info">{{ctrl.getListPlugIn()}}</div>  -->
+				</div>
+			</div>
+				
+				
+			
+						
+		</div> <!--  end listTour -->
+
+	
+	
+		<div class="col-lg-12">
+			<legend class="text-primary"><span class="glyphicon glyphicon-th"></span>Scheduler</legend>
+		
+			<div ng-show="ctrl.inprogress">
+				<span class="Loading">.</span>Please wait, work in progress
+			</div>
+			<!--  <div class="alert alert-success">Scheduler={{ctrl.scheduler}}</div> -->
+			<table style="width:100%; ">
+			<tr>
+			<td>
+				<table>
+					<tr><td style="padding: 10px;">Type: </td><td style="padding: 10px;">{{ctrl.scheduler.type}}</td></tr>
+					<tr><td style="padding: 10px;">Info: </td><td style="padding: 10px;">{{ctrl.scheduler.info}}</td></tr>
+				</table>	
+			
+				<h3>
+				<div ng-show="ctrl.scheduler.status=='STARTED'">
+					<div class="label label-success " >
+						<span class="glyphicon glyphicon-ok-circle" > ACTIF
+					</div>
+					<button ng-click="ctrl.schedulerOperation( false )" class="btn btn-primary btn-xs" ng-disabled="ctrl.inprogress">
+						Stop
+					</button>
+				</div>
+				<div ng-show="ctrl.scheduler.status=='SHUTDOWN'">
+					<div class="label label-warning" >
+						<span class="glyphicon glyphicon-ok-circle" > SHUTDOWN
+					</div>
+					<button ng-click="ctrl.schedulerOperation( false )" class="btn btn-primary btn-xs" ng-disabled="ctrl.inprogress">
+						Stop
+					</button>
+				</div>
+				<div ng-show="ctrl.scheduler.status=='STOPPED'">					
+					<div class="label label-default" >
+						<span class="glyphicon glyphicon-ban-circle"> INACTIF
+					</div>
+					<button ng-click="ctrl.schedulerOperation( true )" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress">
+						Start
+					</button>
+				</div>
+				</h3>
+			</td>
+			<td>
+			
+				<div class="panel panel-warning"   >
+					<div class="panel-heading">
+						Maintenance
+					</div>
+					<div>
+						<table >
+							<tr>
+								<td style="padding: 10px;">
+									<button ng-click="ctrl.schedulerMaintenance('status')" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress">
+											Status
+									</button>
+								</td><td style="padding: 10px;">	
+									<button ng-click="ctrl.schedulerMaintenance('deploy')" class="btn btn-warning btn-xs" ng-disabled="ctrl.inprogress">
+										Deploy
+									</button>
+								</td><td style="padding: 10px;">
+									<button ng-click="ctrl.schedulerMaintenance('reset')" class="btn btn-warning btn-xs" ng-disabled="ctrl.inprogress">
+										Reset
+									</button>
+								</td><td style="padding: 10px;">
+									<select ng-model="ctrl.scheduler.selectscheduler"  >
+										<option ng-repeat="item in ctrl.getListTypeScheduler()" value="{{item}}">{{item}}</option>
+									</select>
+									<button ng-click="ctrl.schedulerMaintenance('changescheduler')" class="btn btn-danger btn-xs" ng-disabled="ctrl.inprogress">
+										Change the scheduler
+									</button>
+								</td>
+							</tr>
+						</table>
+					</div>
+				</div>
+			</td>
+			</tr>
+			</table>
+			
+			<div ng-bind-html="ctrl.getListEvents(ctrl.scheduler.schedulerlistevents )"></div>
+			
+		</div>
+
+		<!-- Register a new plug in 
+		<div class="col-lg-12">	
+			<legend class="text-primary"><span class="glyphicon glyphicon-th"></span>Plug In</legend>	
+			<div ng-show="ctrl.inprogress">
+				<span class="Loading">.</span>Please wait, work in progress
+			</div>
+					
+			<button class="btn btn-info" ng-disabled="ctrl.inprogress">Register a new PlugIn</button>
+		</div>
+		 -->
+	</div>
+	
+</div>
+
+
+
+<!-- Third party dependencies -->
+
+<script src="pageResource?page=custompage_truckmilk&location=3rd-party/jquery.min.js"></script>
+
+<script src="pageResource?page=custompage_truckmilk&location=3rd-party/angular.min.js"></script>
+
+<script src="pageResource?page=custompage_truckmilk&location=3rd-party/angular-resource.min.js"></script>
+<script src="pageResource?page=custompage_truckmilk&location=3rd-party/angular-cookies.min.js"></script>
+
+<script src="pageResource?page=custompage_truckmilk&location=3rd-party/bootstrap/js/bootstrap.min.js"></script>
+<script src="pageResource?page=custompage_truckmilk&location=3rd-party/angular-bootstrap-tpls.min.js"></script>
+<script src="pageResource?page=custompage_truckmilk&location=3rd-party/angular-file-upload.js"></script> 
+<script src="pageResource?page=custompage_truckmilk&location=3rd-party/ng-google-chart.js"></script> 
+
+<script src="pageResource?page=custompage_truckmilk&location=3rd-party/angular-sanitize.min.js&v=@_CURRENTTIMEMILIS_@"></script>
+
+
+<!-- Application dependencies -->
+<script src="pageResource?page=custompage_truckmilk&location=truckmilkmonitor.js&v=@_CURRENTTIMEMILIS_@"></script>
+
+</body>
+</html>		
