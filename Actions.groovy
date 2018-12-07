@@ -41,7 +41,6 @@ import java.util.Date;
 
 import org.apache.commons.lang3.StringEscapeUtils
 
-
 import org.bonitasoft.engine.identity.User;
 import org.bonitasoft.engine.search.SearchOptionsBuilder;
 import org.bonitasoft.engine.search.SearchResult;
@@ -55,7 +54,11 @@ import org.bonitasoft.engine.exception.DeletionException;
 import org.bonitasoft.engine.exception.ServerAPIException;
 import org.bonitasoft.engine.exception.UnknownAPITypeException;
 import org.bonitasoft.engine.bpm.process.ProcessDefinitionNotFoundException;
-
+import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfo;
+import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfoSearchDescriptor;
+import org.bonitasoft.engine.search.SearchOptions;
+import org.bonitasoft.engine.search.SearchOptionsBuilder;
+import org.bonitasoft.engine.search.Order;
 import org.bonitasoft.engine.api.TenantAPIAccessor;
 import org.bonitasoft.engine.bpm.flownode.HumanTaskInstance;
 import org.bonitasoft.engine.bpm.flownode.HumanTaskInstanceSearchDescriptor;
@@ -63,8 +66,10 @@ import org.bonitasoft.engine.bpm.process.ArchivedProcessInstance;
 import org.bonitasoft.engine.bpm.process.ArchivedProcessInstancesSearchDescriptor;
 import org.bonitasoft.engine.bpm.process.ProcessInstance;
 import org.bonitasoft.engine.bpm.process.ProcessInstanceSearchDescriptor;
+import org.bonitasoft.engine.identity.UserSearchDescriptor;
 import org.bonitasoft.engine.session.APISession;
 import org.bonitasoft.engine.api.ProcessAPI;
+import org.bonitasoft.engine.api.IdentityAPI;
 
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEventFactory;
@@ -97,13 +102,14 @@ public class Actions {
         Index.ActionAnswer actionAnswer = new Index.ActionAnswer(); 
         List<BEvent> listEvents=new ArrayList<BEvent>();
         
+        
         try {
             String action=request.getParameter("action");
             
             if (action==null || action.length()==0 )
             {
                 actionAnswer.isManaged=false;
-                logger.info("#### log:Actions END No Actions");
+                // logger.info("#### log:Actions END No Actions");
                 return actionAnswer;
             }
             actionAnswer.isManaged=true;
@@ -111,6 +117,7 @@ public class Actions {
             APISession apiSession = pageContext.getApiSession();
             HttpSession httpSession = request.getSession();            
             ProcessAPI processAPI = TenantAPIAccessor.getProcessAPI(apiSession);
+            IdentityAPI identityAPI = TenantAPIAccessor.getIdentityAPI(apiSession);
 
             Parameter parameter = Parameter.getInstanceFromJson(paramJsonSt);
             
@@ -120,7 +127,7 @@ public class Actions {
             parameter.pageDirectory = pageResourceProvider.getPageDirectory();
             MilkAccessAPI milkAccessAPI = MilkAccessAPI.getInstance();
 
-            logger.info("#### log:Actions_2 ["+action+"]");
+            // logger.info("#### log:Actions_2 ["+action+"]");
             if ("init".equals(action))
             {
                actionAnswer.responseMap = milkAccessAPI.startup( parameter);
@@ -145,20 +152,59 @@ public class Actions {
             else if ("stopTour".equals(action))
             {
                actionAnswer.responseMap = milkAccessAPI.stopTour( parameter);                
-            }              
+            }      
+            else if ("collect_reset".equals(action))
+            {              
+              String paramJsonPartial = request.getParameter("paramjsonpartial");
+              if (paramJsonPartial==null)
+                paramJsonPartial="";
+              logger.info("collect_reset  paramJsonPartial=["+paramJsonPartial+"]");
+              httpSession.setAttribute("accumulate", paramJsonPartial );              
+              actionAnswer.responseMap.put("status", "ok");
+            }
+            else if ("collect_add".equals(action))
+            {
+              String paramJsonPartial = request.getParameter("paramjsonpartial");
+              logger.info("collect_add paramJsonPartial=["+paramJsonPartial+"] json=["+paramJsonSt+"]");
+        
+              String accumulateJson = (String) httpSession.getAttribute("accumulate" );
+              accumulateJson+=paramJsonPartial;
+              httpSession.setAttribute("accumulate", accumulateJson );              
+              actionAnswer.responseMap.put("status", "ok");
+            }
             else if ("updateTour".equals(action))
             {
-               actionAnswer.responseMap = milkAccessAPI.updateTour( parameter);                
+              String accumulateJson = (String) httpSession.getAttribute("accumulate" );
+              logger.info("update Tour accumulateJson=["+accumulateJson+"]");
+              if (accumulateJson !=null && accumulateJson.length() >0)
+              {
+                logger.info("collect_end use the saved value ["+accumulateJson+"]");
+                // recalculate the parameters from accumate mechanism
+                parameter.setInformation(accumulateJson);
+              }
+              httpSession.setAttribute("accumulate", "" );               
+              actionAnswer.responseMap = milkAccessAPI.updateTour( parameter);                
             } 
+            else if ("testButton".equals(action))
+            {
+              String accumulateJson = (String) httpSession.getAttribute("accumulate" );
+              logger.info("update Tour accumulateJson=["+accumulateJson+"]");
+              if (accumulateJson !=null && accumulateJson.length() >0)
+              {
+                logger.info("collect_end use the saved value ["+accumulateJson+"]");
+                // recalculate the parameters from accumate mechanism
+                parameter.setInformation(accumulateJson);
+              }
+              httpSession.setAttribute("accumulate", "" );               
+              actionAnswer.responseMap = milkAccessAPI.testButton( parameter);
+            }
             else if ("immediateExecution".equals(action))
             {
                 logger.info("#### log:Actions call immediateExecution");
                 
                actionAnswer.responseMap = milkAccessAPI.immediateExecution( parameter);
                logger.info("#### log:Actions call immediateExecution : YES");
-
-            } 
-            
+            }             
             else  if ("scheduler".equals(action))
             {
                 actionAnswer.responseMap = milkAccessAPI.scheduler( parameter);                
@@ -167,6 +213,52 @@ public class Actions {
             {
                 actionAnswer.responseMap = milkAccessAPI.schedulerMaintenance( parameter);                
              } 
+            else if ("queryprocess".equals(action))
+            {
+              List listProcess = new ArrayList();
+              Object jsonParam = (paramJsonSt==null ? null : JSONValue.parse(paramJsonSt));              
+              String processFilter = jsonParam.get("userfilter");
+              SearchOptionsBuilder searchOptionsBuilder = new SearchOptionsBuilder(0,100);
+              // searchOptionsBuilder.filter(ProcessDeploymentInfoSearchDescriptor.NAME, processFilter);
+              searchOptionsBuilder.sort(  ProcessDeploymentInfoSearchDescriptor.NAME,  Order.ASC);
+              searchOptionsBuilder.sort(  ProcessDeploymentInfoSearchDescriptor.VERSION,  Order.ASC);
+              
+              SearchResult<ProcessDeploymentInfo> searchResult = processAPI.searchProcessDeploymentInfos(searchOptionsBuilder.done() );
+              logger.info("Search process deployment containing ["+processFilter+"] - found "+searchResult.getCount());
+
+              for (final ProcessDeploymentInfo processDeploymentInfo : searchResult.getResult())
+              {
+                  final Map<String, Object> oneRecord = new HashMap<String, Object>();
+                  oneRecord.put("display", processDeploymentInfo.getName() + " (" + processDeploymentInfo.getVersion()+")");
+                  oneRecord.put("id", processDeploymentInfo.getName() + " (" + processDeploymentInfo.getVersion()+")");
+                  listProcess.add( oneRecord );
+              }
+                 actionAnswer.responseMap.put("listProcess", listProcess);
+            }
+            else if ("queryusers".equals(action))
+            {
+               
+              List listUsers = new ArrayList();
+              final SearchOptionsBuilder searchOptionBuilder = new SearchOptionsBuilder(0, 100000);
+              // http://documentation.bonitasoft.com/?page=using-list-and-search-methods
+              searchOptionBuilder.filter(UserSearchDescriptor.ENABLED, Boolean.TRUE);
+              Object jsonParam = (paramJsonSt==null ? null : JSONValue.parse(paramJsonSt));              
+              searchOptionBuilder.searchTerm( jsonParam==null ? "" : jsonParam.get("userfilter") );
+
+              searchOptionBuilder.sort(UserSearchDescriptor.LAST_NAME, Order.ASC);
+              searchOptionBuilder.sort(UserSearchDescriptor.FIRST_NAME, Order.ASC);
+              final SearchResult<User> searchResult = identityAPI.searchUsers(searchOptionBuilder.done());
+              for (final User user : searchResult.getResult())
+              {
+                  final Map<String, Object> oneRecord = new HashMap<String, Object>();
+                // oneRecord.put("display", user.getFirstName()+" " + user.getLastName()  + " (" + user.getUserName() + ")");
+                  oneRecord.put("display", user.getLastName() + "," + user.getFirstName() + " (" + user.getUserName() + ")");
+                  oneRecord.put("id", user.getId());
+                  listUsers.add( oneRecord );
+              }
+              actionAnswer.responseMap.put("listUsers", listUsers);
+
+            } 
             logger.info("#### log:Actions END responseMap ="+actionAnswer.responseMap.size());
             return actionAnswer;
         } catch (Exception e) {

@@ -1,87 +1,21 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.bonitasoft.custompage</groupId>
-	<artifactId>TruckMilk</artifactId>
-	<version>1.0</version>
-	<name>TruckMilk</name>
-	<dependencies>
-
-
-		<dependency>
-			<groupId>org.bonitasoft.engine</groupId>
-			<artifactId>bonita-client</artifactId>
-			<version>7.6.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.bonitasoft.engine</groupId>
-			<artifactId>bonita-server</artifactId>
-			<version>7.6.0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>com.bonitasoft.log.event</groupId>
-			<artifactId>bonita-event</artifactId>
-			<version>1.2.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.bonitasoft.command</groupId>
-  			<artifactId>BonitaCommandDeployment</artifactId>
-  			<version>1.0.0</version>
-		</dependency>
-		
-		
-		<dependency>
-			<groupId>org.bonitasoft.ext.BonitaProperties</groupId>
-			<artifactId>bonita-properties</artifactId>
-			<version>1.6.1</version>
-		</dependency>
-		<dependency>
-			<groupId>com.googlecode.json-simple</groupId>
-			<artifactId>json-simple</artifactId>
-			<version>1.1</version>
-		</dependency>
-		<dependency>
-			<groupId>javax.mail</groupId>
-			<artifactId>mail</artifactId>
-			<version>1.5.0-b01</version>
-		</dependency>
-	</dependencies>
-
-	<build>
-		<plugins>
-			<plugin>
-				<artifactId>maven-jar-plugin</artifactId>
-				<executions>
-					<execution>
-						<id>only-library</id>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-						<phase>package</phase>
-						<configuration>
-							<classifier>Page</classifier>
-							<excludes>
-								<exclude>org/bonitasoft/truckmilk/schedule/quartz/*</exclude>
-							</excludes>
-						</configuration>
-					</execution>
-					<execution>
-						<id>everything</id>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-						<phase>package</phase>
-						<configuration>
-							<classifier>Quartzjob</classifier>
-							<includes>
-								<include>org/bonitasoft/truckmilk/schedule/quartz/*</include>
-							</includes>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-		</plugins>
-	</build>
-
-
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.bonitasoft.custompage</groupId>
+  <artifactId>CustomPageTowTruck</artifactId>
+  <version>1.0.1</version>
+  <name>CustomPageTowTruck</name>
+   <dependencies>
+  
+  	 
+  	<dependency>
+  		<groupId>org.bonitasoft.engine</groupId>
+  		<artifactId>bonita-client</artifactId>
+  		<version>6.5.1</version>
+	</dependency>
+	<dependency>
+  		<groupId>org.bonitasoft.engine</groupId>
+  		<artifactId>bonita-server</artifactId>
+  		<version>6.5.1</version>
+	</dependency>
+  </dependencies>
 </project>
