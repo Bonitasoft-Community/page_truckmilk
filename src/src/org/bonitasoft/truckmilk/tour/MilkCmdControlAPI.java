@@ -77,7 +77,7 @@ public class MilkCmdControlAPI {
     commandDescription.mainCommandClassName = MilkCmdControl.class.getName();
     commandDescription.mainJarFile = "TruckMilk-1.0-Page.jar";
     commandDescription.commandDescription = MilkCmdControl.cstCommandDescription;
-    commandDescription.dependencyJars = new String[] { "bonita-event-1.2.0.jar", "bonita-properties-1.6.jar" }; // "mail-1.5.0-b01.jar", "activation-1.1.jar"};
+    commandDescription.dependencyJars = new String[] { "bonita-event-1.2.0.jar", "bonita-properties-1.6.2.jar" }; // "mail-1.5.0-b01.jar", "activation-1.1.jar"};
 
     BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(MilkCmdControl.cstCommandName);
     DeployStatus deployStatus = bonitaCommand.checkAndDeployCommand(commandDescription, true, tenantId, commandAPI, platFormAPI);
