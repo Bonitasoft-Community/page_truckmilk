@@ -25,7 +25,7 @@ import org.bonitasoft.truckmilk.plugin.MilkPlugIn.TypeParameter;
  */
 public class SendMail {
 
-  private static BEvent eventMailError = new BEvent(SendMail.class.getName(), 1,
+  private static BEvent EVENT_MAIL_ERROR = new BEvent(SendMail.class.getName(), 1,
       Level.APPLICATIONERROR,
       "Mail error", "Error during sending an email",
       "Email was not sent",
@@ -102,7 +102,7 @@ public class SendMail {
       transport.sendMessage(message, message.getAllRecipients());
       transport.close();
     } catch (Exception e) {
-      listEvents.add(new BEvent(eventMailError, "Send Mail to [" + toMail + "] " + e.getMessage()));
+      listEvents.add(new BEvent(EVENT_MAIL_ERROR, "Send Mail to [" + toMail + "] " + e.getMessage()));
     }
     return listEvents;
   }

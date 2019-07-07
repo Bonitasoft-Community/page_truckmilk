@@ -2,6 +2,7 @@ package org.bonitasoft.truckmilk.plugin;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -419,11 +420,12 @@ public abstract class MilkPlugIn {
 
   public static class PlugTourOutput {
 
+    public Date executionDate = new Date();
     /**
      * main result of the execution is a list of Events and the status.
      * Null until a new execution is started
      */
-    private List<BEvent> listEvents = null;
+    private List<BEvent> listEvents = new ArrayList<BEvent>();
 
     // the listEvents is saved in the St
     public String listEventsSt = "";
@@ -438,6 +440,11 @@ public abstract class MilkPlugIn {
     public MilkPlugInTour plugInTour;
 
     public String explanation;
+    
+    /*
+     * return as information, how many item the plug in managed
+     */
+    public int nbItemsProcessed=0;
 
     // if you have a PlugInTourInput, create the object from this
     public PlugTourOutput(MilkPlugInTour plugInTour) {
@@ -445,16 +452,10 @@ public abstract class MilkPlugIn {
     }
 
     public void addEvent(BEvent event) {
-      // new execution : create the list event to collect it
-      if (listEvents == null)
-        listEvents = new ArrayList<BEvent>();
       listEvents.add(event);
     }
 
     public void addEvents(List<BEvent> events) {
-      // new execution : create the list event to collect it
-      if (listEvents == null)
-        listEvents = new ArrayList<BEvent>();
       listEvents.addAll(events);
     }
 

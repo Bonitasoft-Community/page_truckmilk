@@ -10,7 +10,10 @@ import java.util.Map;
 import org.bonitasoft.ext.properties.BonitaProperties;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.truckmilk.plugin.MilkPlugIn.ExecutionStatus;
 import org.bonitasoft.truckmilk.plugin.MilkPlugIn.PlugTourOutput;
+
+import net.sf.ehcache.config.generator.model.XMLGeneratorVisitor.OutputBehavior;
 
 public class MilkPlugInTourFactory {
 
@@ -91,6 +94,14 @@ public class MilkPlugInTourFactory {
     return listEvents;
   }
   // save a tour
+
+
+  /* ******************************************************************************** */
+  /*                                                                                  */
+  /* Load / Save */
+  /*                                                                                  */
+  /*                                                                                  */
+  /* ******************************************************************************** */
 
   // read a tour
   public List<BEvent> dbLoadAllPlugInTour(long tenantId, MilkCmdControl milkCmdControl) {
@@ -206,10 +217,7 @@ public class MilkPlugInTourFactory {
   public final static String BonitaPropertiesName = "MilkTour";
   private final static String BonitaPropertiesDomain = "tour";
 
-  // save a tour execution
-  public void saveExecution(Date currentDate, PlugTourOutput output) {
 
-  }
 
   // load all tour execution
 

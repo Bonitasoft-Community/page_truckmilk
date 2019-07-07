@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.StringWriter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -15,7 +16,6 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import org.bonitasoft.command.BonitaCommand;
-import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.command.SCommandExecutionException;
 import org.bonitasoft.engine.command.SCommandParameterizationException;
 import org.bonitasoft.engine.connector.ConnectorAPIAccessorImpl;
@@ -35,6 +35,7 @@ import org.bonitasoft.truckmilk.plugin.MilkSLA;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerFactory;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt.StatusScheduler;
+import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt.TypeStatus;
 
 /* ******************************************************************************** */
 /*                                                                                  */
@@ -104,7 +105,7 @@ public class MilkCmdControl extends BonitaCommand {
 
   private static BEvent EVENT_BUTTONARG_FAILED = new BEvent(MilkCmdControl.class.getName(), 15, Level.ERROR,
       "No Answer", "The Button Arg does not return an anwser", "Operation can't be realised", "Contact your administrator");
-  
+
   /* ******************************************************************************** */
   /*                                                                                  */
   /* the companion MilkCmdControlAPI call this API */
@@ -117,11 +118,16 @@ public class MilkCmdControl extends BonitaCommand {
   public static String cstCommandName = "truckmilk";
   public static String cstCommandDescription = "Execute TruckMilk plugin at frequency";
 
+  private final static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss SSS");
+
   /**
    * this enum is defined too in MilkQuartzJob to have an independent JAR
+   * INIT : this order does not exist for the command point of view
+   * REFRESH : refresh only the Tour information, no check environment
+   * GETSTATUS : refresh + check environment
    */
   public enum VERBE {
-    CHECKENVIRONMENT, INITALINFORMATION, REFRESH, DEPLOYPLUGIN, DELETEPLUGIN, ADDTOUR, REMOVETOUR, STOPTOUR, STARTTOUR, UPDATETOUR, IMMEDIATETOUR, SCHEDULERSTARTSTOP, SCHEDULERDEPLOY, SCHEDULERRESET, SCHEDULERSTATUS, SCHEDULERCHANGE, TESTBUTTONARGS, HEARTBEAT
+    GETSTATUS, REFRESH, DEPLOYPLUGIN, DELETEPLUGIN, ADDTOUR, REMOVETOUR, STOPTOUR, STARTTOUR, UPDATETOUR, IMMEDIATETOUR, SCHEDULERSTARTSTOP, SCHEDULERDEPLOY, SCHEDULERRESET, SCHEDULERCHANGE, TESTBUTTONARGS, HEARTBEAT
   };
 
   public static String cstPageDirectory = "pagedirectory";
@@ -130,7 +136,11 @@ public class MilkCmdControl extends BonitaCommand {
   private static String cstResultListPlugTour = "listplugtour";
   public static String cstResultListEvents = "listevents";
 
-  public static String cstJsonSchedulerEvents = "schedulerlistevents";
+  public static String cstJsonDashboardEvents = "dashboardlistevents";
+  public static String cstJsonDashboardSyntheticEvents = "dashboardsyntheticlistevents";
+  public static String cstJsonScheduler = "scheduler";
+  public static String cstJsonSchedulerType = "type";
+  public static String cstJsonSchedulerInfo = "info";
 
   public static String cstJsonSchedulerStatus = "status";
   public static String cstJsonSchedulerStatus_V_RUNNING = "RUNNING";
@@ -139,14 +149,16 @@ public class MilkCmdControl extends BonitaCommand {
 
   public static String cstSchedulerChangeType = "schedulerchangetype";
 
-  
   public static String cstEnvironmentStatus = "ENVIRONMENTSTATUS";
   public static String cstEnvironmentStatus_V_CORRECT = "OK";
   public static String cstEnvironmentStatus_V_ERROR = "ERROR";
-  
+
   public static String cstButtonName = "buttonName";
 
-  List<MilkPlugIn> listPlugIns = new ArrayList<MilkPlugIn>();
+  private List<MilkPlugIn> listPlugIns = new ArrayList<MilkPlugIn>();
+
+  // keep a list of 10 last executions
+  private List<String> lastHeartBeat = new ArrayList<String>();
 
   /**
    * keep the scheduler Factory
@@ -165,6 +177,15 @@ public class MilkCmdControl extends BonitaCommand {
     return milkCmdControl;
   }
 
+  /** Not the correct Command library if the call come here */
+  public ExecuteAnswer executeCommandVerbe(String verbSt, Map<String, Serializable> parameters, TenantServiceAccessor serviceAccessor) {
+    logger.severe(logHeader+"ERROR: the Command Library is not the correct one");
+
+    ExecuteAnswer executeAnswer = new ExecuteAnswer();
+    return executeAnswer;
+    // return executeCommandVerbe(verbSt, parameters, serviceAccessor);
+  }
+
   /**
    * Singleton object. All privates members are safed
    * 
@@ -174,99 +195,80 @@ public class MilkCmdControl extends BonitaCommand {
    * @throws SCommandParameterizationException
    * @throws SCommandExecutionException
    */
-  public ExecuteAnswer executeCommandVerbe(String verbSt, Map<String, Serializable> parameters, long tenantId, TenantServiceAccessor serviceAccessor) {
+  public ExecuteAnswer executeCommand(ExecuteParameters executeParameters, TenantServiceAccessor serviceAccessor) {
 
     long currentTime = System.currentTimeMillis();
     ExecuteAnswer executeAnswer = new ExecuteAnswer();
     long startTime = System.currentTimeMillis();
+
     VERBE verbEnum = null;
     try {
       // ------------------- ping ?
-      verbEnum = VERBE.valueOf(verbSt);
-      logger.fine(logHeader + "MilkTourCommand Verb[" + verbEnum.toString() + "] Tenant[" + tenantId + "]");
+      verbEnum = VERBE.valueOf(executeParameters.verb);
+      logger.fine(logHeader + "command Verb[" + verbEnum.toString() + "] Tenant[" + executeParameters.tenantId + "]");
 
       // initialise the factory ?
       MilkPlugInTourFactory milkPlugInTourFactory = MilkPlugInTourFactory.getInstance();
 
-      if (VERBE.CHECKENVIRONMENT.equals(verbEnum)) {
-        executeAnswer.listEvents.addAll(milkSchedulerFactory.checkEnvironment(tenantId));
-        List<MilkPlugIn> list = detectListPlugIn(tenantId);
-        for (MilkPlugIn plugIn : list) {
-          executeAnswer.listEvents.addAll(plugIn.checkEnvironment(tenantId));
-        }
-        executeAnswer.listEvents.addAll(milkPlugInTourFactory.checkEnvironment(tenantId));
-        
-        executeAnswer.listEvents = BEventFactory.filterUnique(executeAnswer.listEvents );
-        
-        if (BEventFactory.isError( executeAnswer.listEvents))
-          executeAnswer.result.put(cstEnvironmentStatus,  cstEnvironmentStatus_V_ERROR);
-        else
-          executeAnswer.result.put(cstEnvironmentStatus,  cstEnvironmentStatus_V_CORRECT);
+      boolean addSchedulerStatus=false;
 
-        return executeAnswer;
-
-      }
-
+      
       if (milkSchedulerFactory.getScheduler() == null) {
-        executeAnswer.listEvents.addAll(milkSchedulerFactory.startup(tenantId));
+        executeAnswer.listEvents.addAll(milkSchedulerFactory.startup(executeParameters.tenantId));
       }
+      
+      /**
+       * getStatus or Refresh
+       */
+      if (VERBE.GETSTATUS.equals(verbEnum) || VERBE.REFRESH.equals(verbEnum)) {
+        addSchedulerStatus=false; // still add it, why not?
 
-      if (VERBE.INITALINFORMATION.equals(verbEnum) || VERBE.REFRESH.equals(verbEnum)) {
-
-        if (VERBE.INITALINFORMATION.equals(verbEnum))
-          executeAnswer.listEvents.addAll(initialization(true, false, tenantId));
-        else
-          // refresh ? Reload the tours
-          executeAnswer.listEvents.addAll(initialization(true, false, tenantId));
-        // get all lists 
-
-        executeAnswer.result.put(cstResultListPlugTour, getListTourMap());
-
-        List<Map<String, Object>> listPlugInMap = new ArrayList<Map<String, Object>>();
-        for (MilkPlugIn plugin : getListPlugIn()) {
-          listPlugInMap.add(plugin.getMap());
+        executeAnswer.listEvents.addAll(initialization(true, false, executeParameters.tenantId));
+   
+        if (VERBE.GETSTATUS.equals(verbEnum))
+        {
+          addSchedulerStatus=true; 
         }
-        executeAnswer.result.put("listplugin", listPlugInMap);
+       
+       executeAnswer.result.put(cstResultListPlugTour, getListTourMap());
 
-        Map<String, Object> mapScheduler = new HashMap<String, Object>();
-        if (milkSchedulerFactory.getScheduler() == null)
-          mapScheduler.put(cstJsonSchedulerStatus, cstJsonSchedulerStatus_V_STOPPED);
-        else {
-          StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(tenantId);
-          mapScheduler.put(cstJsonSchedulerStatus, statusScheduler.status.toString());
-          mapScheduler.put(cstJsonSchedulerEvents, BEventFactory.getHtml(statusScheduler.listEvents));
-          mapScheduler.put("type", milkSchedulerFactory.getScheduler().getType().toString());
-          mapScheduler.put("info", milkSchedulerFactory.getScheduler().getDescription());
-        }
+       List<Map<String, Object>> listPlugInMap = new ArrayList<Map<String, Object>>();
+       for (MilkPlugIn plugin : getListPlugIn()) {
+         listPlugInMap.add(plugin.getMap());
+       }
+       executeAnswer.result.put("listplugin", listPlugInMap);
 
-        mapScheduler.put("listtypeschedulers", milkSchedulerFactory.getListTypeScheduler());
-
-        executeAnswer.result.put("scheduler", mapScheduler);
 
       } else if (VERBE.ADDTOUR.equals(verbEnum)) {
-
-        MilkPlugIn plugIn = getPluginFromName((String) parameters.get("plugin"));
+        
+        MilkPlugIn plugIn = getPluginFromName( executeParameters.getParametersString("plugin"));
         if (plugIn == null)
+        {
+          logger.severe(logHeader+"No tour found with name["+executeParameters.getParametersString("plugin")+"]");
+          executeAnswer.listEvents.add(new BEvent(eventInternalError, "No tour found with name["+executeParameters.getParametersString("plugin")+"]"));
+
           return null;
-        MilkPlugInTour plugInTour = MilkPlugInTour.getInstanceFromPlugin((String) parameters.get("name"),
-            plugIn);
+        }
+        String tourName=executeParameters.getParametersString("name");
+        logger.info(logHeader+"Add tourName["+tourName+"] PlugIn["+executeParameters.getParametersString("plugin")+"]");
+        MilkPlugInTour plugInTour = MilkPlugInTour.getInstanceFromPlugin(tourName, plugIn);
         executeAnswer.listEvents.addAll(registerATour(plugInTour));
         if (!BEventFactory.isError(executeAnswer.listEvents)) {
-          executeAnswer.listEvents.addAll(milkPlugInTourFactory.dbSavePlugInTour(plugInTour, tenantId));
+          executeAnswer.listEvents.addAll(milkPlugInTourFactory.dbSavePlugInTour(plugInTour, executeParameters.tenantId));
           if (!BEventFactory.isError(executeAnswer.listEvents))
-            executeAnswer.listEvents.add(new BEvent(eventTourRegister, "Tour registerd[" + plugInTour.getName() + "]"));
+            executeAnswer.listEvents.add(new BEvent(eventTourRegister, "Tour registered[" + plugInTour.getName() + "]"));
         }
         // get all lists            
         executeAnswer.result.put(cstResultListPlugTour, getListTourMap());
 
       } else if (VERBE.REMOVETOUR.equals(verbEnum)) {
 
-        Long idTour = (Long) parameters.get("id");
+        Long idTour = executeParameters.getParametersLong("id");
         if (idTour == null) {
           executeAnswer.listEvents.add(EVENT_MISSING_ID);
         } else {
           MilkPlugInTour plugInTour = getTourById(idTour);
-          executeAnswer.listEvents.addAll(removeTour(idTour, tenantId));
+          executeAnswer.listEvents.addAll(removeTour(idTour, executeParameters.tenantId));
 
           if (!BEventFactory.isError(executeAnswer.listEvents)) {
             executeAnswer.listEvents.add(new BEvent(eventTourRemoved, "Tour removed[" + plugInTour.getName() + "]"));
@@ -275,7 +277,7 @@ public class MilkCmdControl extends BonitaCommand {
         executeAnswer.result.put(cstResultListPlugTour, getListTourMap());
       } else if (VERBE.STARTTOUR.equals(verbEnum) || VERBE.STOPTOUR.equals(verbEnum)) {
 
-        Long idTour = (Long) parameters.get("id");
+        Long idTour = executeParameters.getParametersLong("id");
         if (idTour == null) {
           executeAnswer.listEvents.add(EVENT_MISSING_ID);
         } else {
@@ -284,21 +286,23 @@ public class MilkCmdControl extends BonitaCommand {
           if (plugInTour != null) {
             // save parameteres
             @SuppressWarnings("unchecked")
-            Map<String, Object> parametersObject = (Map<String, Object>) parameters.get("parametersvalue");
+            Map<String, Object> parametersObject = executeParameters.getParametersMap("parametersvalue");
             if (parametersObject != null)
               plugInTour.setTourParameters(parametersObject);
-            String cronSt = (String) parameters.get("cron");
+            String cronSt = executeParameters.getParametersString("cron");
             if (cronSt != null)
               plugInTour.setCron(cronSt);
 
             plugInTour.setEnable(VERBE.STARTTOUR.equals(verbEnum));
-            executeAnswer.listEvents.addAll(milkPlugInTourFactory.dbSavePlugInTour(plugInTour, tenantId));
+            executeAnswer.listEvents.addAll( plugInTour.calculateNextExecution() );
+            executeAnswer.listEvents.addAll(milkPlugInTourFactory.dbSavePlugInTour(plugInTour, executeParameters.tenantId));
             if (VERBE.STARTTOUR.equals(verbEnum))
               executeAnswer.listEvents.add(new BEvent(eventTourStarted, "Tour Activated[" + plugInTour.getName() + "]"));
             else
               executeAnswer.listEvents.add(new BEvent(eventTourStopped, "Tour Deactived[" + plugInTour.getName() + "]"));
 
             executeAnswer.result.put("enable", plugInTour.isEnable);
+            executeAnswer.result.put("tour", plugInTour.getMap(true));
           } else
             executeAnswer.listEvents.add(new BEvent(MilkPlugInTourFactory.EVENT_TOUR_NOT_FOUND, "TourID[" + idTour + "]"));
         }
@@ -306,22 +310,23 @@ public class MilkCmdControl extends BonitaCommand {
 
       else if (VERBE.UPDATETOUR.equals(verbEnum)) {
 
-        Long idTour = (Long) parameters.get("id");
+        Long idTour = executeParameters.getParametersLong("id");
         if (idTour == null) {
           executeAnswer.listEvents.add(EVENT_MISSING_ID);
         } else {
+          logger.info( logHeader+"Update tour ["+idTour+"]");
           MilkPlugInTour plugInTour = getTourById(idTour);
 
           if (plugInTour != null) {
             @SuppressWarnings("unchecked")
-            Map<String, Object> parametersObject = (Map<String, Object>) parameters.get("parametersvalue");
-            String cronSt = (String) parameters.get("cron");
+            Map<String, Object> parametersObject = executeParameters.getParametersMap("parametersvalue");
+            String cronSt = executeParameters.getParametersString("cron");
             plugInTour.setTourParameters(parametersObject);
             plugInTour.setCron(cronSt);
-            plugInTour.setDescription((String) parameters.get("description"));
-            String newName = (String) parameters.get("newname");
+            plugInTour.setDescription(executeParameters.getParametersString("description"));
+            String newName = executeParameters.getParametersString("newname");
             plugInTour.setName(newName);
-            executeAnswer.listEvents.addAll(milkPlugInTourFactory.dbSavePlugInTour(plugInTour, tenantId));
+            executeAnswer.listEvents.addAll(milkPlugInTourFactory.dbSavePlugInTour(plugInTour, executeParameters.tenantId));
             executeAnswer.listEvents.add(new BEvent(EVENT_TOUR_UPDATED, "Tour updated[" + plugInTour.getName() + "]"));
 
           } else
@@ -329,7 +334,7 @@ public class MilkCmdControl extends BonitaCommand {
           executeAnswer.result.put(cstResultListPlugTour, getListTourMap());
         }
       } else if (VERBE.IMMEDIATETOUR.equals(verbEnum)) {
-        Long idTour = (Long) parameters.get("id");
+        Long idTour = executeParameters.getParametersLong("id");
         if (idTour == null) {
           executeAnswer.listEvents.add(EVENT_MISSING_ID);
         } else {
@@ -337,7 +342,7 @@ public class MilkCmdControl extends BonitaCommand {
 
           if (plugInTour != null) {
             plugInTour.setImmediateExecution(true);
-            executeAnswer.listEvents.addAll(milkPlugInTourFactory.dbSavePlugInTour(plugInTour, tenantId));
+            executeAnswer.listEvents.addAll(milkPlugInTourFactory.dbSavePlugInTour(plugInTour, executeParameters.tenantId));
             executeAnswer.listEvents.add(new BEvent(EVENT_TOUR_UPDATED, "Tour updated[" + plugInTour.getName() + "]"));
           } else
             executeAnswer.listEvents.add(new BEvent(MilkPlugInTourFactory.EVENT_TOUR_NOT_FOUND, "Tour[" + idTour + "]"));
@@ -345,108 +350,158 @@ public class MilkCmdControl extends BonitaCommand {
           executeAnswer.result.put(cstResultListPlugTour, getListTourMap());
         }
       } else if (VERBE.TESTBUTTONARGS.equals(verbEnum)) {
-        Long idTour = (Long) parameters.get("id");
+        Long idTour = executeParameters.getParametersLong("id");
         if (idTour == null) {
           executeAnswer.listEvents.add(EVENT_MISSING_ID);
         } else {
           MilkPlugInTour plugInTour = getTourById(idTour);
 
           if (plugInTour != null) {
-            String buttonName = (String) parameters.get(cstButtonName);
-            Map<String, Object> parametersObject = (Map<String, Object>) parameters.get("parametersvalue");
+            String buttonName = executeParameters.getParametersString(cstButtonName);
+            Map<String, Object> parametersObject = executeParameters.getParametersMap("parametersvalue");
             plugInTour.setTourParameters(parametersObject);
 
-            
-            Map<String, Object> argsParameters= (Map<String, Object>) parameters.get("args");
+            Map<String, Object> argsParameters = executeParameters.getParametersMap("args");
 
             // execute it!
             PlugTourInput plugTourInput = new PlugTourInput(plugInTour);
 
-            
-            MySimpleTestThread buttonThread = new MySimpleTestThread(tenantId, buttonName, plugInTour, plugTourInput, argsParameters);
-            
+            MySimpleTestThread buttonThread = new MySimpleTestThread(executeParameters.tenantId, buttonName, plugInTour, plugTourInput, argsParameters);
+
             buttonThread.start();
-            int count=0;
-            while( ! buttonThread.isFinish && count<1000)
-            {
+            int count = 0;
+            while (!buttonThread.isFinish && count < 1000) {
               count++;
               Thread.sleep(1000);
             }
             if (buttonThread.isFinish)
-              executeAnswer.listEvents.addAll( buttonThread.listEvents );
+              executeAnswer.listEvents.addAll(buttonThread.listEvents);
             else
-              executeAnswer.listEvents.add( new BEvent(EVENT_BUTTONARG_FAILED, "No answer"));
-            
+              executeAnswer.listEvents.add(new BEvent(EVENT_BUTTONARG_FAILED, "No answer"));
+
           }
-      }
+        }
 
       } else if (VERBE.HEARTBEAT.equals(verbEnum)) {
-        executeOneTimeNewThread(tenantId);
+        if ((milkSchedulerFactory.getScheduler() != null))
+        {
+          StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(executeParameters.tenantId);
+          if (statusScheduler.status == TypeStatus.STARTED)
+            executeOneTimeNewThread(executeParameters.tenantId);
+        }
       }
 
       else if (VERBE.SCHEDULERSTARTSTOP.equals(verbEnum)) {
-        boolean startScheduler = Boolean.valueOf(parameters.get("start").toString());
-        if (milkSchedulerFactory.getScheduler() != null) {
+        addSchedulerStatus=true; // still add it, why not?
+        Boolean startScheduler = executeParameters.getParametersBoolean("start");
+        logger.info(logHeader+"SchedulerStartStop requested["+startScheduler+"] - ");
+        if (startScheduler == null &&  "true".equals(executeParameters.parametersCommand.get("start")))
+            startScheduler=true;
+        if (milkSchedulerFactory.getScheduler() != null && startScheduler != null) {
           if (startScheduler)
-            executeAnswer.listEvents.addAll(milkSchedulerFactory.getScheduler().start(tenantId));
+            executeAnswer.listEvents.addAll(milkSchedulerFactory.getScheduler().start(executeParameters.tenantId));
           else
-            executeAnswer.listEvents.addAll(milkSchedulerFactory.getScheduler().stop(tenantId));
+            executeAnswer.listEvents.addAll(milkSchedulerFactory.getScheduler().stop(executeParameters.tenantId));
         }
-        StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(tenantId);
+        StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(executeParameters.tenantId);
         executeAnswer.result.put(cstJsonSchedulerStatus, statusScheduler.status.toString());
-        executeAnswer.listEvents.addAll(statusScheduler.listEvents);
+        // no need to add the event: it will be done by the getEvent after
       } else if (VERBE.SCHEDULERDEPLOY.equals(verbEnum)) {
-        String pageDirectory = (String) parameters.get(cstPageDirectory);
+        String pageDirectory = executeParameters.getParametersString(cstPageDirectory);
         File pageDirectoryFile = new File(pageDirectory);
         // now ask the deployment
         MilkSchedulerInt scheduler = milkSchedulerFactory.getScheduler();
-        executeAnswer.listEvents.addAll(scheduler.checkAndDeploy(true, pageDirectoryFile, tenantId));
+        executeAnswer.listEvents.addAll(scheduler.checkAndDeploy(true, pageDirectoryFile, executeParameters.tenantId));
         // then reset it
-        executeAnswer.listEvents.addAll(milkSchedulerFactory.getScheduler().reset(tenantId));
+        executeAnswer.listEvents.addAll(milkSchedulerFactory.getScheduler().reset(executeParameters.tenantId));
         if (!BEventFactory.isError(executeAnswer.listEvents)) {
           executeAnswer.listEvents.add(eventSchedulerResetSuccess);
         }
         // return the status
-        StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(tenantId);
+        StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(executeParameters.tenantId);
         executeAnswer.result.put(cstJsonSchedulerStatus, statusScheduler.status.toString());
         executeAnswer.listEvents.addAll(statusScheduler.listEvents);
       } else if (VERBE.SCHEDULERRESET.equals(verbEnum)) {
-        executeAnswer.listEvents.addAll(milkSchedulerFactory.getScheduler().reset(tenantId));
+        executeAnswer.listEvents.addAll(milkSchedulerFactory.getScheduler().reset(executeParameters.tenantId));
         if (!BEventFactory.isError(executeAnswer.listEvents)) {
           executeAnswer.listEvents.add(eventSchedulerResetSuccess);
         }
-        StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(tenantId);
-        executeAnswer.result.put(cstJsonSchedulerStatus, statusScheduler.status.toString());
-        executeAnswer.listEvents.addAll(statusScheduler.listEvents);
-      } else if (VERBE.SCHEDULERSTATUS.equals(verbEnum)) {
-        StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(tenantId);
+        StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(executeParameters.tenantId);
         executeAnswer.result.put(cstJsonSchedulerStatus, statusScheduler.status.toString());
         executeAnswer.listEvents.addAll(statusScheduler.listEvents);
       } else if (VERBE.SCHEDULERCHANGE.equals(verbEnum)) {
         MilkSchedulerFactory milkSchedulerFactory = MilkSchedulerFactory.getInstance();
-        String newSchedulerChange = (String) parameters.get(cstSchedulerChangeType);
-        executeAnswer.listEvents.addAll(milkSchedulerFactory.changeTypeScheduler(newSchedulerChange, tenantId));
+        String newSchedulerChange = executeParameters.getParametersString(cstSchedulerChangeType);
+        executeAnswer.listEvents.addAll(milkSchedulerFactory.changeTypeScheduler(newSchedulerChange, executeParameters.tenantId));
 
         // get information on the new Scheduler then
         if ((!BEventFactory.isError(executeAnswer.listEvents))) {
-          StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(tenantId);
+          StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(executeParameters.tenantId);
           executeAnswer.result.put(cstJsonSchedulerStatus, statusScheduler.status.toString());
           executeAnswer.listEvents.addAll(statusScheduler.listEvents);
         }
       }
 
+      //------------------------------ Check Environment
+      if (addSchedulerStatus)
+      {
+
+        List<BEvent> listEvents= new ArrayList<BEvent>();
+        
+        // Schedule is part of any answer
+        Map<String, Object> mapScheduler = new HashMap<String, Object>();
+        if (milkSchedulerFactory.getScheduler() == null)
+          mapScheduler.put(cstJsonSchedulerStatus, cstJsonSchedulerStatus_V_STOPPED);
+        else {
+          StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(executeParameters.tenantId);
+          mapScheduler.put(cstJsonSchedulerStatus, statusScheduler.status.toString());
+          listEvents.addAll( statusScheduler.listEvents );
+          mapScheduler.put(cstJsonSchedulerType, milkSchedulerFactory.getScheduler().getType().toString());
+          mapScheduler.put(cstJsonSchedulerInfo, milkSchedulerFactory.getScheduler().getDescription());
+        }
+        
+        // Plug in
+        List<MilkPlugIn> list = detectListPlugIn(executeParameters.tenantId);
+        for (MilkPlugIn plugIn : list) {
+          listEvents.addAll(plugIn.checkEnvironment(executeParameters.tenantId));
+        }
+      
+        // plug tour
+        listEvents.addAll(milkPlugInTourFactory.checkEnvironment(executeParameters.tenantId));
+        
+        // filter then set status
+        listEvents = BEventFactory.filterUnique(listEvents);
+        
+        mapScheduler.put(cstJsonDashboardEvents, BEventFactory.getHtml( listEvents ));
+        mapScheduler.put(cstJsonDashboardSyntheticEvents, BEventFactory.getSyntheticHtml( listEvents ));
+
+        mapScheduler.put("listtypeschedulers", milkSchedulerFactory.getListTypeScheduler());
+        // return in scheduler the last heartBeat
+        mapScheduler.put("lastheartbeat", lastHeartBeat);
+
+        executeAnswer.result.put(cstJsonScheduler, mapScheduler);
+
+        
+        if (BEventFactory.isError(executeAnswer.listEvents))
+          executeAnswer.result.put(cstEnvironmentStatus, cstEnvironmentStatus_V_ERROR);
+        else
+          executeAnswer.result.put(cstEnvironmentStatus, cstEnvironmentStatus_V_CORRECT);
+
+      }
+      
+      
     } catch (Exception e) {
       StringWriter sw = new StringWriter();
       e.printStackTrace(new PrintWriter(sw));
       String exceptionDetails = sw.toString();
-      logger.severe("MilkCommand: ~~~~~~~~~~  : ERROR " + e + " at " + exceptionDetails);
+      logger.severe(logHeader+"ERROR " + e + " at " + exceptionDetails);
 
       executeAnswer.listEvents.add(new BEvent(eventInternalError, e.getMessage()));
     } catch (Error er) {
       StringWriter sw = new StringWriter();
       er.printStackTrace(new PrintWriter(sw));
       String exceptionDetails = sw.toString();
-      logger.severe("MilkCommand: ~~~~~~~~~~  : ERROR " + er + " at " + exceptionDetails);
+      logger.severe(logHeader+"ERROR " + er + " at " + exceptionDetails);
 
       executeAnswer.listEvents.add(new BEvent(eventInternalError, er.getMessage()));
     } finally {
@@ -454,13 +509,12 @@ public class MilkCmdControl extends BonitaCommand {
       executeAnswer.result.put(cstResultListEvents, BEventFactory.getHtml(executeAnswer.listEvents));
       if (verbEnum.HEARTBEAT.equals(verbEnum))
         logger.fine(logHeader + "MilkTourCommand Verb[" + (verbEnum == null ? "null" : verbEnum.toString()) + "] Tenant["
-          + tenantId + "] Error?" + BEventFactory.isError(executeAnswer.listEvents) + " in "
-          + (System.currentTimeMillis() - startTime) + " ms");
+            + executeParameters.tenantId + "] Error?" + BEventFactory.isError(executeAnswer.listEvents) + " in "
+            + (System.currentTimeMillis() - startTime) + " ms");
       else
         logger.info(logHeader + "MilkTourCommand Verb[" + (verbEnum == null ? "null" : verbEnum.toString()) + "] Tenant["
-            + tenantId + "] Error?" + BEventFactory.isError(executeAnswer.listEvents) + " in "
+            + executeParameters.tenantId + "] Error?" + BEventFactory.isError(executeAnswer.listEvents) + " in "
             + (System.currentTimeMillis() - startTime) + " ms");
-        
 
     }
 
@@ -504,6 +558,7 @@ public class MilkCmdControl extends BonitaCommand {
     return listEvents;
   }
 
+ 
   /* ******************************************************************************** */
   /*                                                                                  */
   /* timer() */
@@ -521,8 +576,8 @@ public class MilkCmdControl extends BonitaCommand {
 
   /**
    * thread to execute in a different thread to have a new connection
+   * 
    * @author Firstname Lastname
-   *
    */
   public class MyTruckMilkThread extends Thread {
 
@@ -563,6 +618,8 @@ public class MilkCmdControl extends BonitaCommand {
 
       ConnectorAPIAccessorImpl connectorAccessorAPI = new ConnectorAPIAccessorImpl(tenantId);
       Date currentDate = new Date();
+      String executionDescription = "";
+
       // check all the Tour now
       for (MilkPlugInTour plugInTour : getListTour()) {
         if (plugInTour.isEnable || plugInTour.isImmediateExecution()) {
@@ -572,6 +629,10 @@ public class MilkCmdControl extends BonitaCommand {
 
           if (plugInTour.isImmediateExecution() || plugInTour.nextExecutionDate != null
               && plugInTour.nextExecutionDate.getTime() < currentDate.getTime()) {
+
+            if (plugInTour.isImmediateExecution)
+              executionDescription += "(i)";
+            executionDescription += " "+plugInTour.getName()+" ";
 
             List<BEvent> listEvents = new ArrayList<BEvent>();
             MilkPlugIn plugIn = plugInTour.getPlugIn();
@@ -586,9 +647,20 @@ public class MilkCmdControl extends BonitaCommand {
               plugTourInput.tourName = plugTourReLoaded.getName();
 
               // ----------------- Execution
-              long timeBegin = System.currentTimeMillis();
-              output = plugIn.execute(plugTourInput, connectorAccessorAPI);
-              long timeEnd = System.currentTimeMillis();
+                long timeBegin = System.currentTimeMillis();
+                try
+                {
+                output = plugIn.execute(plugTourInput, connectorAccessorAPI);
+                }
+                catch(Exception e)
+                {
+                  if (output == null) {
+                    output = new PlugTourOutput(plugTourReLoaded);
+                    output.addEvent(new BEvent(eventPlugInViolation, "PlugIn[" + plugIn.getName() + "] Exception "+e.getMessage()));
+                    output.executionStatus = ExecutionStatus.CONTRACTVIOLATION;
+                  }
+                }
+                long timeEnd = System.currentTimeMillis();
 
               if (output == null) {
                 output = new PlugTourOutput(plugTourReLoaded);
@@ -596,6 +668,8 @@ public class MilkCmdControl extends BonitaCommand {
                 output.executionStatus = ExecutionStatus.CONTRACTVIOLATION;
               }
               output.executionTimeInMs = (timeEnd - timeBegin);
+
+              executionDescription += "(" + output.executionStatus + ") " + output.nbItemsProcessed + " in " + output.executionTimeInMs + ";";
 
             } catch (Exception e) {
               output = new PlugTourOutput(plugTourReLoaded);
@@ -607,8 +681,8 @@ public class MilkCmdControl extends BonitaCommand {
               if (output.executionStatus == ExecutionStatus.NOEXECUTION)
                 output.executionStatus = ExecutionStatus.SUCCESS;
 
-              plugInTour.setStatusLastExecution(currentDate, output);
-              milkPlugInTourFactory.saveExecution(currentDate, output);
+              
+              plugInTour.registerExecution(currentDate, output);
               listEvents.addAll(output.getListEvents());
             }
             // calculate the next time
@@ -619,10 +693,18 @@ public class MilkCmdControl extends BonitaCommand {
         } // end isEnable
 
       }
+      if (executionDescription.length()==0)
+        executionDescription = "No jobs executed;";
+      executionDescription= sdf.format(currentDate) + ":" + executionDescription;
+          
+      lastHeartBeat.add(executionDescription);
+      if (lastHeartBeat.size() > 10)
+        lastHeartBeat.remove(0);
+
     } catch (Exception e) {
-      logger.severe("MilkCmdControl.executeTimer: Exception " + e.getMessage());
+      logger.severe(logHeader+".executeTimer: Exception " + e.getMessage());
     } catch (Error er) {
-      logger.severe("MilkCmdControl.executeTimer: Error " + er.getMessage());
+      logger.severe(logHeader+".executeTimer: Error " + er.getMessage());
     }
     // we finished
     isInProgress = false;
@@ -715,37 +797,34 @@ public class MilkCmdControl extends BonitaCommand {
   /* detection method */
   /*                                                                                  */
   /* ******************************************************************************** */
-public List<BEvent> initialiseListPlugIn( long tenantId )
-{
-  List<BEvent> listEvents = new ArrayList<BEvent>();
-  listPlugIns = detectListPlugIn( tenantId);
-  try
-  {
-  // todo : get all the command deploy, and verify if this is not a PlugIn
-  for (MilkPlugIn plugIn : listPlugIns) {
-    // call the plug in, and init all now
-    listEvents.addAll(plugIn.initialize(tenantId));
-  }
-  } catch(Exception e)
-  {
-    StringWriter sw = new StringWriter();
-    e.printStackTrace(new PrintWriter(sw));
-    String exceptionDetails = sw.toString();
-    logger.severe("MilkCommand: ~~~~~~~~~~  : ERROR " + e + " at " + exceptionDetails);
+  public List<BEvent> initialiseListPlugIn(long tenantId) {
+    List<BEvent> listEvents = new ArrayList<BEvent>();
+    listPlugIns = detectListPlugIn(tenantId);
+    try {
+      // todo : get all the command deploy, and verify if this is not a PlugIn
+      for (MilkPlugIn plugIn : listPlugIns) {
+        // call the plug in, and init all now
+        listEvents.addAll(plugIn.initialize(tenantId));
+      }
+    } catch (Exception e) {
+      StringWriter sw = new StringWriter();
+      e.printStackTrace(new PrintWriter(sw));
+      String exceptionDetails = sw.toString();
+      logger.severe(logHeader+"ERROR " + e + " at " + exceptionDetails);
 
-    listEvents.add(new BEvent(eventInternalError, e.getMessage()));
-    
-  } catch (Error er) {
-  StringWriter sw = new StringWriter();
-  er.printStackTrace(new PrintWriter(sw));
-  String exceptionDetails = sw.toString();
-  logger.severe("MilkCommand: ~~~~~~~~~~  : ERROR " + er + " at " + exceptionDetails);
+      listEvents.add(new BEvent(eventInternalError, e.getMessage()));
 
-  listEvents.add(new BEvent(eventInternalError, er.getMessage()));
+    } catch (Error er) {
+      StringWriter sw = new StringWriter();
+      er.printStackTrace(new PrintWriter(sw));
+      String exceptionDetails = sw.toString();
+      logger.severe(logHeader+"ERROR " + er + " at " + exceptionDetails);
+
+      listEvents.add(new BEvent(eventInternalError, er.getMessage()));
+    }
+    return listEvents;
   }
-  return listEvents;
-}
-  
+
   public List<MilkPlugIn> detectListPlugIn(long tenantId) {
     List<MilkPlugIn> list = new ArrayList<MilkPlugIn>();
     // listPlugIns.add(new MilkDirectory());
@@ -755,8 +834,7 @@ public List<BEvent> initialiseListPlugIn( long tenantId )
     list.add(new MilkDeleteCases());
     list.add(new MilkSLA());
     list.add(new MilkEmailUsersTasks());
-    
-   
+
     return list;
   }
 
@@ -770,14 +848,14 @@ public List<BEvent> initialiseListPlugIn( long tenantId )
 
     private MilkCmdControl cmdControl;
     private long tenantId;
-    public boolean isFinish=false;
-    public String buttonName; 
+    public boolean isFinish = false;
+    public String buttonName;
     public PlugTourInput input;
     List<BEvent> listEvents;
     MilkPlugInTour plugInTour;
     public Map<String, Object> argsParameters;
-    
-    protected MySimpleTestThread(long tenantId, String buttonName,  MilkPlugInTour plugInTour, PlugTourInput input, Map<String, Object> argsParameters) {
+
+    protected MySimpleTestThread(long tenantId, String buttonName, MilkPlugInTour plugInTour, PlugTourInput input, Map<String, Object> argsParameters) {
       this.tenantId = tenantId;
       this.buttonName = buttonName;
       this.input = input;
@@ -786,16 +864,13 @@ public List<BEvent> initialiseListPlugIn( long tenantId )
     }
 
     public void run() {
-      try
-      {
+      try {
         ConnectorAPIAccessorImpl connectorAccessorAPI = new ConnectorAPIAccessorImpl(tenantId);
-        listEvents= plugInTour.getPlugIn().buttonParameters( buttonName, input, argsParameters, connectorAccessorAPI);
-      }
-      catch(Exception e)
-      {
+        listEvents = plugInTour.getPlugIn().buttonParameters(buttonName, input, argsParameters, connectorAccessorAPI);
+      } catch (Exception e) {
         listEvents.add(new BEvent(eventInternalError, e.getMessage()));
       }
-      isFinish=true;
+      isFinish = true;
     }
   }
   /**

@@ -19,7 +19,17 @@
 		this.showhistory = function(show) {
 			this.isshowhistory = show;
 		}
+		this.navbaractiv='Tour';
+		
+		this.getNavClass = function( tabtodisplay )
+		{
+			if (this.navbaractiv === tabtodisplay)
+			 return 'ng-isolate-scope active';
+			return 'ng-isolate-scope';
+		}
 
+		
+		
 		this.inprogress = false;
 		this.listplugtour =[];
 		this.listplugtourSimul = [ {
@@ -40,7 +50,7 @@
 		this.listplugin = [];
 		this.newtourname = '';
 		
-		this.scheduler={ 'enable': false};
+		this.scheduler={ 'enable': false, listtypeschedulers:[]};
 		
 		// -----------------------------------------------------------------------------------------
 		// getListPlugin
@@ -58,7 +68,7 @@
 			self.inprogress = true;
 			self.listevents='';
 			
-			$http.get('?page=custompage_truckmilk&action=init&t='+Date.now()).success(function(jsonResult) {
+			$http.get('?page=custompage_truckmilk&action=startup&t='+Date.now()).success(function(jsonResult) {
 				console.log("history", jsonResult);
 				self.inprogress = false;
 
@@ -90,13 +100,15 @@
 		}
 
 		this.autorefresh=false;
-		this.completeRefresh=false;
-		// Completerefresh : refresh the complete list, else refresh only some attributes
-		this.refresh = function( completeRefresh ) {
-			console.log("truckmilk:refresh ["+completeRefresh+"]");
+		this.completeStatus=false;
+		
+		
+		// completeStatus : refresh the complete list + getStatus on scheduler, else refresh only some attributes
+		this.refresh = function( completeStatus ) {
+			console.log("truckmilk:completeStatus ["+completeStatus+"]");
 
 			var self = this;
-
+			self.deploimentsuc=''; // no need to keep it for ever
 			console.log("truckmilk: refresh listplugtour="+angular.toJson( self.listplugtour )); 
 			
 			
@@ -107,21 +119,20 @@
 				console.log("Refresh in progress, skip this one");
 				return;
 			}
-			if (! this.autorefresh && ! completeRefresh)
-			{
-				console.log("No refresh");
-				return;
-			}
-				
-			self.completeRefresh = completeRefresh;
+			
+			var verb="refresh";
+			if (completeStatus)
+				verb="getstatus";
+			
+			self.completeStatus = completeStatus;
 			self.listevents='';
 			self.inprogress = true;
 			
-			$http.get('?page=custompage_truckmilk&action=refresh&t='+Date.now()).success(function(jsonResult) {
+			$http.get('?page=custompage_truckmilk&action='+verb+'&t='+Date.now()).success(function(jsonResult) {
 				// console.log("history", jsonResult);
 				self.inprogress = false;
 				self.deploiment = jsonResult.deploiment;
-				if (self.completeRefresh)
+				if (self.completeStatus)
 				{
 					self.listplugtour 	= jsonResult.listplugtour;
 					// prepare defaut value
@@ -129,6 +140,7 @@
 						var plugtourindex = self.listplugtour[i];
 						self.preparePlugTourParameter(plugtourindex);
 					}
+					self.scheduler 		= jsonResult.scheduler;
 				}
 				else
 				{
@@ -162,7 +174,7 @@
 				}
 				self.listplugin 	= jsonResult.listplugin;
 				self.listevents 	= jsonResult.listevents;
-				self.scheduler 		= jsonResult.scheduler;
+				
 
 			}).error(function() {
 
@@ -214,6 +226,7 @@
 			var self=this;
 			// update maybe very heavy : truncate it
 			self.listeventsexecution="";
+			plugtour.listevents='';
 			// first action will be a reset
 			// prepare the string
 			var  plugtourcopy =angular.copy( plugtour );
@@ -223,7 +236,7 @@
 			
 			var json = angular.toJson( plugtourcopy, false);
 			
-			self.simulatePost('updateTour', json );
+			self.sendPost('updateTour', json );
 		}
 		
 		
@@ -242,6 +255,9 @@
 			console.log("operationTour START ["+action+"]");
 			
 			var self = this;
+			self.action = action;
+			self.addlistevents= "";
+			self.listevents = "";
 			self.inprogress = true;
 			self.currentplugtour = plugtour;
 			self.refreshParam = refreshParam;
@@ -264,8 +280,12 @@
 					self.currentplugtour.enable = jsonResult.enable;
 				}
 
-				if (self.currentplugtour != null)
+				if (self.currentplugtour != null) {
 					self.currentplugtour.listevents = jsonResult.listevents;
+				}
+				else if (self.action==='addTour') {
+					self.addlistevents = jsonResult.listevents;
+				}
 				else {
 					self.listevents = jsonResult.listevents;
 				}
@@ -332,10 +352,10 @@
 
 		     return Array.isArray( value );
 	     }
-		this.addInArray = function( valueArray)
+		this.addInArray = function( valueArray, valueToAdd )
 		{
 			console.log("addInArray valueArray="+angular.toJson( valueArray ));
-			valueArray.push(  {} );
+			valueArray.push(  valueToAdd );
 			// console.log("add valueArray="+angular.toJson( valueArray ));
 		}
 		this.removeInArray = function( valueArray, value)
@@ -372,7 +392,7 @@
 			parameterdef.listeventsexecution="";
 			self.currentButtonExecution = parameterdef;	
 			parameterdef.listeventsexecution="";
-			self.simulatePost('testButton', angular.toJson( plugtourcopy ) );
+			self.sendPost('testButton', angular.toJson( plugtourcopy ) );
 		}
 				
 		// -----------------------------------------------------------------------------------------
@@ -437,7 +457,7 @@
 		this.getNowStyle= function( plugtour )
 		{
 			if (plugtour.imediateExecution)
-				return "btn btn-danger btn-xs"
+				return "btn btn-success btn-xs"
 			return "btn btn-primary btn-xs";
 		}
 		this.getNowTitle=function( plugtour )
@@ -490,13 +510,12 @@
 			var param= { 'operation': operation, 'newscheduler': this.scheduler.selectscheduler };
 			var json = encodeURIComponent(angular.toJson(param, true));
 			self.scheduler.schedulerlistevents='';
-			
-			$http.get('?page=custompage_truckmilk&action=schedulermaintenance&paramjson=' + json+'&t='+Date.now()).success(function(jsonResult) {
+
+			$http.get('?page=custompage_truckmilk&action=status&paramjson=' + json+'&t='+Date.now()).success(function(jsonResult) {
 				console.log("scheduler", jsonResult);
 				self.inprogress = false;
 
-				self.scheduler.status 		= jsonResult.status;
-				self.scheduler.schedulerlistevents	= jsonResult.listevents;
+				self.scheduler	= jsonResult;
 			}).error(function() {
 
 				self.inprogress = false;
@@ -507,7 +526,9 @@
 		
 		this.getListTypeScheduler = function()
 		{
-			return this.scheduler.listtypeschedulers;
+			if (this.scheduler)
+				return this.scheduler.listtypeschedulers;
+			return [];
 		}
 		
 		// -----------------------------------------------------------------------------------------
@@ -529,7 +550,7 @@
 			"advPercent":0
 			
 		}
-		this.simulatePost = function(finalaction, json )
+		this.sendPost = function(finalaction, json )
 		{
 			console.log("executeUrl action="+finalaction+" Json="+ angular.toJson( json ));
 			var self=this;

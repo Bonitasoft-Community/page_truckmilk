@@ -128,7 +128,7 @@ public class Actions {
             MilkAccessAPI milkAccessAPI = MilkAccessAPI.getInstance();
 
             // logger.info("#### log:Actions_2 ["+action+"]");
-            if ("init".equals(action))
+            if ("startup".equals(action))
             {
                actionAnswer.responseMap = milkAccessAPI.startup( parameter);
             }
@@ -136,7 +136,10 @@ public class Actions {
             {
                actionAnswer.responseMap = milkAccessAPI.getRefreshInformation( parameter);
             }
-            
+            else if ("getstatus".equals(action))
+            {
+               actionAnswer.responseMap = milkAccessAPI.getStatusInformation( parameter);
+            }
             else if ("addTour".equals(action))
             {
                actionAnswer.responseMap = milkAccessAPI.addTour( parameter);                

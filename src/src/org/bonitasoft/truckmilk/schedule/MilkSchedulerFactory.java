@@ -13,6 +13,7 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt.StatusScheduler;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt.TypeScheduler;
+import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt.TypeStatus;
 import org.bonitasoft.truckmilk.tour.MilkPlugInTourFactory;
 
 /**
@@ -144,10 +145,17 @@ public class MilkSchedulerFactory {
       statusScheduler = new StatusScheduler();
       statusScheduler.listEvents.add(eventNoScheduler);
     }
-    SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-    String message = "Last Heart Beat[" + (lastExecution == null ? "undefined" : sdf.format(lastExecution)) + "]";
-    message += ", Next[" + (nextDateHeartBeat == null ? "undefined" : sdf.format(nextDateHeartBeat)) + "]";
-    statusScheduler.listEvents.add(new BEvent(EVENT_HEART_BEAT, message));
+    if (!BEventFactory.isError(statusScheduler.listEvents))
+    {
+      SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+      String message = "Last Heart Beat[" + (lastExecution == null ? "undefined" : sdf.format(lastExecution)) + "]";
+      if (statusScheduler.status == TypeStatus.STARTED)
+        message += ", Next[" + (nextDateHeartBeat == null ? "undefined" : sdf.format(nextDateHeartBeat)) + "]";
+      else
+        message +="Scheduler stopped;";
+      
+      statusScheduler.listEvents.add(new BEvent(EVENT_HEART_BEAT, message));
+    }
     return statusScheduler;
 
   }

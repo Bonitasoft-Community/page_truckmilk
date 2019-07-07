@@ -20,7 +20,7 @@ public class MilkMail extends MilkPlugIn {
    * check the environment : for the milkEmailUsersTasks, we require to be able to send an email
    */
   public List<BEvent> checkEnvironment(long tenantId) {
-    return SendMailEnvironment.checkEnvironment(tenantId);
+    return SendMailEnvironment.checkEnvironment(tenantId, this);
   };
 
   @Override

@@ -29,6 +29,7 @@ import org.bonitasoft.engine.transaction.TransactionService;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
+import org.bonitasoft.truckmilk.tour.MilkCmdControl;
 import org.bonitasoft.truckmilk.tour.MilkCmdControlAPI;
 
 /**
@@ -51,20 +52,27 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
    */
   private static final long serialVersionUID = 6612011028374019122L;
 
-  private static BEvent eventScheduleError = new BEvent(MilkCmdControlAPI.class.getName(), 1, Level.ERROR,
+  private static BEvent EVENT_QUARTZ_SCHEDULE_ERROR = new BEvent(MilkScheduleQuartz.class.getName(), 1, Level.ERROR,
       "Quartz Job failed", "Check the error", "The different monitoring can't run", "See the error");
-  private static BEvent eventDeployQuartzJob = new BEvent(MilkCmdControlAPI.class.getName(), 2, Level.ERROR,
+  
+  private static BEvent EVENT_DEPLOY_QUARTZ_JOB = new BEvent(MilkScheduleQuartz.class.getName(), 2, Level.ERROR,
       "Deploy Quartz Job failed", "To have an execution with the correct frequency, a job has to be deploy. Java class implementation of the job failed", "The different monitoring can't run", "See the error");
 
-  private static BEvent eventQuartzNoJob = new BEvent(MilkCmdControlAPI.class.getName(), 3, Level.ERROR,
+  private static BEvent EVENT_QUARTZ_NO_JOB = new BEvent(MilkScheduleQuartz.class.getName(), 3, Level.ERROR,
       "No Quartz Job found", "The Quartz Job does not exist", "No monitoring", "Reset the scheduler");
 
-  private static BEvent eventQuartzJobClassNotDeployed = new BEvent(MilkCmdControlAPI.class.getName(), 4, Level.ERROR,
+  private static BEvent EVENT_QUARTZ_JOB_CLASS_NOT_DEPLOYED = new BEvent(MilkScheduleQuartz.class.getName(), 4, Level.ERROR,
       "Quartz Job not deployed", "The JAR file containing the Quartz Job [TruckMilk-1.0-Quartzjob.jar] is not deployed. It must be deployed manually in the webapps/bonita/WEB-INF/lib", "No monitoring",
       "Deploy it: copy the JAR file [TruckMilk-1.0-Quartzjob.jar] delivered in the custom page to the Bonita Web Application (<tomcat>/webapps/bonita/WEB-INF/lib) ");
 
-  private static BEvent eventQuartzJobUpAndRunning = new BEvent(MilkCmdControlAPI.class.getName(), 4, Level.SUCCESS,
+  private static BEvent EVENT_QUARTZ_JOB_UP_AND_RUNNING = new BEvent(MilkScheduleQuartz.class.getName(), 4, Level.SUCCESS,
       "Quartz Job Up and running", "The Quartz Job is up and running");
+
+  private static BEvent EVENT_QUARTZ_SCHEDULER_STOPPED = new BEvent(MilkScheduleQuartz.class.getName(), 5, Level.SUCCESS,
+      "Scheduler is stopped", "The Scheduler is stopped");
+
+  private static BEvent EVENT_QUARTZ_SCHEDULER_STARTED = new BEvent(MilkScheduleQuartz.class.getName(), 6, Level.SUCCESS,
+      "Scheduler is started", "The Scheduler is started");
 
   private static Logger logger = Logger.getLogger(MilkScheduleQuartz.class.getName());
   private static String logHeader = "MilkScheduleQuartz ~~ ";
@@ -89,6 +97,11 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
   public String mJsonMilkOperation;
 
   public String mCommandName;
+  
+  /**
+   * administrator ask to stop the scheduler
+   */
+  public boolean isStarted=true;
 
   public MilkScheduleQuartz() {
     super();
@@ -109,7 +122,7 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
       Object ojb = classMilk.newInstance();
     } catch (Exception e) {
       logger.severe(logHeader + "Can't instanciate class - the class [org.bonitasoft.truckmilk.schedule.quartz.MilkQuartzJob] is not deployed");
-      listEvents.add(new BEvent(eventQuartzJobClassNotDeployed, "org.bonitasoft.truckmilk.schedule.quartz.MilkQuartzJob"));
+      listEvents.add(new BEvent(EVENT_QUARTZ_JOB_CLASS_NOT_DEPLOYED, "org.bonitasoft.truckmilk.schedule.quartz.MilkQuartzJob"));
 
     }
     return listEvents;
@@ -123,7 +136,14 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
   public StatusScheduler getStatus(long tenantId) {
     StatusScheduler statusScheduler = new StatusScheduler();
     statusScheduler.status = TypeStatus.SHUTDOWN;
-
+    
+    // administrator ask to stop it ? Return immediately it's stopped.
+    if (!isStarted)
+    {
+      statusScheduler.status = TypeStatus.STOPPED;
+      return statusScheduler;
+    }
+    
     try {
       SchedulerService bonitaScheduler = ServiceAccessorFactory.getInstance().createPlatformServiceAccessor()
           .getSchedulerService();
@@ -139,7 +159,7 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
         }
       }
       if (!isQuartzJob)
-        statusScheduler.listEvents.add(eventQuartzNoJob);
+        statusScheduler.listEvents.add(EVENT_QUARTZ_NO_JOB);
 
       // can access the Job class ?
       boolean isQuartzClass = false;
@@ -147,7 +167,7 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
       isQuartzClass = !BEventFactory.isError(statusScheduler.listEvents);
 
       if (isQuartzJob && isQuartzClass)
-        statusScheduler.listEvents.add(eventQuartzJobUpAndRunning);
+        statusScheduler.listEvents.add(EVENT_QUARTZ_JOB_UP_AND_RUNNING);
 
     } catch (Exception e) {
 
@@ -163,7 +183,10 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
    * @return
    */
   public List<BEvent> start(long tenantId) {
-    return new ArrayList<BEvent>();
+    isStarted=true;
+    ArrayList<BEvent> listEvents= new ArrayList<BEvent>();
+    listEvents.add(EVENT_QUARTZ_SCHEDULER_STARTED);
+    return listEvents;
   }
 
   /**
@@ -172,7 +195,10 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
    * @return
    */
   public List<BEvent> stop(long tenantId) {
-    return new ArrayList<BEvent>();
+    isStarted=false;
+    ArrayList<BEvent> listEvents= new ArrayList<BEvent>();
+    listEvents.add(EVENT_QUARTZ_SCHEDULER_STOPPED);
+    return listEvents;
   }
 
   /**
@@ -278,7 +304,7 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
       String exceptionDetails = sw.toString();
 
       logger.severe(logHeader + "~~~~~~~~~~  : ERROR " + e + " at " + exceptionDetails);
-      listEvents.add(new BEvent(eventScheduleError, e, ""));
+      listEvents.add(new BEvent(EVENT_QUARTZ_SCHEDULE_ERROR, e, ""));
     }
 
     return listEvents;
@@ -381,7 +407,7 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
     } catch (final Exception e) {
       message += "Error " + e.getMessage();
       messageError = true;
-      listEvents.add(new BEvent(eventDeployQuartzJob, e, "Jar file[" + fileJar.getAbsolutePath() + "]"));
+      listEvents.add(new BEvent(EVENT_DEPLOY_QUARTZ_JOB, e, "Jar file[" + fileJar.getAbsolutePath() + "]"));
     } finally {
       try {
         if (transactionService != null)

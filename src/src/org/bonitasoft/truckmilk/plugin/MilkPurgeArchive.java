@@ -120,22 +120,25 @@ public class MilkPurgeArchive extends MilkPlugIn {
       Date currentDate = new Date();
       long timeSearch = currentDate.getTime() - delayInDay * 1000 * 60 * 60 * 24;
 
-      searchActBuilder.greaterOrEquals(ArchivedProcessInstancesSearchDescriptor.ARCHIVE_DATE, timeSearch);
+      searchActBuilder.lessOrEquals(ArchivedProcessInstancesSearchDescriptor.ARCHIVE_DATE, timeSearch);
       searchActBuilder.sort(ArchivedProcessInstancesSearchDescriptor.ARCHIVE_DATE, Order.ASC);
       SearchResult<ArchivedProcessInstance> searchArchivedProcessInstance;
       searchArchivedProcessInstance = processAPI.searchArchivedProcessInstances(searchActBuilder.done());
       if (searchArchivedProcessInstance.getCount() == 0) {
         plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+        plugTourOutput.nbItemsProcessed=0;
         return plugTourOutput;
       }
       
       List<Long> sourceProcessInstanceIds = new ArrayList<Long>();
 
       for (ArchivedProcessInstance archivedProcessInstance : searchArchivedProcessInstance.getResult()) {
+        // logger.info("instance"+archivedProcessInstance.getSourceObjectId()+" archiveDate"+archivedProcessInstance.getArchiveDate().getTime()+" <>"+timeSearch);
         sourceProcessInstanceIds.add(archivedProcessInstance.getSourceObjectId());
       }
       try {
         processAPI.deleteArchivedProcessInstancesInAllStates(sourceProcessInstanceIds);
+        plugTourOutput.nbItemsProcessed += sourceProcessInstanceIds.size();
         plugTourOutput.addEvent(new BEvent(eventDeletionSuccess, "Purge:" + sourceProcessInstanceIds.size()));
 
       } catch (DeletionException e) {

@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.truckmilk.plugin.MilkPlugIn;
 
 /**
  * the main error when we want to verify that the email is ready is the fact the activation Mail class is correclty deployed.
@@ -15,7 +16,7 @@ import org.bonitasoft.log.event.BEvent.Level;
 public class SendMailEnvironment {
 
   // this event must be here, and not in the SendEmailClass : any try to load the sendEma
-  public static BEvent EVENT_MAIL_NOTDEPLOYED = new BEvent(SendMail.class.getName(), 2,
+  public static BEvent EVENT_MAIL_NOTDEPLOYED = new BEvent(SendMailEnvironment.class.getName(), 2,
       Level.ERROR,
       "Mail Not deployed", "Mail librairy are not deployed",
       "Emails can't be send",
@@ -27,7 +28,7 @@ public class SendMailEnvironment {
    * @param tenantId
    * @return
    */
-  public static List<BEvent> checkEnvironment(long tenantId) {
+  public static List<BEvent> checkEnvironment(long tenantId, MilkPlugIn plugInRequester) {
     List<BEvent> listEvents = new ArrayList<BEvent>();
     // verify that 
     // check if the mail is deployed
@@ -36,7 +37,7 @@ public class SendMailEnvironment {
       listEvents.addAll(sendMail.verifyEmailDeployed(false));
     }
     catch (Error er) {
-      listEvents.add(EVENT_MAIL_NOTDEPLOYED);
+      listEvents.add( new BEvent(EVENT_MAIL_NOTDEPLOYED, "PlugIn:"+plugInRequester.getDescription().displayName));
      }  
     return listEvents;
 

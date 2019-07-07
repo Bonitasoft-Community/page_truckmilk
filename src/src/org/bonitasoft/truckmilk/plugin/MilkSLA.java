@@ -258,7 +258,7 @@ public class MilkSLA extends MilkPlugIn {
    * check the environment : for the milkEmailUsersTasks, we require to be able to send an email
    */
   public List<BEvent> checkEnvironment(long tenantId) {
-      return SendMailEnvironment.checkEnvironment(tenantId);
+      return SendMailEnvironment.checkEnvironment(tenantId, this);
   };
 
   
@@ -312,7 +312,13 @@ public class MilkSLA extends MilkPlugIn {
     plugInDescription.addParameter(cstParamMaximumTask);
     plugInDescription.addParameter(cstParamAnalyseCaseId);
     
-    SendMail.addPlugInParameter(SendMail.MAIL_DIRECTION.SENDONLY, plugInDescription);
+    try
+    {
+      SendMail.addPlugInParameter(SendMail.MAIL_DIRECTION.SENDONLY, plugInDescription);
+    } catch (Error er) {
+      // do nothing here, the error will show up again in the check Environment
+      // Cause : the Email Jar file is not installed, then java.lang.NoClassDefFoundError: javax/mail/Address
+    }
 
     /*
      * plugInDescription.addParameterFromMapJson(

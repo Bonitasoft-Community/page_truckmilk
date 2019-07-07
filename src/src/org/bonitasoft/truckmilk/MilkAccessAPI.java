@@ -115,22 +115,19 @@ public class MilkAccessAPI {
       return result;
     }
 
-    // // startyupo: check the environment   
-    result.putAll(milkCmdControlAPI.checkEnvironment(parameter.commandAPI, parameter.getTenantId()));
-    String statusDeployment="";
+    // // startup: check the environment   
+    String statusDeployment = "";
     if (deployStatus.newDeployment)
-      statusDeployment="Command deployed with success;";
-    else if (! deployStatus.alreadyDeployed)
-      statusDeployment="Command not deployed;";
-      
-    if (MilkCmdControl.cstEnvironmentStatus_V_ERROR.equals(result.get(MilkCmdControl.cstEnvironmentStatus)))
-    {
-      statusDeployment="Bad environment;";
-    }
-    else
-      //  second call the command		    
-      result.putAll(milkCmdControlAPI.getInitialInformation(parameter.commandAPI, parameter.getTenantId()));
-    
+      statusDeployment = "Command deployed with success;";
+    else if (!deployStatus.alreadyDeployed)
+      statusDeployment = "Command not deployed;";
+
+    if (MilkCmdControl.cstEnvironmentStatus_V_ERROR.equals(result.get(MilkCmdControl.cstEnvironmentStatus))) {
+      statusDeployment = "Bad environment;";
+    } else
+      //  second call the command getStatus		    
+      result.putAll(milkCmdControlAPI.getStatus(parameter.commandAPI, parameter.getTenantId()));
+
     result.put(cstJsonDeploimentsuc, statusDeployment);
     return result;
   }
@@ -142,6 +139,14 @@ public class MilkAccessAPI {
     return milkCmdControlAPI.getRefreshInformation(parameter.commandAPI, parameter.getTenantId());
   }
 
+  public Map<String, Object> getStatusInformation(Parameter parameter) {
+    // first, deploy the command if needed
+    MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
+    // second call the command          
+    return milkCmdControlAPI.getStatus(parameter.commandAPI, parameter.getTenantId());
+  }
+  
+  
   public Map<String, Object> addTour(Parameter parameter) {
     MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
     return milkCmdControlAPI.callTourOperation(MilkCmdControl.VERBE.ADDTOUR, parameter.information, parameter.commandAPI, parameter.getTenantId());
@@ -161,15 +166,14 @@ public class MilkAccessAPI {
     MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
     return milkCmdControlAPI.callTourOperation(MilkCmdControl.VERBE.UPDATETOUR, parameter.information, parameter.commandAPI, parameter.getTenantId());
   }
-  
+
   public Map<String, Object> testButton(Parameter parameter) {
     MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
     Map<String, Object> information = parameter.information;
     information.put(MilkCmdControl.cstButtonName, parameter.information.get("buttonName"));
     return milkCmdControlAPI.callTourOperation(MilkCmdControl.VERBE.TESTBUTTONARGS, parameter.information, parameter.commandAPI, parameter.getTenantId());
   }
-  
-  
+
   public Map<String, Object> immediateExecution(Parameter parameter) {
     MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
     return milkCmdControlAPI.callTourOperation(MilkCmdControl.VERBE.IMMEDIATETOUR, parameter.information, parameter.commandAPI, parameter.getTenantId());
@@ -179,6 +183,7 @@ public class MilkAccessAPI {
     MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
     return milkCmdControlAPI.callTourOperation(MilkCmdControl.VERBE.STARTTOUR, parameter.information, parameter.commandAPI, parameter.getTenantId());
   }
+
   public Map<String, Object> scheduler(Parameter parameter) {
     MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
     return milkCmdControlAPI.callTourOperation(MilkCmdControl.VERBE.SCHEDULERSTARTSTOP, parameter.information, parameter.commandAPI, parameter.getTenantId());

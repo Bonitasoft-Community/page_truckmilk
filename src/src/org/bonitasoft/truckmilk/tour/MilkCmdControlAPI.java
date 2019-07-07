@@ -77,7 +77,8 @@ public class MilkCmdControlAPI {
     commandDescription.mainCommandClassName = MilkCmdControl.class.getName();
     commandDescription.mainJarFile = "TruckMilk-1.0-Page.jar";
     commandDescription.commandDescription = MilkCmdControl.cstCommandDescription;
-    commandDescription.dependencyJars = new String[] { "bonita-event-1.2.0.jar", "bonita-properties-1.6.2.jar" }; // "mail-1.5.0-b01.jar", "activation-1.1.jar"};
+    // "bonita-commanddeployment-1.2.jar" is deployed automaticaly with BonitaCommandDeployment
+    commandDescription.dependencyJars = new String[] {  "bonita-event-1.4.0.jar", "bonita-properties-1.6.2.jar" }; // "mail-1.5.0-b01.jar", "activation-1.1.jar"};
 
     BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(MilkCmdControl.cstCommandName);
     DeployStatus deployStatus = bonitaCommand.checkAndDeployCommand(commandDescription, true, tenantId, commandAPI, platFormAPI);
@@ -120,11 +121,6 @@ public class MilkCmdControlAPI {
       result.put(MilkCmdControl.cstResultListEvents, BEventFactory.getHtml(listEvents));
     }
 
-    else if ("status".equals(operation)) {
-      operationManaged = true;
-      result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULERSTATUS.toString(), parameters, tenantId, commandAPI);
-    }
-
     if ("changescheduler".equals(operation)) {
       operationManaged = true;
       parameters.put(MilkCmdControl.cstSchedulerChangeType, (String) information.get("newscheduler"));
@@ -146,23 +142,12 @@ public class MilkCmdControlAPI {
   /*                                                                                  */
   /* ******************************************************************************** */
 
-  public Map<String, Object> checkEnvironment(CommandAPI commandAPI, long tenantId) {
+  public Map<String, Object> getStatus(CommandAPI commandAPI, long tenantId) {
     BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(MilkCmdControl.cstCommandName);
 
-    return bonitaCommand.callCommand(MilkCmdControl.VERBE.CHECKENVIRONMENT.toString(), null, tenantId, commandAPI);
+    return bonitaCommand.callCommand(MilkCmdControl.VERBE.GETSTATUS.toString(), null, tenantId, commandAPI);
   }
 
-  /**
-   * get all initial information
-   * 
-   * @return
-   */
-  public Map<String, Object> getInitialInformation(CommandAPI commandAPI, long tenantId) {
-    BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(MilkCmdControl.cstCommandName);
-
-    return bonitaCommand.callCommand(MilkCmdControl.VERBE.INITALINFORMATION.toString(), null, tenantId, commandAPI);
-
-  }
 
   public Map<String, Object> getRefreshInformation(CommandAPI commandAPI, long tenantId) {
     BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(MilkCmdControl.cstCommandName);

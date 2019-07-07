@@ -16,6 +16,7 @@ import org.bonitasoft.truckmilk.plugin.MilkPlugIn.ExecutionStatus;
 import org.bonitasoft.truckmilk.plugin.MilkPlugIn.PlugInDescription;
 import org.bonitasoft.truckmilk.plugin.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.plugin.MilkPlugIn.PlugTourOutput;
+
 import org.json.simple.JSONValue;
 import org.quartz.CronExpression;
 
@@ -61,10 +62,14 @@ public class MilkPlugInTour {
   public String cronSt = "";
   public Date nextExecutionDate;
 
-  public PlugTourOutput lastExecutionOutput;
 
+  /** keep the last Execution Date and Status, for the dashboard
+   * 
+   */
   public Date lastExecutionDate;
-
+  public ExecutionStatus lastExecutionStatus;
+  
+  
   public Map<String, Object> parameters = new HashMap<String, Object>();
 
   public MilkPlugInTour(String name, MilkPlugIn plugIn) {
@@ -110,63 +115,7 @@ public class MilkPlugInTour {
    * /*
    */
   /* ******************************************************************************** */
-  public static MilkPlugInTour getInstanceFromJson(String jsonSt, MilkCmdControl milkCmdControl) {
-    Map<String, Object> jsonMap = (Map<String, Object>) JSONValue.parse(jsonSt);
-    if (jsonMap == null)
-      return null;
-
-    String plugInName = (String) jsonMap.get(cstJsonPluginName);
-    MilkPlugIn plugIn = milkCmdControl.getPluginFromName(plugInName);
-    if (plugIn == null)
-      return null;
-
-    String name = (String) jsonMap.get(cstJsonName);
-    MilkPlugInTour plugInTour = new MilkPlugInTour(name, plugIn);
-    plugInTour.description = (String) jsonMap.get(cstJsonDescription);
-
-    plugInTour.id = getLongValue(jsonMap.get(cstJsonId), 0L);
-    plugInTour.checkId();
-
-    // clone the parameters !
-    // new HashMap<>(description.getParametersMap()) not need at this moment because the maps is created
-    plugInTour.parameters = (Map<String, Object>) jsonMap.get(cstJsonParameters);
-    if (plugInTour.parameters == null)
-      plugInTour.parameters = new HashMap<String, Object>();
-
-    plugInTour.cronSt = (String) jsonMap.get(cstJsonCron);
-    // search the name if all the list
-    plugInTour.isEnable = getBooleanValue(jsonMap.get(cstJsonEnable), false);
-    plugInTour.isImmediateExecution = getBooleanValue(jsonMap.get(cstJsonImmediateExecution), false);
-    Long nextExecutionDateLong = (Long) jsonMap.get(cstJsonNextExecution);
-    if (nextExecutionDateLong != null)
-      plugInTour.nextExecutionDate = new Date(nextExecutionDateLong);
-
-    Long lastExecutionDateLong = (Long) jsonMap.get(cstJsonLastExecution);
-    if (lastExecutionDateLong != null)
-      plugInTour.lastExecutionDate = new Date(lastExecutionDateLong);
-
-    if (jsonMap.get(cstJsonLastExecutionListEventsSt) != null) {
-      if (plugInTour.lastExecutionOutput == null)
-        plugInTour.lastExecutionOutput = new PlugTourOutput(plugInTour);
-      plugInTour.lastExecutionOutput.listEventsSt = (String) jsonMap.get(cstJsonLastExecutionListEventsSt);
-    }
-    if (jsonMap.get(cstJsonLastExecutionStatus) != null) {
-      if (plugInTour.lastExecutionOutput == null)
-        plugInTour.lastExecutionOutput = new PlugTourOutput(plugInTour);
-      plugInTour.lastExecutionOutput.executionStatus = ExecutionStatus.valueOf((String) jsonMap.get(cstJsonLastExecutionStatus));
-    }
-    if (jsonMap.get(cstJsonLastExecutionTimeinMs) != null) {
-      if (plugInTour.lastExecutionOutput == null)
-        plugInTour.lastExecutionOutput = new PlugTourOutput(plugInTour);
-      plugInTour.lastExecutionOutput.executionTimeInMs = (Long) jsonMap.get(cstJsonLastExecutionTimeinMs);
-    }
-
-    if (plugInTour.isEnable && plugInTour.nextExecutionDate == null)
-      plugInTour.calculateNextExecution();
-
-    return plugInTour;
-  }
-
+ 
   /**
    * return a boolean value, and set a default one
    * 
@@ -269,7 +218,7 @@ public class MilkPlugInTour {
   }
 
   /**
-   * Next check ? Start immediatemy
+   * Next check ? Start immediately
    */
   public void setImmediateExecution(boolean immediateExecution) {
     isImmediateExecution = immediateExecution;
@@ -280,11 +229,7 @@ public class MilkPlugInTour {
     return isImmediateExecution;
   }
 
-  public void setStatusLastExecution(Date dateExecution, PlugTourOutput plugInOutput) {
-    lastExecutionOutput = plugInOutput;
-    lastExecutionDate = dateExecution;
-  }
-
+ 
   /**
    * get the parameters for this tour
    * 
@@ -298,7 +243,7 @@ public class MilkPlugInTour {
    * @param parameters
    */
   public void setTourParameters(Map<String, Object> parameters) {
-    this.parameters = parameters;
+    this.parameters = parameters ==null ? new HashMap<String,Object>() : parameters;
   }
 
   /* ******************************************************************************** */
@@ -323,13 +268,87 @@ public class MilkPlugInTour {
   private final static String cstJsonCron = "cron";
   private final static String cstJsonNextExecution = "nextexecution";
   private final static String cstJsonLastExecution = "lastexecution";
-  private final static String cstJsonLastExecutionTimeinMs = "lastexecutiontimeinms";
-  private final static String cstJsonLastExecutionStatus = "lastexecutionstatus";
-  private final static String cstJsonLastExecutionListEventsSt = "lastexecutionlistevents";
   private final static String cstJsonName = "name";
   private final static String cstJsonId = "id";
   private final static String cstJsonImmediateExecution = "imediateExecution";
+  private final static String cstJsonlastExecutionStatus="lastexecutionstatus";
+  
+  // saved last execution  
+  private final static String cstJsonSavedExec = "savedExecution";
+  private final static String cstJsonSaveExecDate = "execDate";
+  private final static String cstJsonSaveExecStatus = "status";
+  private final static String cstJsonSaveExecListEventsSt = "listevents";
+  private final static String cstJsonSaveExecExplanation = "explanation";
+  private final static String cstJsonSaveExecItemsProcessed = "itemprocessed";
+  private final static String cstJsonSaveExecTimeinMs = "timeinms";
 
+  /**
+   * getInstanceFromMap (the load)
+   * @param jsonSt
+   * @param milkCmdControl
+   * @return
+   */
+  
+  public static MilkPlugInTour getInstanceFromJson(String jsonSt, MilkCmdControl milkCmdControl) {
+    Map<String, Object> jsonMap = (Map<String, Object>) JSONValue.parse(jsonSt);
+    if (jsonMap == null)
+      return null;
+
+    String plugInName = (String) jsonMap.get(cstJsonPluginName);
+    MilkPlugIn plugIn = milkCmdControl.getPluginFromName(plugInName);
+    if (plugIn == null)
+      return null;
+
+    String name = (String) jsonMap.get(cstJsonName);
+    MilkPlugInTour plugInTour = new MilkPlugInTour(name, plugIn);
+    plugInTour.description = (String) jsonMap.get(cstJsonDescription);
+
+    plugInTour.id = getLongValue(jsonMap.get(cstJsonId), 0L);
+    plugInTour.checkId();
+
+    // clone the parameters !
+    // new HashMap<>(description.getParametersMap()) not need at this moment because the maps is created
+    plugInTour.parameters = (Map<String, Object>) jsonMap.get(cstJsonParameters);
+    if (plugInTour.parameters == null)
+      plugInTour.parameters = new HashMap<String, Object>();
+
+    plugInTour.cronSt = (String) jsonMap.get(cstJsonCron);
+    // search the name if all the list
+    plugInTour.isEnable = getBooleanValue(jsonMap.get(cstJsonEnable), false);
+    plugInTour.isImmediateExecution = getBooleanValue(jsonMap.get(cstJsonImmediateExecution), false);
+    Long nextExecutionDateLong = (Long) jsonMap.get(cstJsonNextExecution);
+    if (nextExecutionDateLong != null && nextExecutionDateLong !=0)
+      plugInTour.nextExecutionDate = new Date(nextExecutionDateLong);
+
+    Long lastExecutionDateLong = (Long) jsonMap.get(cstJsonLastExecution);
+    if (lastExecutionDateLong != null && lastExecutionDateLong !=0)
+      plugInTour.lastExecutionDate = new Date(lastExecutionDateLong);
+
+    String lastExecutionStatus = (String) jsonMap.get(cstJsonlastExecutionStatus);
+    if (lastExecutionStatus != null)
+      plugInTour.lastExecutionStatus = ExecutionStatus.valueOf( lastExecutionStatus );
+    
+
+    if (plugInTour.isEnable && plugInTour.nextExecutionDate == null)
+      plugInTour.calculateNextExecution();
+
+    // get the last saved execution
+    List<Map<String,Object>> list = (List) jsonMap.get(cstJsonSavedExec);
+    if (list!=null)
+    {
+      for (Map<String,Object> execSaveMap : list)
+      {
+        plugInTour.listSavedExecution.add( SavedExecution.getInstance(execSaveMap));
+      }
+    }
+    return plugInTour;
+  }
+
+  /**
+   * getMap : use to save it or send to the browser
+   * @param withExplanation
+   * @return
+   */
   public Map<String, Object> getMap(boolean withExplanation) {
 
     Map<String, Object> map = new HashMap<String, Object>();
@@ -341,8 +360,8 @@ public class MilkPlugInTour {
       map.put(cstJsonExplanation, plugIn.getDescription().explanation);
       map.put(cstJsonPlugInDisplayName, plugIn.getDescription().displayName);
     }
-    map.put(cstJsonCron, cronSt);
-    map.put(cstJsonParameters, parameters);
+    map.put(cstJsonCron, cronSt);    
+    map.put(cstJsonParameters, parameters );
     // create the list of parameters definition
     List<Map<String, Object>> listParametersDef = new ArrayList<Map<String, Object>>();
     map.put(cstJsonParametersDef, listParametersDef);
@@ -359,20 +378,21 @@ public class MilkPlugInTour {
 
     map.put(cstJsonLastExecution, lastExecutionDate == null ? 0 : lastExecutionDate.getTime());
     map.put("lastexecutionst", lastExecutionDate == null ? "" : sdf.format(lastExecutionDate));
+    map.put(cstJsonlastExecutionStatus, lastExecutionStatus==null ? null : lastExecutionStatus.toString() );
 
-    // keep the status of the last execution
-    if (lastExecutionOutput != null) {
-      map.put(cstJsonLastExecutionStatus, lastExecutionOutput.executionStatus.toString());
-      map.put(cstJsonLastExecutionTimeinMs, lastExecutionOutput.executionTimeInMs);
-      // if we have a list of event, use it, else retrieve the last String save
-      if (lastExecutionOutput.getListEvents() != null)
-        map.put(cstJsonLastExecutionListEventsSt, BEventFactory.getSyntheticHtml(lastExecutionOutput.getListEvents()));
-      else
-        map.put(cstJsonLastExecutionListEventsSt, lastExecutionOutput.listEventsSt);
-    }
+    
     map.put(cstJsonEnable, isEnable);
     map.put(cstJsonImmediateExecution, isImmediateExecution);
 
+    
+    // save the last execution
+    List<Map<String,Object>> listExecution = new ArrayList<Map<String,Object>>();
+    for (SavedExecution savedExecution : listSavedExecution)
+    {
+      listExecution.add( savedExecution.getMap());
+    }
+    map.put(cstJsonSavedExec, listExecution);
+    
     return map;
   }
 
@@ -395,5 +415,86 @@ public class MilkPlugInTour {
       }
       id = System.currentTimeMillis();
     }
+  }
+  
+
+  /* ******************************************************************************** */
+  /*                                                                                  */
+  /* Save execution */
+  /*                                                                                  */
+  /*                                                                                  */
+  /* ******************************************************************************** */
+
+  private static class SavedExecution {
+    public Date executionDate;
+    public ExecutionStatus executionStatus;
+
+    private String listEventSt;
+    public String explanation;
+    public long nbItemsProcessed=0;
+    public long executionTimeInMs;
+    public SavedExecution()
+    {};
+    
+    public SavedExecution(PlugTourOutput output )
+    {
+      executionDate         = output.executionDate;
+      executionStatus       = output.executionStatus;
+      listEventSt           = BEventFactory.getSyntheticHtml(output.getListEvents());
+      explanation           = output.explanation;
+      nbItemsProcessed      = output.nbItemsProcessed;
+      executionTimeInMs     = output.executionTimeInMs;
+    }
+    public Map<String,Object> getMap()
+    {
+      Map<String, Object> map = new HashMap<String, Object>();
+      map.put(cstJsonSaveExecDate, executionDate.getTime());
+      map.put(cstJsonSaveExecDate+"St", sdf.format( executionDate));
+      map.put(cstJsonSaveExecStatus, executionStatus.toString());
+      map.put(cstJsonSaveExecListEventsSt, listEventSt);
+      map.put(cstJsonSaveExecExplanation, explanation);
+      map.put(cstJsonSaveExecItemsProcessed, nbItemsProcessed);
+      map.put(cstJsonSaveExecTimeinMs, executionTimeInMs);
+      
+      return map;
+    }
+    public static SavedExecution getInstance( Map<String,Object> jsonMap )
+    {
+      SavedExecution savedExecution = new SavedExecution();
+      
+      Long execDateLong = (Long) jsonMap.get(cstJsonSaveExecDate);
+      if (execDateLong != null && execDateLong !=0)
+        savedExecution.executionDate  = new Date(execDateLong);
+      savedExecution.executionStatus    = ExecutionStatus.valueOf( (String) jsonMap.get(cstJsonSaveExecStatus ) );
+      savedExecution.listEventSt        =  (String) jsonMap.get(cstJsonSaveExecListEventsSt);
+      savedExecution.explanation        =  (String) jsonMap.get(cstJsonSaveExecExplanation);
+      savedExecution.nbItemsProcessed   =  (Long) jsonMap.get(cstJsonSaveExecItemsProcessed);
+      savedExecution.executionTimeInMs  =  (Long) jsonMap.get(cstJsonSaveExecTimeinMs);
+
+      return savedExecution;
+    }
+  }
+  
+  // save a tour execution
+  List<SavedExecution> listSavedExecution = new ArrayList<SavedExecution>();
+  
+  /**
+   * register an execution. Keep the last 10 
+   * @param currentDate
+   * @param output
+   */
+  public void registerExecution(Date currentDate, PlugTourOutput output) {
+    lastExecutionDate = output.executionDate;
+    lastExecutionStatus = output.executionStatus;
+    if (output.executionStatus == ExecutionStatus.SUCCESSNOTHING
+        || output.executionStatus == ExecutionStatus.NOEXECUTION)
+    {
+      return; // no need to save it
+    }
+    
+    SavedExecution savedExecution = new SavedExecution(output);
+    listSavedExecution.add(0, savedExecution);
+    if (listSavedExecution.size() > 10)
+      listSavedExecution.remove(10);
   }
 }

@@ -21,13 +21,13 @@
 		<dependency>
 			<groupId>com.bonitasoft.log.event</groupId>
 			<artifactId>bonita-event</artifactId>
-			<version>1.2.0</version>
+			<version>1.4.0</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.bonitasoft.command</groupId>
   			<artifactId>bonita-commanddeployment</artifactId>
-  			<version>1.0.0</version>
+  			<version>1.2</version>
 		</dependency>
 		
 		<dependency>
