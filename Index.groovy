@@ -113,17 +113,17 @@ public class Index implements PageController {
                   out.close();
                   return;
             }
-            loggerCustomPage.info("#### CustomPage:Groovy_2 , requestParamJsonSt=["+requestParamJsonSt+"] (source is["+requestParamJson+"])" );
+            loggerCustomPage.info("#### "+pageName+": requestParamJsonSt=["+requestParamJsonSt+"] (source is["+requestParamJson+"])" );
             
             
             Index.ActionAnswer actionAnswer = Actions.doAction( request, requestParamJsonSt,  response, pageResourceProvider, pageContext );
             if (! actionAnswer.isManaged)
             {
-                loggerCustomPage.info("#### CustomPage:Groovy NoAction, return index.html" );
+                loggerCustomPage.info("#### "+pageName+": NoAction, return index.html" );
                 runTheBonitaIndexDoGet( request, response,pageResourceProvider,pageContext);
                 return;
             }
-            loggerCustomPage.info("#### CustomPage:Groovy , ResponseMap="+actionAnswer.responseMap.size() );
+            loggerCustomPage.info("#### "+pageName+": ResponseMap="+actionAnswer.responseMap.size() );
             
             if ((actionAnswer.responseMap.size()>0) || (actionAnswer.responseJsonSt != null))
             {
@@ -137,7 +137,7 @@ public class Index implements PageController {
                 else
                     jsonSt= actionAnswer.responseJsonSt ;
                 out.write( jsonSt );
-                loggerCustomPage.info("#### ##############################CustomPage: return json["+jsonSt+"]" );
+                loggerCustomPage.info("#### "+pageName+": return json["+jsonSt+"]" );
                 out.flush();
                 out.close();
                 return;
@@ -145,7 +145,7 @@ public class Index implements PageController {
             
                 
             // assuming the DoAction did the job (export a ZIP file for example)
-            loggerCustomPage.info("#### ##############################CustomPage: AssumingDoAction did the job (export a file)" );
+            loggerCustomPage.info("#### "+pageName+": AssumingDoAction did the job (export a file)" );
                 
             return;
         } catch (Exception e) {
@@ -216,7 +216,7 @@ public class Index implements PageController {
     */
    private void runTheBonitaIndexDoGet(HttpServletRequest request, HttpServletResponse response, PageResourceProvider pageResourceProvider, PageContext pageContext) {
        try {
-               def String indexContent;
+               String indexContent;
                pageResourceProvider.getResourceAsStream("index.html").withStream { InputStream s->
                        indexContent = s.getText()
                }
@@ -236,7 +236,7 @@ public class Index implements PageController {
                out.print(indexContent);
                out.flush();
                out.close();
-               loggerCustomPage.info("#### "+pageName+": return index.hml size("+indexContent.length+"]");
+               loggerCustomPage.info("#### "+pageName+": return index.hml size("+indexContent.length()+"]");
                
        } catch (Exception e) {
            loggerCustomPage.severe("#### "+pageName+":Error "+e.toString());

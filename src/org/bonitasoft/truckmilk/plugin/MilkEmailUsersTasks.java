@@ -1,0 +1,287 @@
+package org.bonitasoft.truckmilk.plugin;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.logging.Logger;
+
+import org.bonitasoft.engine.api.APIAccessor;
+import org.bonitasoft.engine.api.IdentityAPI;
+import org.bonitasoft.engine.api.ProcessAPI;
+import org.bonitasoft.engine.api.ProfileAPI;
+import org.bonitasoft.engine.bpm.flownode.ActivityInstanceCriterion;
+import org.bonitasoft.engine.bpm.flownode.HumanTaskInstance;
+import org.bonitasoft.engine.identity.ContactData;
+import org.bonitasoft.engine.identity.User;
+import org.bonitasoft.engine.identity.UserSearchDescriptor;
+import org.bonitasoft.engine.profile.Profile;
+import org.bonitasoft.engine.profile.ProfileMember;
+import org.bonitasoft.engine.profile.ProfileMemberSearchDescriptor;
+import org.bonitasoft.engine.profile.ProfileSearchDescriptor;
+import org.bonitasoft.engine.search.SearchOptionsBuilder;
+import org.bonitasoft.engine.search.SearchResult;
+import org.bonitasoft.log.event.BEvent;
+import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.log.event.BEventFactory;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.toolbox.SendMail;
+import org.bonitasoft.truckmilk.toolbox.SendMailEnvironment;
+
+public class MilkEmailUsersTasks extends MilkPlugIn {
+
+    public static Logger logger = Logger.getLogger(MilkEmailUsersTasks.class.getName());
+
+    private static BEvent EVENT_SEND_EMAIL = new BEvent(MilkEmailUsersTasks.class.getName(), 1, Level.APPLICATIONERROR,
+            "Mail send failed", "Email can't be send", "No email send", "Check the error");
+
+    private static BEvent EVENT_OPERATION_SUCCESS = new BEvent(MilkEmailUsersTasks.class.getName(), 2, Level.SUCCESS,
+            "Mails was sent if needed", "Mails was sent");
+
+    private static BEvent EVENT_OPERATION_ERROR = new BEvent(MilkEmailUsersTasks.class.getName(), 3, Level.APPLICATIONERROR,
+            "Error during sending", "Errors arrived : no email in users, smtp server down", "Some emails failed", "Check errors");
+
+    private static BEvent EVENT_PROFILES_DOES_NOT_EXIST = new BEvent(MilkEmailUsersTasks.class.getName(), 4, Level.APPLICATIONERROR,
+            "Profiles does not exist", "The profiles does not exist", "Operation failed", "Give an existing profile name");
+
+    private static PlugInParameter cstParamProfilesUser = PlugInParameter.createInstance("profilesuser", "Profiles User", TypeParameter.ARRAY, null, "Give a list of Profiles User. All users referenced in theses profiles are inspected, to detet if they have tasks to execute");
+
+    private static PlugInParameter cstParamEmailFrom = PlugInParameter.createInstance("emailfrom", "Email From", TypeParameter.STRING, "bonitasoftreminder@myserver.com", "The 'mail from' attribute. Give a name, then the user can confirms this transmitter in its anti spam");
+    private static PlugInParameter cstParamEmailSubject = PlugInParameter.createInstance("emailsubject", "Email Subject", TypeParameter.STRING, "You have some pending tasks", "Subject on the email");
+    private static PlugInParameter cstParamEmailText = PlugInParameter.createInstance("emailtext", "Email Text", TypeParameter.TEXT, "Your assigned task <br>{{assignedtasks}}<p>Your pending tasks:<br>{{pendingtasks}}", "Content of the email. Use the place holder {{assignedtasks}} and {{pendingtasks}}");
+
+    private static PlugInParameter cstParamMaxTaskInEmail = PlugInParameter.createInstance("maxtasksinemail", "Maximum tasks in the mail", TypeParameter.LONG, 30L, "Number of task to display in the email");
+
+    private static PlugInParameter cstParamBonitaHost = PlugInParameter.createInstance("bonitahost", "Bonita Host", TypeParameter.STRING, null, "In the Email, the HTTP link will use this information");
+    private static PlugInParameter cstParamBonitaPort = PlugInParameter.createInstance("bonitaport", "Bonita Port", TypeParameter.LONG, null, "In the Email, the HTTP link will use this information");
+
+    public MilkEmailUsersTasks() {
+        super(TYPE_PLUGIN.EMBEDED);
+    }
+
+    /**
+     * check the environment : for the milkEmailUsersTasks, we require to be able to send an email
+     */
+    public List<BEvent> checkEnvironment(long tenantId, APIAccessor apiAccessor) {
+        return SendMailEnvironment.checkEnvironment(tenantId, this);
+    };
+
+    @Override
+    public PlugInDescription getDefinitionDescription() {
+        PlugInDescription plugInDescription = new PlugInDescription();
+        plugInDescription.name = "EmailUsersTasks";
+        plugInDescription.label = "Emails users tasks";
+        plugInDescription.description = "For all users part of the given profile(s), an email is send with a link on all pending tasks";
+        plugInDescription.addParameter(cstParamProfilesUser);
+
+        try {
+            SendMail.addPlugInParameter(SendMail.MAIL_DIRECTION.SENDONLY, plugInDescription);
+        } catch (Error er) {
+            // do nothing here, the error will show up again in the check Environment
+            // Cause : the Email Jar file is not installed, then java.lang.NoClassDefFoundError: javax/mail/Address
+        }
+        plugInDescription.addParameter(cstParamMaxTaskInEmail);
+        plugInDescription.addParameter(cstParamEmailText);
+
+        return plugInDescription;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public PlugTourOutput execute(MilkJobExecution input, APIAccessor apiAccessor) {
+        PlugTourOutput plugTourOutput = input.getPlugTourOutput();
+
+        // read profiles
+        List<String> listProfilesName = (List<String>) input.getInputListParameter(cstParamProfilesUser);
+        if (listProfilesName.size() == 0) {
+            plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+            return plugTourOutput;
+        }
+        try {
+            ProfileAPI profileAPI = apiAccessor.getProfileAPI();
+            ProcessAPI processAPI = apiAccessor.getProcessAPI();
+            IdentityAPI identityAPI = apiAccessor.getIdentityAPI();
+            // collect users in profiles
+            Set<Long> userIdToSendEmail = new HashSet<Long>();
+            List<Long> listProfileId = new ArrayList<Long>();
+            for (int i = 0; i < listProfilesName.size(); i++) {
+                SearchOptionsBuilder searchOptionsBuilder = new SearchOptionsBuilder(0, 10000);
+
+                searchOptionsBuilder.filter(ProfileSearchDescriptor.NAME, listProfilesName.get(i));
+                SearchResult<Profile> searchResultProfiles = profileAPI.searchProfiles(searchOptionsBuilder.done());
+                if (searchResultProfiles.getCount() == 0) {
+                    plugTourOutput.addEvent(new BEvent(EVENT_PROFILES_DOES_NOT_EXIST, "profile[" + listProfilesName.get(i)));
+                } else {
+                    for (Profile profile : searchResultProfiles.getResult()) {
+                        listProfileId.add(profile.getId());
+                    }
+                }
+            }
+
+            if (listProfileId.size() == 0) {
+                plugTourOutput.executionStatus = ExecutionStatus.WARNING;
+                return plugTourOutput;
+            }
+            //---------------- then search each profiles member
+            SearchOptionsBuilder searchOptionsBuilder = new SearchOptionsBuilder(0, 10000);
+            for (int i = 0; i < listProfileId.size(); i++) {
+                if (i > 0)
+                    searchOptionsBuilder.or();
+                searchOptionsBuilder.filter(ProfileMemberSearchDescriptor.PROFILE_ID, listProfileId.get(i));
+            }
+
+            String[] listMembersType = new String[] { "user", "role", "group", "roleAndGroup" };
+            for (String memberType : listMembersType) {
+                SearchResult<ProfileMember> searchResultProfileMember = profileAPI.searchProfileMembers(memberType, searchOptionsBuilder.done());
+                for (ProfileMember profileMember : searchResultProfileMember.getResult()) {
+                    SearchOptionsBuilder searchProfileMember = new SearchOptionsBuilder(0, 100);
+                    // membership : contains a Groupid and a roleid
+
+                    if (profileMember.getRoleId() > 0) {
+                        searchProfileMember.filter(UserSearchDescriptor.ROLE_ID, profileMember.getRoleId());
+                    }
+                    if (profileMember.getGroupId() > 0) {
+                        searchProfileMember.filter(UserSearchDescriptor.GROUP_ID, profileMember.getGroupId());
+                    }
+                    if (profileMember.getUserId() > 0) {
+                        searchProfileMember.filter(UserSearchDescriptor.ID, profileMember.getUserId());
+                    }
+
+                    searchProfileMember.filter(UserSearchDescriptor.ENABLED, Boolean.TRUE);
+
+                    SearchResult<User> listUsers = identityAPI.searchUsers(searchProfileMember.done());
+                    for (User user : listUsers.getResult())
+                        userIdToSendEmail.add(user.getId());
+
+                }
+            } // end for collect user
+
+            //------------------------ now run each users
+            int maxTaxInEmail = input.getInputLongParameter(cstParamMaxTaskInEmail).intValue();
+            String bonitaHost = input.getInputStringParameter(cstParamBonitaHost);
+            long bonitaPort = input.getInputLongParameter(cstParamBonitaPort);
+            int numberOfEmailsSent = 0;
+            String messageOperation = "";
+            StringBuffer totalMessageOperation = new StringBuffer();
+            for (Long userId : userIdToSendEmail) {
+                // do this user has a task ?
+                List<HumanTaskInstance> listAssignedHumanTask = processAPI.getAssignedHumanTaskInstances(userId, 0, maxTaxInEmail, ActivityInstanceCriterion.EXPECTED_END_DATE_DESC);
+
+                List<HumanTaskInstance> listPendingHumanTask = processAPI.getPendingHumanTaskInstances(userId, 0, maxTaxInEmail, ActivityInstanceCriterion.EXPECTED_END_DATE_DESC);
+
+                if (listAssignedHumanTask.size() + listPendingHumanTask.size() == 0)
+                    continue;
+
+                // send an email to this users !
+                String contentEmail = input.getInputStringParameter(cstParamEmailText);
+                String contentAssignedTask = getHtmlListTasks(listAssignedHumanTask, bonitaHost, bonitaPort, processAPI);
+                String contentPendingTask = getHtmlListTasks(listPendingHumanTask, bonitaHost, bonitaPort, processAPI);
+                // search and replace the different place holder
+                if (contentEmail.indexOf("{{assignedtasks}}") != -1)
+                    contentEmail = contentEmail.replaceAll("\\{\\{assignedtasks\\}\\}", contentAssignedTask);
+                else
+                    contentEmail += "<p>" + contentAssignedTask;
+
+                if (contentEmail.indexOf("{{pendingtasks}}") != -1)
+                    contentEmail = contentEmail.replaceAll("\\{\\{pendingtasks\\}\\}", contentPendingTask);
+                else
+                    contentEmail += "<p>" + contentPendingTask;
+
+                ContactData contactData = identityAPI.getUserContactData(userId, false);
+                // send email
+                if (contactData.getEmail() == null)
+                    messageOperation += "No email";
+                else {
+
+                    //ok, we have all we need
+                    List<BEvent> listEvents = sendEmail(contactData.getEmail(), contentEmail, input);
+                    if (BEventFactory.isError(listEvents))
+                        messageOperation += "Error emails " + BEventFactory.getHtml(listEvents);
+                    else
+                        numberOfEmailsSent++;
+                }
+
+                if (messageOperation.length() > 0) {
+                    User user = identityAPI.getUser(userId);
+                    totalMessageOperation.append("User[" + user.getUserName() + "] : " + messageOperation);
+                }
+
+            }
+            if (totalMessageOperation.toString().length() == 0) {
+                // No Error !
+                if (numberOfEmailsSent == 0)
+                    plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+                else
+                    plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
+                plugTourOutput.addEvent(new BEvent(EVENT_OPERATION_SUCCESS, "Users checks: " + userIdToSendEmail.size() + ", Emails sent: " + numberOfEmailsSent));
+            } else {
+                plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+                String totalMessageOperationSt = totalMessageOperation.toString();
+                if (totalMessageOperationSt.length() > 1000)
+                    totalMessageOperationSt = totalMessageOperationSt.substring(0, 1000) + "...";
+                plugTourOutput.addEvent(new BEvent(EVENT_OPERATION_ERROR, "Users checks: " + userIdToSendEmail.size() + ", Emails sent: " + numberOfEmailsSent + ",Error:" + totalMessageOperationSt));
+            }
+        } catch (Exception e) {
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            String exceptionDetails = sw.toString();
+
+            logger.severe("MilkEmailUsersTasks exception " + e + " at " + exceptionDetails);
+            plugTourOutput.addEvent(new BEvent(EVENT_OPERATION_ERROR, e, ""));
+        }
+        return plugTourOutput;
+    }
+
+    /**
+     * Create the HTML list
+     */
+    static SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+
+    private String getHtmlListTasks(List<HumanTaskInstance> listHumanTasks, String bonitaHost, Long bonitaPort, ProcessAPI processAPI) {
+        StringBuffer content = new StringBuffer();
+        content.append("<table><tr><th>Task</th><th>Due date</th></tr>");
+        for (HumanTaskInstance task : listHumanTasks) {
+            content.append("<tr>");
+
+            content.append("<td><a href=\"http://" + bonitaHost + ":" + bonitaPort + "/bonita/portal/form/taskInstance/" + task.getId() + ">");
+            if (task.getDisplayName() == null)
+                content.append(task.getName());
+            else
+                content.append(task.getDisplayName());
+            content.append("</a></td>");
+
+            content.append("<td>");
+            if (task.getExpectedEndDate() != null) {
+                content.append(sdf.format(task.getExpectedEndDate()));
+            }
+            content.append("</td>");
+            content.append("</tr>");
+        }
+        return content.toString();
+
+    }
+
+    /**
+     * send the email
+     * 
+     * @param emailTo
+     * @param textMessage
+     * @param input
+     * @return
+     */
+    private List<BEvent> sendEmail(String emailTo, String textMessage, MilkJobExecution input) {
+
+        List<BEvent> listEvents = new ArrayList<BEvent>();
+        // Sender's email ID needs to be mentioned
+        String emailFrom = input.getInputStringParameter(cstParamEmailFrom);
+        SendMail sendMail = new SendMail(input);
+
+        listEvents.addAll(sendMail.sendMail(emailTo, emailFrom, input.getInputStringParameter(cstParamEmailSubject), textMessage));
+
+        return listEvents;
+    }
+}

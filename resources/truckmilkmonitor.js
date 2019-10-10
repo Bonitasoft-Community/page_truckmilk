@@ -5,7 +5,7 @@
 
 (function() {
 
-	var appCommand = angular.module('truckmilk', [ 'googlechart', 'ui.bootstrap','ngMaterial' ]);
+	var appCommand = angular.module('truckmilk', [ 'googlechart', 'ui.bootstrap','ngMaterial', 'angularFileUpload' ]);
 
 	// --------------------------------------------------------------------------
 	//
@@ -14,12 +14,12 @@
 	// --------------------------------------------------------------------------
 
 	// Ping the server
-	appCommand.controller('TruckMilkControler', function($http, $scope, $sce, $timeout) {
+	appCommand.controller('TruckMilkControler', function($http, $scope, $sce, $timeout, $upload) {
 
 		this.showhistory = function(show) {
 			this.isshowhistory = show;
 		}
-		this.navbaractiv='Tour';
+		this.navbaractiv='Jobs';
 		
 		this.getNavClass = function( tabtodisplay )
 		{
@@ -31,6 +31,7 @@
 		
 		
 		this.inprogress = false;
+
 		this.listplugtour =[];
 		this.listplugtourSimul = [ {
 			'name' : 'Replay process Free',
@@ -49,29 +50,47 @@
 		} ];
 		this.listplugin = [];
 		this.newtourname = '';
-		
+		this.refreshDate=null;
 		this.scheduler={ 'enable': false, listtypeschedulers:[]};
+		
+		// a new listPlugTour is receive : refresh all what we need in the interface
+		this.afterRefreshListPlugTour = function() {
+			// console.log("afterRefreshListPlugTour:Start");
+			for ( var i in this.listplugtour) {
+				var plugtourindex = this.listplugtour[i];
+				this.preparePlugTourParameter(plugtourindex);
+			}
+			// calculate a uniq time stamp, to avoid the infinit loop when calculate the downloadParameterFile
+			this.refreshDate = new Date();
+			
+			this.calculateParameterUpload();
+		}
+
 		
 		// -----------------------------------------------------------------------------------------
 		// getListPlugin
 		// -----------------------------------------------------------------------------------------
 
 		this.getListPlugIn = function() {
+			// console.log("getListPlugIn:Start (r/o)");
 			return this.listplugin;
 		}
 		this.getListPlugTour = function() {
+			// consoleCall HTTPgTour:Start (r/o)");
 			return this.listplugtour;
 		}
 
 		this.loadinit = function() {
 			var self = this;
+			
 			self.inprogress = true;
+			console.log("loadinit inprogress<=true");
 			self.listevents='';
 			
+			// console.log("loadinit Call HTTP");
 			$http.get('?page=custompage_truckmilk&action=startup&t='+Date.now()).success(function(jsonResult) {
-				console.log("history", jsonResult);
-				self.inprogress = false;
-
+				console.log("loadinit.receiveData HTTP");
+				
 				self.listplugtour 	= jsonResult.listplugtour;
 				self.listplugin 	= jsonResult.listplugin;
 				self.scheduler 		= jsonResult.scheduler;
@@ -79,18 +98,17 @@
 				self.deploimentsuc  = jsonResult.deploimentsuc;
 				self.deploimenterr  = jsonResult.deploimenterr;
 				
-				console.log("TruckMilk RECEPTION INIT");
+				console.log("loadInit start initialisation");
 				// prepare defaut value
-				for ( var i in self.listplugtour) {
-					var plugtourindex = self.listplugtour[i];
-					self.preparePlugTourParameter(plugtourindex);
-				}
-				
-				console.log("TruckMilk END init ");
-				
+				self.afterRefreshListPlugTour();
+
+				self.inprogress = false;
+				console.log("loadinit.end inprogress<=false");
+
 			}).error(function() {
 
 				self.inprogress = false;
+				console.log("loadinit.error HTTP inprogress<=false");
 
 				self.listplugtour = [];
 				self.listplugin = [];
@@ -105,15 +123,9 @@
 		
 		// completeStatus : refresh the complete list + getStatus on scheduler, else refresh only some attributes
 		this.refresh = function( completeStatus ) {
-			console.log("truckmilk:completeStatus ["+completeStatus+"]");
-
 			var self = this;
 			self.deploimentsuc=''; // no need to keep it for ever
-			console.log("truckmilk: refresh listplugtour="+angular.toJson( self.listplugtour )); 
-			
-			
-			// rearm the timer
-			$scope.timer = $timeout(function() { self.refresh( false ) }, 120000);
+			console.log("refresh.start listplugtour="+angular.toJson( self.listplugtour )); 
 			if (self.inprogress)
 			{
 				console.log("Refresh in progress, skip this one");
@@ -127,20 +139,19 @@
 			self.completeStatus = completeStatus;
 			self.listevents='';
 			self.inprogress = true;
-			
+			console.log("refresh: inprogress<=true");
+			// console.log("refresh call HTTP");
 			$http.get('?page=custompage_truckmilk&action='+verb+'&t='+Date.now()).success(function(jsonResult) {
-				// console.log("history", jsonResult);
 				self.inprogress = false;
+				console.log("refresh.receiveData HTTP inprogress<=true");
+
 				self.deploiment = jsonResult.deploiment;
 				if (self.completeStatus)
 				{
 					self.listplugtour 	= jsonResult.listplugtour;
-					// prepare defaut value
-					for ( var i in self.listplugtour) {
-						var plugtourindex = self.listplugtour[i];
-						self.preparePlugTourParameter(plugtourindex);
-					}
+					self.afterRefreshListPlugTour();
 					self.scheduler 		= jsonResult.scheduler;
+
 				}
 				else
 				{
@@ -150,10 +161,10 @@
 						var foundIt = false;
 						for ( var j in self.listplugtour) {
 							var localPlugTour = self.listplugtour[ j ];
-							console.log("Compare server["+serverPlugTour.name+"]("+serverPlugTour.id+") with ["+localPlugTour.name+"]("+localPlugTour.id+")");
+							// console.log("Compare server["+serverPlugTour.name+"]("+serverPlugTour.id+") with ["+localPlugTour.name+"]("+localPlugTour.id+")");
 							if (serverPlugTour.id == localPlugTour.id)
 							{
-								console.log("Found it !");
+								// console.log("Found it !");
 								foundIt= true;
 								localPlugTour.enable					= serverPlugTour.enable;
 								// localPlugTour.name		= serverPlugTour.name;
@@ -167,7 +178,7 @@
 						if (! foundIt)
 						{
 							// add it in the list
-							console.log("Found it !");
+							// console.log("Found it !");
 							// self.listplugtour.push(serverPlugTour );
 						}
 					}						
@@ -179,6 +190,7 @@
 			}).error(function() {
 
 				self.inprogress = false;
+				console.log("refresh.error HTTP - inprogress=false");
 
 				self.listplugtour = [];
 				self.listplugin = [];
@@ -186,42 +198,46 @@
 			});
 
 		}
-		this.addTour = function(plugin, nameTour) {
+		this.addJob = function(plugin, nameJob) {
+			console.log("addJob:Start");
 			var param = {
 				'plugin' : plugin,
-				'name' : nameTour
+				'name' : nameJob
 			};
-			this.operationTour('addTour', param, null, true);
+			this.operationJob('addJob', param, null, true);
 		}
 
-		this.removeTour = function(plugtour) {
-			console.log("removeTour");
+		this.removeJob = function(plugtour) {
+			console.log("removeJob:Start");
+			// console.log("removeJob: Start");
 			var param = {
 				'name' :  plugtour.name,
 				'id'   :  plugtour.id
 			};
-			this.operationTour('removeTour', param, null, false);
+			this.operationJob('removeJob', param, null, false);
 		}
 
-		this.stopTour = function( plugtour) {
+		this.abortJob = function( plugtour) {
+			console.log("abortTour:Start");
 			var param = {
 					'name' :  plugtour.name,
 					'id'   :  plugtour.id
 				};
-			this.operationTour('stopTour', param, plugtour, false);
+			this.operationJob('abortJob', param, plugtour, false);
 		}
-		this.startTour = function(plugtour) {
+		this.startJob = function(plugtour) {
+			console.log("startJob:Start");
 			var param = {
 					'name' :  plugtour.name,
 					'id'   :  plugtour.id
 				};
-			this.operationTour('startTour', param, plugtour, false);
+			this.operationJob('startJob', param, plugtour, false);
 		}
 		
 		
 		
-		this.updatePlugtour= function(plugtour) {
-			console.log("UpdatePlugtour START")
+		this.updateJob= function(plugtour) {
+			console.log("updateJob START")
 			var paramStart = plugtour;
 			var self=this;
 			// update maybe very heavy : truncate it
@@ -236,54 +252,87 @@
 			
 			var json = angular.toJson( plugtourcopy, false);
 			
-			self.sendPost('updateTour', json );
+			self.sendPost('updateJob', json );
 		}
 		
 		
 		
-		this.immediateTour = function(plugtour) {
+		this.immediateJob = function(plugtour) {
+			console.log("immediateJob:Start");
 			var param = {
 					'name' :  plugtour.name,
 					'id'   :  plugtour.id
 				};
 
-			this.operationTour('immediateExecution', param, plugtour, true);		
+			this.operationJob('immediateExecution', param, plugtour, true);		
+		}
+		this.stopJob = function(plugtour) {
+			console.log("stopJob:beginning");
+			var param = {
+					'name' :  plugtour.name,
+					'id'   :  plugtour.id
+				};
+
+			this.operationJob('stopJob', param, plugtour, true);		
+		}
+		this.abortJob = function(plugtour) {
+			console.log("abortJob:begin");
+			var param = {
+					'name' :  plugtour.name,
+					'id'   :  plugtour.id
+				};
+
+			this.operationJob('abortJob', param, plugtour, true);		
+		}
+		this.resetJob = function(plugtour) {
+			console.log("resetJob:begin");
+			var param = {
+					'name' :  plugtour.name,
+					'id'   :  plugtour.id
+				};
+
+			this.operationJob('resetJob', param, plugtour, true);		
 		}
 		
-		// execute an operation on tour
-		this.operationTour = function(action, param, plugtour, refreshParam) {
-			console.log("operationTour START ["+action+"]");
+		// execute an operation on Job
+		this.operationJob = function(action, param, plugtour, refreshParam) {
+			console.log("operationJob:Start");
+
 			
 			var self = this;
+			self.inprogress = true;
+			console.log("operationJob START ["+action+"] inprogress<=true");
+
 			self.action = action;
 			self.addlistevents= "";
 			self.listevents = "";
-			self.inprogress = true;
 			self.currentplugtour = plugtour;
 			self.refreshParam = refreshParam;
 			var json = encodeURIComponent(angular.toJson(param, true));
 			self.listevents='';
-			
+			// console.log("operationJob Call HTTP");
+
 			$http.get('?page=custompage_truckmilk&action=' + action + '&paramjson=' + json+'&t='+Date.now()).success(function(jsonResult) {
-				console.log("TruckMilk - operation tour Result:", jsonResult);
 				self.inprogress = false;
+				console.log("operationJob.receiveData HTTP inprogress<=false");
 
 				if (jsonResult.listplugtour != undefined)
 				{
 					// todo keep the one open
 					self.listplugtour = jsonResult.listplugtour;
+					self.afterRefreshListPlugTour();
 					self.refreshParam=true; // force it to true
 				}
 				if (jsonResult.enable != undefined && self.currentplugtour != undefined)
 				{	
-					console.log("enable=", jsonResult.enable);
+					// console.log("enable=", jsonResult.enable);
 					self.currentplugtour.enable = jsonResult.enable;
 				}
 
 				if (self.currentplugtour != null) {
 					self.currentplugtour.listevents = jsonResult.listevents;
 				}
-				else if (self.action==='addTour') {
+				else if (self.action==='addJob') {
 					self.addlistevents = jsonResult.listevents;
 				}
 				else {
@@ -291,16 +340,14 @@
 				}
 				if (self.refreshParam) {
 					
-					console.log("TruckMilk RECEPTION TOUR : Refresh them");
+					console.log("operationtour.Refresh them");
 					// prepare defaut value
-					for ( var i in self.listplugtour) {
-						var plugtourindex = self.listplugtour[i];
-						self.preparePlugTourParameter(plugtourindex);
-					}
+					self.afterRefreshListPlugTour();
 				}
 			}).error(function() {
 
 				self.inprogress = false;
+				console.log("operationJob.error HTTP inprogress<=false");
 
 				self.listplugtour = [];
 				self.listplugin = [];
@@ -312,7 +359,8 @@
 		// preparePlugTourParameter
 		// we copy the different parameters from parameters[SourceRESTAPI] to parametersvalue [ANGULAR MAPPED] 
 		this.preparePlugTourParameter = function(plugtour) {
-			console.log("PlugTourPreration START" + plugtour.name);
+			
+			// console.log("preparePlugTourParameter.start: " + plugtour.name);
 			plugtour.newname=plugtour.name;
 			plugtour.parametersvalue = {};
 			
@@ -348,24 +396,26 @@
 		// -----------------------------------------------------------------------------------------
 		// manupulate array in parameters
 		this.isAnArray = function( value ) {
-			console.log("operationTour Is An Array");
-
-		     return Array.isArray( value );
+			console.log("isAnArray:Start");
+			// console.log("operationTour Is An Array");
+		    return Array.isArray( value );
 	     }
 		this.addInArray = function( valueArray, valueToAdd )
 		{
-			console.log("addInArray valueArray="+angular.toJson( valueArray ));
+			console.log("addInArray:Start");
+			// console.log("addInArray valueArray="+angular.toJson( valueArray ));
 			valueArray.push(  valueToAdd );
 			// console.log("add valueArray="+angular.toJson( valueArray ));
 		}
 		this.removeInArray = function( valueArray, value)
 		{
-			console.log("removeInArray value "+value);
+			console.log("removeInArray:Start");
+			// console.log("removeInArray value "+value);
 			var index = valueArray.indexOf(value);
 			if (index > -1) {
 				valueArray.splice(index, 1);
 			}
-			console.log("remove value ["+value+"] index ["+index+"] valueArray="+angular.toJson( valueArray ));
+			// console.log("remove value ["+value+"] index ["+index+"] valueArray="+angular.toJson( valueArray ));
 		}
 		
 		// -----------------------------------------------------------------------------------------
@@ -374,6 +424,7 @@
 		// just return an array with the same size as the nbargs
 		this.getArgs = function( parameterdef )
 		{
+			console.log("getArgs:Start");
 			 return new Array(parameterdef.nbargs);  
 		}
 		
@@ -381,6 +432,7 @@
 		var currentButtonExecution=null;
 		this.testbutton = function(parameterdef, plugtour)
 		{
+			console.log("testbutton:Start");
 			var self=this;
 			var  plugtourcopy =angular.copy( plugtour );
 			plugtourcopy.parametersdef = null; // parameters are in plugtourcopy.parametersvalue
@@ -388,7 +440,7 @@
 			plugtourcopy.buttonName= parameterdef.name;
 			plugtourcopy.args = plugtour.parametersvalue[ parameterdef.name ];
 			
-			console.log("testbutton with "+angular.toJson( plugtourcopy ));
+			// console.log("testbutton with "+angular.toJson( plugtourcopy ));
 			parameterdef.listeventsexecution="";
 			self.currentButtonExecution = parameterdef;	
 			parameterdef.listeventsexecution="";
@@ -399,26 +451,30 @@
 		// parameters tool
 		// -----------------------------------------------------------------------------------------
 		this.query = function(queryName, textSearch, parameterDef) {
+			console.log("query:Start");
 			var self=parameterDef;
-			console.log("Query ["+queryName+"] on ["+textSearch+"]");
 			self.inprogress=true;
+			console.log("operationTour.query ["+queryName+"] on ["+textSearch+"] inprogress<=true");
+
 			var param={ 'userfilter' :  textSearch};
 			
 			var json = encodeURI( angular.toJson( param, false));
 			// 7.6 : the server force a cache on all URL, so to bypass the cache, then create a different URL
 			var d = new Date();
 			
+			// console.log("query Call HTTP")
 			return $http.get( '?page=custompage_truckmilk&action='+queryName+'&paramjson='+json+'&t='+d.getTime() )
 			.then( function ( jsonResult ) {
-				console.log("Query - result= "+angular.toJson(jsonResult, false));
 					self.inprogress=false;
+					console.log("Query.receiveData HTTP inProgress<=false result="+angular.toJson(jsonResult, false));
 				 	self.list =  jsonResult.data.listProcess;
 			
 					return self.list;
-					},  function ( jsonResult ) {
-					console.log("Queryprocess THEN");
+				},  function ( jsonResult ) {
+					
 					self.inprogress=false;
-			});
+					console.log("Query.error HTTP inProgress<=false");
+				});
 
 		  };
 		  
@@ -426,45 +482,216 @@
 		// Show information
 		// -----------------------------------------------------------------------------------------
 		this.hideall = function(plugtour) {
+			console.log("hideall:Start");
 			plugtour.show = {
 				'schedule' : false,
 				'parameters' : false,
-				'report' : false
+				'report' : false,
+				'hostrestriction':false
 			};
 		}
 
 		this.showSchedule = function(plugtour) {
+			console.log("showSchedule:Start");
 			this.hideall(plugtour);
 			plugtour.show.schedule = true;
 		}
+		this.showHostRestriction = function(plugtour) {
+			console.log("showHost Restriction:Start");
+			this.hideall(plugtour);
+			plugtour.show.hostrestriction = true;
+		}
 
 		this.showparameters = function(plugtour) {
+			// console.log("showparameters:Start");
 
 			this.hideall(plugtour);
 			plugtour.show.parameters = true;
 		}
 		this.showreport = function(plugtour) {
+			// console.log("showreport:Start");
 			this.hideall(plugtour);
 			plugtour.show.report = true;
 		}
 
 		this.getTourStyle= function(plugtour) {
+			console.log("getTourStyle:Start (r/o) plugtour="+plugtour.id+" imediateExecution="+plugtour.imediateExecution+" inExecution="+plugtour.inExecution+" enable="+plugtour.enable+" askForStop="+plugtour.askForStop);
+			if (plugtour.imediateExecution)
+				return "background-color: #fafabd80";
+			if (plugtour.inExecution && plugtour.askForStop)
+				return "background-color: #ffa5004f";
+			if (plugtour.inExecution)
+				return "background-color: #f6f696";
+			
 			if (plugtour.lastexecutionstatus == "ERROR")
 				return "background-color: #e7c3c3";
 			if (plugtour.lastexecutionstatus == "WARNING")
 				return "background-color: #fcf8e3";
+			if (plugtour.enable)
+				return "background-color: #ebfae5";
+
 		}
 		this.getNowStyle= function( plugtour )
 		{
+			// console.log("getNowStyle:Start (r/o) plugtour="+plugtour.id);
 			if (plugtour.imediateExecution)
 				return "btn btn-success btn-xs"
-			return "btn btn-primary btn-xs";
-		}
+			return "btn btn-default btn-xs";
+		}		
 		this.getNowTitle=function( plugtour )
 		{
+			// console.log("getNowTitle:Start (r/o) plugtour="+plugtour.id);
 			if (plugtour.imediateExecution)
 				return "An execution will start as soon as possible, at the next round"
 			return "Click to have an immediat execution (this does not change the schedule, or the activate state)";
+		}
+		
+		this.getAbortStyle= function( plugtour )
+		{
+			return "btn btn-warning btn-xs"
+		}		
+		this.getAbortTitle=function( plugtour )
+		{
+			return "Click to ask the job to stop as soon as possible, at the end of it's current transaction";
+		}
+		this.getResetStyle= function( plugtour )
+		{
+			return "btn btn-danger btn-xs"
+		}		
+		this.getResetTitle=function( plugtour )
+		{
+			return "Click to kill immediately the job";
+		}
+		
+		// -----------------------------------------------------------------------------------------
+		// Report parameters
+		// -----------------------------------------------------------------------------------------
+		this.downloadParameterFile = function(plugtour, parameterdef)
+		{
+			// console.log("downloadParameterFile:Start (r/o) ["+parameterdef.name+"]");
+			var param={"plugintour": plugtour.id, "parametername":parameterdef.name};			
+			var json = encodeURIComponent(angular.toJson(param, true));
+			// do not calculate a new date now:we will have a recursive call in Angular
+			return "?page=custompage_truckmilk&action=downloadParamFile&paramjson=" + json+'&t='+this.refreshDate;
+		}
+		
+		
+		// calculate listParameterUpload
+		this.listParameterUpload=[];
+		this.parameterToUpload=null;
+		
+		this.calculateParameterUpload = function() {
+			// console.log("calculateParameterUpload - start");
+			this.listParameterUpload = [];
+			for ( var i in this.listplugtour) {
+				var plugtour = this.listplugtour[i];
+				// console.log("calculateParameterUpload - look "+plugtour.name);
+				for ( var key in plugtour.parametersdef) {
+					var parameter = plugtour.parametersdef[ key ];
+					// console.log("calculateParameterUpload - look "+plugtour.name+"/"+parameter.name);
+					if (parameter.type ==='FILEREAD' || parameter.type ==='FILEREADWRITE')
+					{
+						// console.log("calculateParameterUpload - Add "+plugtour.name+"/"+parameter.name);
+						var item = { "plugtour": plugtour.name, "id": plugtour.id, "parameter":parameter.name, "displayname" : plugtour.name+" ("+parameter.label+")"};
+						item.internalid=plugtour.id+"#"+parameter.name;
+						this.listParameterUpload.push( item );
+						// set a default value ?
+						// console.log("Set a default value? "+this.parameterToUpload); //  || this.parameterToUpload===null
+						if (! this.parameterToUpload)
+							this.parameterToUpload=item.internalid;
+					}
+				}
+					
+			}
+			console.log("calculateParameterUpload - end nbDetected="+this.listParameterUpload.length);
+			
+		}
+		var me=this;
+		me.sourceParameterToUpload=null;
+		me.parameterToUploadStatus= " ";
+		$scope.$watch('files', function() {
+			console.log("watch.start");
+
+			if (! $scope.files)
+			{
+				console.log("watch : $filefile, stop");
+				return;
+			}			
+			// find the parameters
+			for (var i in me.listParameterUpload)
+			{
+				if (me.listParameterUpload[ i ].internalid == me.parameterToUpload)
+					me.sourceParameterToUpload = me.listParameterUpload[ i ]; 
+			}
+			console.log("ParameterToUpload="+me.parameterToUpload);
+			
+			for (var i = 0; i < $scope.files.length; i++) {
+				
+				
+				me.parameterToUploadStatus="Upload...";
+				var file = $scope.files[i];
+				me.inprogress=true;
+				console.log("watch inProgress<=true upload file "+file);
+			
+				$scope.upload = $upload.upload({
+					url: '/bonita/portal/fileUpload',
+					method: 'POST',
+					data: {myObj: $scope.myModelObj},
+					file: file
+				}).progress(function(evt) {
+	//				console.log('progress: ' + parseInt(100.0 * evt.loaded / evt.total) + '% file :'+ evt.config.file.name);
+				}).success(function(data, status, headers, config) {
+					console.log('Watch: file is uploaded successfully. Response: ' + data + " Source="+me.sourceParameterToUpload);
+					console.log('SourceId='+me.sourceParameterToUpload.id);
+					
+					me.parameterToUploadStatus="Saving...";
+					// now, upload it in the Tour
+					var param={"id": me.sourceParameterToUpload.id, "parameter":me.sourceParameterToUpload.parameter, "file": data};	
+					// console.log("Parameterupload="+ angular.toJson(param));
+					var json = encodeURIComponent(angular.toJson(param, true));
+					var d = new Date();		
+					
+					// console.log("watch CALL HTTP");
+					$http.get( '?page=custompage_truckmilk&action=uploadParamFile&paramjson='+json+'&t='+d.getTime() )
+					.then( function ( jsonResult ) {
+						me.parameterToUploadStatus="  ";
+						me.inprogress=false;
+						console.log("Watch.then HTTP inprogres<=false");
+						
+					}, function () {						
+						me.inprogress=false;
+						console.log("Watch.error HTTP inProgress<=false");
+					});
+				}); // end upload
+			} // end loop file
+			console.log("watch.end");
+
+		});
+		
+		
+	
+			
+		
+		this.uploadParameterFile= function()
+		{
+			var self=this;
+			self.inprogress=true;
+		    console.log("uploadParameterFile.start= inprogres<=true");
+			var param={"plugintour": this.plugtour.id, "parametername":parameterdef.name, "filename":this.paramfile};
+
+			var json = angular.toJson( param, false);
+			
+			// console.log("uploadParameterFile call HTTP");
+			$http.get('?page=custompage_truckmilk&action=uploadParamFile&paramjson=' + json+'&t='+Date.now())
+				.then( function ( jsonResult ) {
+						self.inprogress=false;
+					    console.log("uploadParameterFile.receivedata HTTP - inprogress<=false result= "+angular.toJson(jsonResult, false));
+					 	return self.list;
+						},  function ( jsonResult ) {
+						self.inprogress=false;
+					    console.log("uploadParameterFile.error HTTP - inprogress<=false ");
+				});
+				
 		}
 		
 		// -----------------------------------------------------------------------------------------
@@ -474,32 +701,44 @@
 		this.armTimer = function()
 		{
 			var self=this;
-			console.log("truckMilk:arm timeout");
-			$scope.timer = $timeout(function() { self.refresh( false ) }, 120000);
+			console.log("armTimer: timerRefresh");
+			$scope.timer = $timeout(function() { self.fireTimer( false ) }, 120000);
+		}
+		this.fireTimer = function() {
+			var self=this;
+			console.log("FireTimer: autoRefresh="+this.autorefresh);
+			// rearm the timer first
+			$scope.timer = $timeout(function() { self.fireTimer( false ) }, 120000);
+			
+			if (this.autorefresh)
+			{
+				this.refresh( false );
+			}
 		}
 		this.armTimer();
-			
+		
+	
 		// -----------------------------------------------------------------------------------------
 		// Scheduler
 		// -----------------------------------------------------------------------------------------
 		this.schedulerOperation = function(action) {
 			var self = this;
 			self.inprogress = true;
+			console.log("schedulerOperation, inprogress=true");
 			var param= { 'start' : action};
 			var json = encodeURIComponent(angular.toJson(param, true));
 			self.scheduler.listevents='';
 			
+			// console.log("schedulerOperation call HTTP");
 			$http.get('?page=custompage_truckmilk&action=scheduler&paramjson=' + json+'&t='+Date.now()).success(function(jsonResult) {
-				console.log("scheduler", jsonResult);
 				self.inprogress = false;
+				console.log("scheduler.receiveData HTTP inprogress<=false jsonResult="+angular.toJson(jsonResult));
 
 				self.scheduler.status 		= jsonResult.status;
 				self.scheduler.listevents	= jsonResult.listevents;
 			}).error(function() {
-
 				self.inprogress = false;
-
-				
+				console.log("scheduler.error HTTP inprogress<=false ");
 			});
 		}
 		
@@ -507,25 +746,26 @@
 		this.schedulerMaintenance = function(operation) {
 			var self = this;
 			self.inprogress = true;
+			console.log("SchedulerMaintenance, Inprogress<=true");
 			var param= { 'operation': operation, 'newscheduler': this.scheduler.selectscheduler };
 			var json = encodeURIComponent(angular.toJson(param, true));
 			self.scheduler.schedulerlistevents='';
-
+			
+			// console.log("schedulerMaintenance call HTTP");
 			$http.get('?page=custompage_truckmilk&action=status&paramjson=' + json+'&t='+Date.now()).success(function(jsonResult) {
-				console.log("scheduler", jsonResult);
 				self.inprogress = false;
+				console.log("schedulerMaintenance.receiveData HTTP Finish inprogress<=false"+ angular.toJson(jsonResult,false));
 
 				self.scheduler	= jsonResult;
 			}).error(function() {
-
 				self.inprogress = false;
-
-				
+				console.log("schedulerMaintenance.error HTTP inprogress<=false");
 			});
 		}
 		
 		this.getListTypeScheduler = function()
 		{
+			console.log("getListTypeScheduler:Start");
 			if (this.scheduler)
 				return this.scheduler.listtypeschedulers;
 			return [];
@@ -535,7 +775,8 @@
 		// tool
 		// -----------------------------------------------------------------------------------------
 
-		this.getHtml = function(listevents) {
+		this.getHtml = function(listevents, sourceContext) {
+			// console.log("getHtml:Start (r/o) source="+sourceContext);
 			return $sce.trustAsHtml(listevents);
 		}
 
@@ -552,9 +793,10 @@
 		}
 		this.sendPost = function(finalaction, json )
 		{
-			console.log("executeUrl action="+finalaction+" Json="+ angular.toJson( json ));
 			var self=this;
 			self.inprogress=true;
+			console.log("sendPost inProgress<=true action="+finalaction+" Json="+ angular.toJson( json ));
+			
 			self.postParams={};
 			self.postParams.listUrlCall=[];
 			self.postParams.action= finalaction;
@@ -568,8 +810,8 @@
 				// Attention, the char # is not encoded !!
 				jsonEncodeSplit = jsonEncodeSplit.replace(new RegExp('#', 'g'), '%23');
 				
-				console.log("collect_add JsonPartial="+jsonSplit);
-				console.log("collect_add JsonEncode ="+jsonEncodeSplit);
+				//console.log("collect_add JsonPartial="+jsonSplit);
+				// console.log("collect_add JsonEncode ="+jsonEncodeSplit);
 			
 				
 				self.postParams.listUrlCall.push( "action="+action+"&paramjsonpartial="+jsonEncodeSplit);
@@ -581,8 +823,8 @@
 			
 			self.postParams.listUrlIndex=0;
 			self.executeListUrl( self ) // , self.listUrlCall, self.listUrlIndex );
-			// this.operationTour('updateTour', plugtour, plugtour, true);
-			console.log("executeUrl END")
+			// this.operationTour('updateJob', plugtour, plugtour, true);
+			console.log("sendPost.END")
 			
 		}
 		
@@ -591,8 +833,11 @@
 			console.log(" CallList "+self.postParams.listUrlIndex+"/"+ self.postParams.listUrlCall.length+" : "+self.postParams.listUrlCall[ self.postParams.listUrlIndex ]);
 			self.postParams.advPercent= Math.round( (100 *  self.postParams.listUrlIndex) / self.postParams.listUrlCall.length);
 			
+			// console.log("executeListUrl call HTTP");
+
 			$http.get( '?page=custompage_truckmilk&t='+Date.now()+'&'+self.postParams.listUrlCall[ self.postParams.listUrlIndex ] )
 				.success( function ( jsonResult ) {
+					console.log("executeListUrl receive data HTTP");
 					// console.log("Correct, advance one more",
 					// angular.toJson(jsonResult));
 					self.postParams.listUrlIndex = self.postParams.listUrlIndex+1;
@@ -601,12 +846,12 @@
 													// self.listUrlIndex);
 					else
 					{
-						console.log("Finish", angular.toJson(jsonResult));
 						self.inprogress = false;
+						console.log("sendPost finish inProgress<=false jsonResult="+ angular.toJson(jsonResult));
 
 						self.postParams.advPercent= 100; 
 		
-						if (self.postParams.action=="updateTour")
+						if (self.postParams.action=="updateJob")
 						{
 							self.listeventsexecution    		= jsonResult.listevents;
 							self.listeventsconfig 				= jsonResult.listeventsconfig;
@@ -619,8 +864,8 @@
 					}
 				})
 				.error( function() {
-					self.inprogress = false;
-					// alert('an error occure');
+					self.inprogress = false;				
+					console.log("sendPost.error HTTP inProgress<=false");
 					});	
 			};
 		

@@ -140,22 +140,26 @@ public class Actions {
             {
                actionAnswer.responseMap = milkAccessAPI.getStatusInformation( parameter);
             }
-            else if ("addTour".equals(action))
+            else if ("addJob".equals(action))
             {
-               actionAnswer.responseMap = milkAccessAPI.addTour( parameter);                
+               actionAnswer.responseMap = milkAccessAPI.addJob( parameter);                
             }          
-            else if ("removeTour".equals(action))
+            else if ("removeJob".equals(action))
             {
-               actionAnswer.responseMap = milkAccessAPI.removeTour( parameter);                
+               actionAnswer.responseMap = milkAccessAPI.removeJob( parameter);                
             } 
-            else if ("startTour".equals(action))
+            else if ("startJob".equals(action))
             {
-               actionAnswer.responseMap = milkAccessAPI.startTour( parameter);                
+               actionAnswer.responseMap = milkAccessAPI.startJob( parameter);                
             } 
-            else if ("stopTour".equals(action))
+            else if ("abortJob".equals(action))
             {
-               actionAnswer.responseMap = milkAccessAPI.stopTour( parameter);                
+               actionAnswer.responseMap = milkAccessAPI.abortJob( parameter);                
             }      
+            else if ("resetJob".equals(action))
+            {
+               actionAnswer.responseMap = milkAccessAPI.resetJob( parameter);                
+            } 
             else if ("collect_reset".equals(action))
             {              
               String paramJsonPartial = request.getParameter("paramjsonpartial");
@@ -175,10 +179,10 @@ public class Actions {
               httpSession.setAttribute("accumulate", accumulateJson );              
               actionAnswer.responseMap.put("status", "ok");
             }
-            else if ("updateTour".equals(action))
+            else if ("updateJob".equals(action))
             {
               String accumulateJson = (String) httpSession.getAttribute("accumulate" );
-              logger.info("update Tour accumulateJson=["+accumulateJson+"]");
+              logger.info("update Job accumulateJson=["+accumulateJson+"]");
               if (accumulateJson !=null && accumulateJson.length() >0)
               {
                 logger.info("collect_end use the saved value ["+accumulateJson+"]");
@@ -186,12 +190,12 @@ public class Actions {
                 parameter.setInformation(accumulateJson);
               }
               httpSession.setAttribute("accumulate", "" );               
-              actionAnswer.responseMap = milkAccessAPI.updateTour( parameter);                
+              actionAnswer.responseMap = milkAccessAPI.updateJob( parameter);                
             } 
             else if ("testButton".equals(action))
             {
               String accumulateJson = (String) httpSession.getAttribute("accumulate" );
-              logger.info("update Tour accumulateJson=["+accumulateJson+"]");
+              logger.info("update Job accumulateJson=["+accumulateJson+"]");
               if (accumulateJson !=null && accumulateJson.length() >0)
               {
                 logger.info("collect_end use the saved value ["+accumulateJson+"]");
@@ -203,11 +207,40 @@ public class Actions {
             }
             else if ("immediateExecution".equals(action))
             {
-                logger.info("#### log:Actions call immediateExecution");
+                logger.info("#### TruckMilk:Actions call immediateExecution");
                 
                actionAnswer.responseMap = milkAccessAPI.immediateExecution( parameter);
-               logger.info("#### log:Actions call immediateExecution : YES");
-            }             
+               logger.info("#### TruckMilk:Actions call immediateExecution : YES");
+            }     
+            else if ("downloadParamFile".equals(action))
+            {
+              
+              actionAnswer.isManaged=true;
+              actionAnswer.isResponseMap=false;
+              
+              OutputStream output = response.getOutputStream();
+              logger.info("#### TruckMilk:Actions write To Output=["+parameter.toString()+"]");
+              
+              
+              Map<String,String> mapHeaders = milkAccessAPI.readParameterFile(parameter, output );
+              for (String key  : mapHeaders.keySet())
+              {
+               response.addHeader( key, mapHeaders.get( key ));
+              }
+              // response.addHeader("content-disposition", "attachment; filename=LogFiles.zip");
+              // response.addHeader("content-type", "application/zip");
+              output.flush();
+              output.close();
+              
+            } 
+            else if ("uploadParamFile".equals(action))
+            {
+                logger.info("#### TruckMilk:Actions call immediateExecution");
+                
+               actionAnswer.responseMap = milkAccessAPI.updateTour( parameter);
+               logger.info("#### TruckMilk:Actions call immediateExecution : YES");
+
+            }
             else  if ("scheduler".equals(action))
             {
                 actionAnswer.responseMap = milkAccessAPI.scheduler( parameter);                
@@ -227,7 +260,7 @@ public class Actions {
               searchOptionsBuilder.sort(  ProcessDeploymentInfoSearchDescriptor.VERSION,  Order.ASC);
               
               SearchResult<ProcessDeploymentInfo> searchResult = processAPI.searchProcessDeploymentInfos(searchOptionsBuilder.done() );
-              logger.info("Search process deployment containing ["+processFilter+"] - found "+searchResult.getCount());
+              logger.info("TruckMilk:Search process deployment containing ["+processFilter+"] - found "+searchResult.getCount());
 
               for (final ProcessDeploymentInfo processDeploymentInfo : searchResult.getResult())
               {
@@ -262,13 +295,13 @@ public class Actions {
               actionAnswer.responseMap.put("listUsers", listUsers);
 
             } 
-            logger.info("#### log:Actions END responseMap ="+actionAnswer.responseMap.size());
+            logger.info("#### TruckMilk:Actions END responseMap ="+actionAnswer.responseMap.size());
             return actionAnswer;
         } catch (Exception e) {
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();
-            logger.severe("#### log:Groovy Exception ["+e.toString()+"] at "+exceptionDetails);
+            logger.severe("#### TruckMilk:Groovy Exception ["+e.toString()+"] at "+exceptionDetails);
             actionAnswer.isResponseMap=true;
             actionAnswer.responseMap.put("Error", "log:Groovy Exception ["+e.toString()+"] at "+exceptionDetails);
             
