@@ -76,12 +76,12 @@ public class MilkCmdControlAPI {
         BonitaCommandDescription commandDescription = new BonitaCommandDescription(bonitaCommand, pageDirectory);
         commandDescription.forceDeploy = false;
         commandDescription.mainCommandClassName = MilkCmdControl.class.getName();
-        commandDescription.mainJarFile = "TruckMilk-1.0-Page.jar";
+        commandDescription.mainJarFile = "TruckMilk-2.1-Page.jar";
         commandDescription.commandDescription = MilkCmdControl.cstCommandDescription;
         // "bonita-commanddeployment-1.2.jar" is deployed automaticaly with BonitaCommandDeployment
         // commandDescription.dependencyJars = new String[] { "bonita-event-1.5.0.jar", "bonita-properties-2.0.0.jar" }; // "mail-1.5.0-b01.jar", "activation-1.1.jar"};
 
-        commandDescription.addJarDependencyLastVersion("bonita-event", "1.5.0", "bonita-event-1.5.0.jar");
+        commandDescription.addJarDependencyLastVersion("bonita-event", "1.6.0", "bonita-event-1.6.0.jar");
         commandDescription.addJarDependencyLastVersion("bonita-properties", "2.1.0", "bonita-properties-2.1.0.jar");
 
         DeployStatus deployStatus = bonitaCommand.checkAndDeployCommand(commandDescription, true, tenantId, commandAPI, platFormAPI);
@@ -112,16 +112,12 @@ public class MilkCmdControlAPI {
             parameters.put(MilkCmdControl.cstPageDirectory, pageDirectory.getAbsolutePath());
 
             result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULERDEPLOY.toString(), parameters, tenantId, commandAPI);
-
-            // override the list event
-            result.put(MilkCmdControl.cstResultListEvents, BEventFactory.getHtml(listEvents));
         }
 
         else if ("reset".equals(operation)) {
             operationManaged = true;
             // reset scheduler must be send to the command
             result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULERRESET.toString(), parameters, tenantId, commandAPI);
-            result.put(MilkCmdControl.cstResultListEvents, BEventFactory.getHtml(listEvents));
         }
 
         if ("changescheduler".equals(operation)) {

@@ -25,7 +25,7 @@ public class MilkSerializeProperties {
     public final static String BonitaPropertiesName = "MilkTour";
     private final static String BonitaPropertiesDomain = "tour";
     private final static String BonitaPropertiesMainInfo = "maininfo";
-    private MilkJobFactory milkPlugInTourFactory;
+    private MilkJobFactory milkJobFactory;
 
     private static BEvent eventBadTourJsonFormat = new BEvent(MilkSerializeProperties.class.getName(), 1,
             Level.APPLICATIONERROR,
@@ -38,7 +38,7 @@ public class MilkSerializeProperties {
     }
 
     public MilkSerializeProperties(MilkJobFactory milkPlugInTourFactory) {
-        this.milkPlugInTourFactory = milkPlugInTourFactory;
+        this.milkJobFactory = milkPlugInTourFactory;
         this.bonitaProperties = new BonitaProperties(BonitaPropertiesName, milkPlugInTourFactory.getTenantId());
     }
 
@@ -58,23 +58,33 @@ public class MilkSerializeProperties {
      * 
      * @param idTour
      * @param bonitaProperties
-     * @param milkPlugInTourFactory
+     * @param milkJobFactory
      * @return
      */
     private MilkJob getInstanceFromBonitaProperties(Long idJob) {
         String jobSt = (String) bonitaProperties.get(idJob.toString());
-        MilkJob milkJobplugInTour = MilkJob.getInstanceFromJson(jobSt, milkPlugInTourFactory);
-        if (milkJobplugInTour == null)
+        MilkJob milkJob = MilkJob.getInstanceFromJson(jobSt, milkJobFactory);
+        if (milkJob == null)
             return null; // not a normal way
+        
+        // read the another information
+        Object askStopObj = bonitaProperties.get(idJob.toString()+prefixPropertiesAskStop);
+        if (askStopObj !=null)
+            milkJob.askForStop = Boolean.valueOf(askStopObj.toString());
+        String jsonStTrackExecution = (String) bonitaProperties.get(idJob.toString()+prefixPropertiesTrackExecution);
+        if (jsonStTrackExecution != null)
+            milkJob.trackExecution.readFromJson(jsonStTrackExecution);
+
+        
         // load File Parameters
-        PlugInDescription plugInDescription = milkJobplugInTour.getPlugIn().getDescription();
+        PlugInDescription plugInDescription = milkJob.getPlugIn().getDescription();
         for (PlugInParameter parameter : plugInDescription.inputParameters) {
             if (parameter.typeParameter == TypeParameter.FILEWRITE || parameter.typeParameter == TypeParameter.FILEREADWRITE || parameter.typeParameter == TypeParameter.FILEREAD) {
-                milkJobplugInTour.setParameterStream(parameter, bonitaProperties.getPropertyStream(milkJobplugInTour.getId() + "_" + parameter.name));
+                milkJob.setParameterStream(parameter, bonitaProperties.getPropertyStream(milkJob.getId() + "_" + parameter.name));
             }
         }
 
-        return milkJobplugInTour;
+        return milkJob;
     }
 
     public List<BEvent> dbLoadAllJobs() {
@@ -87,17 +97,28 @@ public class MilkSerializeProperties {
         Enumeration<?> enumKey = bonitaProperties.propertyNames();
         boolean newIdWasGenerated = false;
         while (enumKey.hasMoreElements()) {
-            String idTour = (String) enumKey.nextElement();
+            String idTourSt = (String) enumKey.nextElement();
             // String plugInTourSt = (String) bonitaProperties.get(idTour);
-            MilkJob plugInTour = getInstanceFromBonitaProperties(Long.valueOf(idTour));
+            Long idTour=null;
+            try
+            {
+                idTour = Long.valueOf(idTourSt);
+            }
+            catch(Exception e)
+            {                
+            }
+            if (idTour==null)
+                continue;
+            // we may have different key now
+            MilkJob plugInTour = getInstanceFromBonitaProperties(idTour);
 
             if (plugInTour != null) {
                 if (plugInTour.newIdGenerated)
                     newIdWasGenerated = true;
                 // register in the factory now
-                milkPlugInTourFactory.putJob(plugInTour);
+                milkJobFactory.putJob(plugInTour);
             } else {
-                listToursToDelete.add(idTour);
+                listToursToDelete.add(idTourSt);
                 listEvents.add(new BEvent(eventBadTourJsonFormat, "Id[" + idTour + "]"));
             }
         }
@@ -119,7 +140,7 @@ public class MilkSerializeProperties {
             String idTour = idStream.substring(0, idStream.indexOf("_"));
             try {
                 Long idTourL = Long.valueOf(idTour);
-                if (!milkPlugInTourFactory.existJob(idTourL)) {
+                if (!milkJobFactory.existJob(idTourL)) {
                     listStreamToDelete.add(idStream);
                 }
             } catch (Exception e) {
@@ -150,10 +171,10 @@ public class MilkSerializeProperties {
       
         MilkJob milkJob = getInstanceFromBonitaProperties(idJob);
         // register in the factory now
-        milkPlugInTourFactory.putJob(milkJob);
+        milkJobFactory.putJob(milkJob);
 
         if (milkJob.newIdGenerated) {
-            bonitaProperties.put(milkJob.getId(), milkJob.getJsonSt());
+            bonitaProperties.put(milkJob.getId(), milkJob.getJsonSt(false));
 
             bonitaProperties.store();
         }
@@ -165,48 +186,110 @@ public class MilkSerializeProperties {
         List<BEvent> listEvents = new ArrayList<BEvent>();
         bonitaProperties.setCheckDatabase(false);
         listEvents.addAll(bonitaProperties.loaddomainName(BonitaPropertiesDomain));
-        for (MilkJob plugInTour : milkPlugInTourFactory.getMapJobsId().values()) {
-            bonitaProperties.put(plugInTour.getId(), plugInTour.getJsonSt());
+        for (MilkJob plugInTour : milkJobFactory.getMapJobsId().values()) {
+            bonitaProperties.put(plugInTour.getId(), plugInTour.getJsonSt(false));
         }
         listEvents.addAll(bonitaProperties.store());
 
         return listEvents;
     }
 
+  
     /**
-     * ******************************************* Soon
-     * 
-     * @param plugInTour
-     * @return
-     */
-    /*
-     * public List<BEvent> dbSavePlugInTour(MilkPlugInTour plugInTour) {
-     * List<BEvent> listEvents = new ArrayList<BEvent>();
-     * bonitaProperties.setCheckDatabase(false);
-     * listEvents.addAll(bonitaProperties.loaddomainName(String.valueOf( plugInTour.getId())));
-     * bonitaProperties.put(BonitaPropertiesMainInfo, plugInTour.getJsonSt());
-     * listEvents.addAll(bonitaProperties.store());
-     * return listEvents;
-     * }
-     */
+     * Do to asynchronous, when a user ask to stop, we must save it. In the same time, if the job report a parameters update, then we have to save it, but do not override the previous update.
 
-    public List<BEvent> dbSaveJob(MilkJob plugInTour, boolean saveFileRead) {
+     *
+     */
+    public static class SaveJobParameters {
+        boolean saveFileRead = false;
+        boolean saveFileWrite = false;
+        boolean saveAskStop=false;
+        boolean saveTrackExecution=false;
+        boolean saveBase=false;
+        
+        public static SaveJobParameters getInstanceTrackExecution() {
+            SaveJobParameters saveParameters = new SaveJobParameters();
+            saveParameters.saveTrackExecution = true;
+            return saveParameters;
+        }
+        /**
+         * sall all main information. End of an execution for example
+         * @return
+         */
+        public static SaveJobParameters getInstanceAllInformations() {
+            SaveJobParameters saveParameters = new SaveJobParameters();
+            saveParameters.saveTrackExecution = true;
+            saveParameters.saveAskStop = true;            
+            saveParameters.saveBase = true;
+            return saveParameters;
+        }
+        
+        public static SaveJobParameters getInstanceEverything() {
+            SaveJobParameters saveParameters = new SaveJobParameters();
+            saveParameters.saveTrackExecution = true;
+            saveParameters.saveAskStop = true;            
+            saveParameters.saveBase = true;  
+            saveParameters.saveFileRead = true;
+            saveParameters.saveFileWrite = true;
+
+            return saveParameters;
+        }
+        public static SaveJobParameters getInstanceEndExecutionJob() {
+            SaveJobParameters saveParameters = new SaveJobParameters();
+            saveParameters.saveTrackExecution = true;
+            saveParameters.saveAskStop = true;            
+            saveParameters.saveBase = true;  
+            saveParameters.saveFileRead = false;
+            saveParameters.saveFileWrite = true;
+
+            return saveParameters;
+        }
+        /**
+         * Save the based information. Do not save the execution / askstop information
+         * @return
+         */
+        public static SaveJobParameters getBaseInformations() {
+            SaveJobParameters saveParameters = new SaveJobParameters();
+            saveParameters.saveBase = true;
+            return saveParameters;
+        }
+        
+        public static SaveJobParameters getAskStop() {
+            SaveJobParameters saveParameters = new SaveJobParameters();
+            saveParameters.saveAskStop = true;
+            return saveParameters;
+        }
+  
+    }
+    public static String prefixPropertiesAskStop = "_askStop";
+    public static String prefixPropertiesTrackExecution = "_trackExec";
+    
+    public List<BEvent> dbSaveJob(MilkJob milkJob, SaveJobParameters saveParameters) {
         List<BEvent> listEvents = new ArrayList<BEvent>();
 
         bonitaProperties.setCheckDatabase(false);
         listEvents.addAll(bonitaProperties.loaddomainName(BonitaPropertiesDomain));
 
         // save the plugInTour
+        if (saveParameters.saveBase)
+            bonitaProperties.put(String.valueOf(milkJob.getId()), milkJob.getJsonSt(false));
+        if (saveParameters.saveAskStop)
+            bonitaProperties.put(String.valueOf(milkJob.getId())+prefixPropertiesAskStop, milkJob.askForStop);
+        if (saveParameters.saveTrackExecution)
+            bonitaProperties.put(String.valueOf(milkJob.getId())+prefixPropertiesTrackExecution, milkJob.trackExecution.getJsonSt());
 
-        bonitaProperties.put(String.valueOf(plugInTour.getId()), plugInTour.getJsonSt());
+
+        
         // save all
-        PlugInDescription plugInDescription = plugInTour.getPlugIn().getDescription();
+        PlugInDescription plugInDescription = milkJob.getPlugIn().getDescription();
         for (PlugInParameter parameter : plugInDescription.inputParameters) {
-            if (parameter.typeParameter == TypeParameter.FILEWRITE
-                    || parameter.typeParameter == TypeParameter.FILEREADWRITE
-                    || (saveFileRead && parameter.typeParameter == TypeParameter.FILEREAD)) {
-                bonitaProperties.setPropertyStream(plugInTour.getId() + "_" + parameter.name, plugInTour.getParameterStream(parameter));
-            }
+            boolean saveFile=false;
+            if (saveParameters.saveFileWrite && (parameter.typeParameter == TypeParameter.FILEWRITE || parameter.typeParameter == TypeParameter.FILEREADWRITE))
+                saveFile=true;
+            if ( saveParameters.saveFileRead && (parameter.typeParameter == TypeParameter.FILEREADWRITE || parameter.typeParameter == TypeParameter.FILEREAD)) 
+                saveFile=true;
+            if (saveFile)
+                bonitaProperties.setPropertyStream(milkJob.getId() + "_" + parameter.name, milkJob.getParameterStream(parameter));            
         }
         listEvents.addAll(bonitaProperties.store());
 

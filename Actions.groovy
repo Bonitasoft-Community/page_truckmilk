@@ -148,9 +148,13 @@ public class Actions {
             {
                actionAnswer.responseMap = milkAccessAPI.removeJob( parameter);                
             } 
-            else if ("startJob".equals(action))
+            else if ("activateJob".equals(action))
             {
-               actionAnswer.responseMap = milkAccessAPI.startJob( parameter);                
+               actionAnswer.responseMap = milkAccessAPI.activateJob( parameter);                
+            } 
+             else if ("deactivateJob".equals(action))
+            {
+               actionAnswer.responseMap = milkAccessAPI.deactivateJob( parameter);                
             } 
             else if ("abortJob".equals(action))
             {
@@ -237,7 +241,7 @@ public class Actions {
             {
                 logger.info("#### TruckMilk:Actions call immediateExecution");
                 
-               actionAnswer.responseMap = milkAccessAPI.updateTour( parameter);
+               actionAnswer.responseMap = milkAccessAPI.updateJob( parameter);
                logger.info("#### TruckMilk:Actions call immediateExecution : YES");
 
             }

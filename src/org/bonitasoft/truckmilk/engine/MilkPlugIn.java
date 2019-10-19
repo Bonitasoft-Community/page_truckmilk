@@ -460,6 +460,10 @@ public abstract class MilkPlugIn {
 
         public String explanation;
 
+        /**
+         * host name where execution was done
+         */
+        public String hostName; 
         /*
          * return as information, how many item the plug in managed
          */

@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SaveJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
 
 public class MilkJobFactory {
@@ -152,7 +153,7 @@ public class MilkJobFactory {
      * @param plugIn
      * @return
      */
-    public CreateJobStatus createPlugTour(String tourName, MilkPlugIn plugIn) {
+    public CreateJobStatus createMilkJob(String tourName, MilkPlugIn plugIn) {
         CreateJobStatus createJobStatus = new CreateJobStatus();
 
         createJobStatus.job= MilkJob.getInstanceFromPlugin( tourName, plugIn, this);
@@ -250,8 +251,8 @@ public class MilkJobFactory {
      *        has to be protected.
      * @return
      */
-    public List<BEvent> dbSaveJob(MilkJob job, boolean saveFileRead) {
-        return milkSerialize.dbSaveJob(job, saveFileRead);
+    public List<BEvent> dbSaveJob(MilkJob job, SaveJobParameters saveParameters) {
+        return milkSerialize.dbSaveJob(job, saveParameters);
     }
 
     /**

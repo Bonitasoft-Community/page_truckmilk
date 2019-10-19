@@ -45,13 +45,8 @@ import org.bonitasoft.log.event.BEventFactory;
  */
 public class MilkScheduleQuartz implements MilkSchedulerInt {
 
-    /**
-     * 
-     */
-    private static final long serialVersionUID = 6612011028374019122L;
-
     private static BEvent EVENT_QUARTZ_SCHEDULE_ERROR = new BEvent(MilkScheduleQuartz.class.getName(), 1, Level.ERROR,
-            "Quartz Job failed", "Check the error", "The different monitoring can't run", "See the error");
+            "Quartz Job failed", "Check the error", "The different monitoring can't run", "RESET the Scheduler. Check installation.");
 
     private static BEvent EVENT_DEPLOY_QUARTZ_JOB = new BEvent(MilkScheduleQuartz.class.getName(), 2, Level.ERROR,
             "Deploy Quartz Job failed", "To have an execution with the correct frequency, a job has to be deploy. Java class implementation of the job failed", "The different monitoring can't run", "See the error");
@@ -116,7 +111,9 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
         List<BEvent> listEvents = new ArrayList<BEvent>();
 
         try {
+            @SuppressWarnings("rawtypes")
             Class classMilk = Class.forName("org.bonitasoft.truckmilk.schedule.quartz.MilkQuartzJob");
+            @SuppressWarnings("unused")
             Object ojb = classMilk.newInstance();
         } catch (Exception e) {
             logger.severe(logHeader + "Can't instanciate class - the class [org.bonitasoft.truckmilk.schedule.quartz.MilkQuartzJob] is not deployed");
@@ -431,13 +428,13 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
      * @param name
      * @param dependencyService
      * @throws Exception
-     */
+     *
     private static void removeDependency(final String name, long artefactId, long tenantId, DependencyService dependencyService) throws Exception {
 
         dependencyService.deleteDependency(name);
         dependencyService.refreshClassLoaderAfterUpdate(cstScopeDeployment, artefactId);
-
     }
+    */
 
     /**
      * check if the dependency exist

@@ -56,7 +56,8 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
     private static PlugInParameter cstParamDelayInDay = PlugInParameter.createInstance("delayinday", "Delai in days", TypeParameter.LONG, 10L, "Only cases archived before this delay are in the perimeter");
     private static PlugInParameter cstParamMaximumInReport = PlugInParameter.createInstance("maximuminreport", "Maximum in report", TypeParameter.LONG, 10000L, "Job stops when then number of case to delete reach this limit, in order to not create a very huge file");
     private static PlugInParameter cstParamMaximumInMinutes = PlugInParameter.createInstance("maximuminminutes", "Maximum in minutes", TypeParameter.LONG, 3L, "Job stops when the execution reach this limit, in order to not overload the server.");
-    private static PlugInParameter cstParamProcessfilter = PlugInParameter.createInstance("processfilter", "Process filter", TypeParameter.ARRAY, null, "Only processes in the list will be in the perimeter. No filter means all processes will be in the perimeter");
+    private static PlugInParameter cstParamProcessfilter = PlugInParameter.createInstance("processfilter", "Process filter", TypeParameter.ARRAY, null, "Only processes in the list will be in the perimeter. No filter means all processes will be in the perimeter. Tips: give 'processName;version' to specify a special version of the process, else all versions of the process are processed");
+    private static PlugInParameter cstParamSeparatorCSV = PlugInParameter.createInstance("separatorCSV", "Separator CSV", TypeParameter.STRING, ",", "CSV use a separator. May be ; or ,");
     private static PlugInParameter cstParamReport = PlugInParameter.createInstanceFile("report", "Report", TypeParameter.FILEWRITE, null, "List is calculated and saved in this parameter", "ListToPurge.csv", "text/csv");
 
     public MilkPurgeArchivedListGetList() {
@@ -75,28 +76,39 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
 
     @SuppressWarnings("unchecked")
     @Override
-    public PlugTourOutput execute(MilkJobExecution plugInTourExecution, APIAccessor apiAccessor) {
-        PlugTourOutput plugTourOutput = plugInTourExecution.getPlugTourOutput();
+    public PlugTourOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
 
         ProcessAPI processAPI = apiAccessor.getProcessAPI();
         // get Input 
-        List<String> listProcessName = (List<String>) plugInTourExecution.getInputListParameter(cstParamProcessfilter);
-
-        long delayInDay = plugInTourExecution.getInputLongParameter(cstParamDelayInDay);
-        plugInTourExecution.setPleaseStopAfterManagedItems(plugInTourExecution.getInputLongParameter(cstParamMaximumInReport), 1000000L);
-        plugInTourExecution.setPleaseStopAfterTime(plugInTourExecution.getInputLongParameter(cstParamMaximumInMinutes), 24 * 60L);
+        List<String> listProcessName = (List<String>) jobExecution.getInputListParameter(cstParamProcessfilter);
+        String separatorCSV = jobExecution.getInputStringParameter(cstParamSeparatorCSV);
+        
+        long delayInDay = jobExecution.getInputLongParameter(cstParamDelayInDay);
+        jobExecution.setPleaseStopAfterManagedItems(jobExecution.getInputLongParameter(cstParamMaximumInReport), 1000000L);
+        jobExecution.setPleaseStopAfterTime(jobExecution.getInputLongParameter(cstParamMaximumInMinutes), 24 * 60L);
         try {
 
             List<Long> listProcessDefinitionId = new ArrayList<Long>();
 
             // Filter on process?
-            SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, plugInTourExecution.getPleaseStopAfterManagerItems().intValue());
+            SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, jobExecution.getPleaseStopAfterManagerItems().intValue());
 
             if (listProcessName != null && listProcessName.size() > 0) {
 
-                for (String processName : listProcessName) {
+                for (String fullProcessName : listProcessName) {
                     SearchOptionsBuilder searchOptionBuilder = new SearchOptionsBuilder(0, 1000);
+                    String processName= fullProcessName;
+                    String version=null;
+                    if (fullProcessName.lastIndexOf(";")!=-1)
+                    {
+                        int pos=fullProcessName.lastIndexOf(";");
+                        processName= fullProcessName.substring(0,pos);
+                        version= fullProcessName.substring(pos+1);
+                    }
                     searchOptionBuilder.filter(ProcessDeploymentInfoSearchDescriptor.NAME, processName);
+                    if (version!=null)
+                        searchOptionBuilder.filter(ProcessDeploymentInfoSearchDescriptor.VERSION, version);
                     searchOptionBuilder.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE,
                             ActivationState.ENABLED.name());
                     SearchResult<ProcessDeploymentInfo> searchProcessDeployment = processAPI
@@ -142,27 +154,28 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
             ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
             Writer w = new OutputStreamWriter(arrayOutputStream);
 
-            w.write(cstColCaseId + ";processname;processversion;archiveddate;" + cstColStatus + "\n");
+            w.write(cstColCaseId + separatorCSV+"processname"+separatorCSV+"processversion"+separatorCSV+"archiveddate" + separatorCSV+ cstColStatus + "\n");
 
             // loop on archive
             for (ArchivedProcessInstance archivedProcessInstance : searchArchivedProcessInstance.getResult()) {
-                if (plugInTourExecution.pleaseStop())
+            
+                if (jobExecution.pleaseStop())
                     break;
-                String line = String.valueOf(archivedProcessInstance.getSourceObjectId()) + ";";
+                String line = String.valueOf(archivedProcessInstance.getSourceObjectId()) + separatorCSV;
                 long processId = archivedProcessInstance.getProcessDefinitionId();
                 if (!cacheProcessDefinition.containsKey(processId)) {
                     try {
                         ProcessDefinition processDefinition = processAPI.getProcessDefinition(processId);
-                        cacheProcessDefinition.put(processId, processDefinition.getName() + ";" + processDefinition.getVersion() + ";");
+                        cacheProcessDefinition.put(processId, processDefinition.getName() + separatorCSV + processDefinition.getVersion() + separatorCSV);
                     } catch (Exception e) {
-                        cacheProcessDefinition.put(processId, " ; ;");
+                        cacheProcessDefinition.put(processId, separatorCSV+" "+separatorCSV);
                     }
                 }
                 line += cacheProcessDefinition.get(processId);
                 line += TypesCast.sdfCompleteDate.format(archivedProcessInstance.getArchiveDate());
                 line += ";";
                 w.write(line + "\n");
-                plugInTourExecution.addManagedItem( 1 );
+                jobExecution.addManagedItem( 1 );
             }
             w.flush();
             plugTourOutput.nbItemsProcessed = searchArchivedProcessInstance.getCount();
@@ -174,7 +187,7 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
                 return plugTourOutput;
             }
 
-            plugTourOutput.executionStatus = plugInTourExecution.pleaseStop()? ExecutionStatus.SUCCESSPARTIAL : ExecutionStatus.SUCCESS;
+            plugTourOutput.executionStatus = jobExecution.pleaseStop()? ExecutionStatus.SUCCESSPARTIAL : ExecutionStatus.SUCCESS;
         }
 
         catch (SearchException e1) {
@@ -198,6 +211,8 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
         plugInDescription.addParameter(cstParamMaximumInReport);
         plugInDescription.addParameter(cstParamMaximumInMinutes);
         plugInDescription.addParameter(cstParamProcessfilter);
+        plugInDescription.addParameter(cstParamSeparatorCSV);
+        
         plugInDescription.addParameter(cstParamReport);
         return plugInDescription;
     }

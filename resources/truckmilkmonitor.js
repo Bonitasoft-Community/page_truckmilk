@@ -24,10 +24,16 @@
 		this.getNavClass = function( tabtodisplay )
 		{
 			if (this.navbaractiv === tabtodisplay)
-			 return 'ng-isolate-scope active';
+				return 'ng-isolate-scope active';
 			return 'ng-isolate-scope';
 		}
 
+		this.getNavStyle = function( tabtodisplay )
+		{
+			if (this.navbaractiv === tabtodisplay)
+				return 'border: 1px solid #c2c2c2;border-bottom-color: transparent;';
+			return '';
+		}
 		
 		
 		this.inprogress = false;
@@ -118,6 +124,7 @@
 		}
 
 		this.autorefresh=false;
+		this.showResetJobs=false;
 		this.completeStatus=false;
 		
 		
@@ -166,12 +173,21 @@
 							{
 								// console.log("Found it !");
 								foundIt= true;
-								localPlugTour.enable					= serverPlugTour.enable;
 								// localPlugTour.name		= serverPlugTour.name;
 								// cron
-								localPlugTour.nextexecutionst			= serverPlugTour.nextexecutionst;
-								localPlugTour.lastexecutionstatus		= serverPlugTour.lastexecutionstatus;
-								localPlugTour.lastexecutionlistevents	= serverPlugTour.lastexecutionlistevents;
+								localPlugTour.nextexecutionst					= serverPlugTour.nextexecutionst;
+								localPlugTour.lastexecutionlistevents			= serverPlugTour.lastexecutionlistevents;
+								
+								localPlugTour.lastexecutionstatus				= serverPlugTour.lastexecutionstatus;
+								localPlugTour.enable							= serverPlugTour.enable;
+								localPlugTour.hostsrestriction					= serverPlugTour.hostsrestriction;
+								localPlugTour.imediateExecution					= serverPlugTour.imediateExecution;
+								localPlugTour.trackExecution					= serverPlugTour.trackExecution;
+								localPlugTour.lastexecution						= serverPlugTour.lastexecution; 
+								localPlugTour.lastexecutionst					= serverPlugTour.lastexecutionst;
+								localPlugTour.lastexecutionstatus				= serverPlugTour.lastexecutionstatus;
+								localPlugTour.savedExecution					= serverPlugTour.savedExecution;
+								localPlugTour.askForStop						= serverPlugTour.askForStop;
 							}
 
 						}
@@ -208,13 +224,16 @@
 		}
 
 		this.removeJob = function(plugtour) {
-			console.log("removeJob:Start");
-			// console.log("removeJob: Start");
-			var param = {
-				'name' :  plugtour.name,
-				'id'   :  plugtour.id
-			};
-			this.operationJob('removeJob', param, null, false);
+			var result = confirm("Do you want to remove this job?");
+			if (result) {
+				console.log("removeJob:Start");
+
+				var param = {
+					'name' :  plugtour.name,
+					'id'   :  plugtour.id
+				};
+				this.operationJob('removeJob', param, null, false);
+			}
 		}
 
 		this.abortJob = function( plugtour) {
@@ -225,16 +244,27 @@
 				};
 			this.operationJob('abortJob', param, plugtour, false);
 		}
-		this.startJob = function(plugtour) {
+
+		<!-- Activate / Deactivate -->
+		this.activateJob = function(plugtour) {
 			console.log("startJob:Start");
 			var param = {
 					'name' :  plugtour.name,
 					'id'   :  plugtour.id
 				};
-			this.operationJob('startJob', param, plugtour, false);
+			this.operationJob('activateJob', param, plugtour, false);
 		}
 		
-		
+		this.deactivateJob = function(plugtour) {
+			console.log("stopJob:beginning");
+			var param = {
+					'name' :  plugtour.name,
+					'id'   :  plugtour.id
+				};
+
+			this.operationJob('deactivateJob', param, plugtour, true);		
+		}
+
 		
 		this.updateJob= function(plugtour) {
 			console.log("updateJob START")
@@ -265,15 +295,6 @@
 				};
 
 			this.operationJob('immediateExecution', param, plugtour, true);		
-		}
-		this.stopJob = function(plugtour) {
-			console.log("stopJob:beginning");
-			var param = {
-					'name' :  plugtour.name,
-					'id'   :  plugtour.id
-				};
-
-			this.operationJob('stopJob', param, plugtour, true);		
 		}
 		this.abortJob = function(plugtour) {
 			console.log("abortJob:begin");
@@ -514,8 +535,10 @@
 			plugtour.show.report = true;
 		}
 
-		this.getTourStyle= function(plugtour) {
-			console.log("getTourStyle:Start (r/o) plugtour="+plugtour.id+" imediateExecution="+plugtour.imediateExecution+" inExecution="+plugtour.inExecution+" enable="+plugtour.enable+" askForStop="+plugtour.askForStop);
+		this.getJobStyle= function(plugtour) {
+			console.log("getTourStyle:Start (r/o) plugtour="+plugtour.id+" imediateExecution="+plugtour.imediateExecution+" inExecution="+plugtour.trackExecution.inExecution+" enable="+plugtour.enable+" askForStop="+plugtour.askForStop);
+			
+			/* no more color
 			if (plugtour.imediateExecution)
 				return "background-color: #fafabd80";
 			if (plugtour.inExecution && plugtour.askForStop)
@@ -529,14 +552,14 @@
 				return "background-color: #fcf8e3";
 			if (plugtour.enable)
 				return "background-color: #ebfae5";
-
+			*/
 		}
 		this.getNowStyle= function( plugtour )
 		{
 			// console.log("getNowStyle:Start (r/o) plugtour="+plugtour.id);
 			if (plugtour.imediateExecution)
 				return "btn btn-success btn-xs"
-			return "btn btn-default btn-xs";
+			return "btn btn-info btn-xs";
 		}		
 		this.getNowTitle=function( plugtour )
 		{
@@ -568,7 +591,7 @@
 		// -----------------------------------------------------------------------------------------
 		this.downloadParameterFile = function(plugtour, parameterdef)
 		{
-			// console.log("downloadParameterFile:Start (r/o) ["+parameterdef.name+"]");
+			console.log("downloadParameterFile:Start (r/o) ["+parameterdef.name+"]");
 			var param={"plugintour": plugtour.id, "parametername":parameterdef.name};			
 			var json = encodeURIComponent(angular.toJson(param, true));
 			// do not calculate a new date now:we will have a recursive call in Angular
@@ -746,13 +769,13 @@
 		this.schedulerMaintenance = function(operation) {
 			var self = this;
 			self.inprogress = true;
-			console.log("SchedulerMaintenance, Inprogress<=true");
+			console.log("SchedulerMaintenance, Inprogress<=true operation=["+operation+"]");
 			var param= { 'operation': operation, 'newscheduler': this.scheduler.selectscheduler };
 			var json = encodeURIComponent(angular.toJson(param, true));
-			self.scheduler.schedulerlistevents='';
+			self.scheduler = { 'schedulerlistevents' : '' };
 			
 			// console.log("schedulerMaintenance call HTTP");
-			$http.get('?page=custompage_truckmilk&action=status&paramjson=' + json+'&t='+Date.now()).success(function(jsonResult) {
+			$http.get('?page=custompage_truckmilk&action=schedulermaintenance&paramjson=' + json+'&t='+Date.now()).success(function(jsonResult) {
 				self.inprogress = false;
 				console.log("schedulerMaintenance.receiveData HTTP Finish inprogress<=false"+ angular.toJson(jsonResult,false));
 

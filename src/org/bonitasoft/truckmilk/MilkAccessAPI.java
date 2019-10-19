@@ -170,9 +170,15 @@ public class MilkAccessAPI {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.REMOVEJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
     }
-    public Map<String, Object> stopJob(Parameter parameter) {
+    
+    public Map<String, Object> activateJob(Parameter parameter) {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
-        return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.STOPTOUR, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
+        return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.ACTIVATEJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
+    }
+
+    public Map<String, Object> deactivateJob(Parameter parameter) {
+        MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
+        return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.DEACTIVATEJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
     }
     public Map<String, Object> abortJob(Parameter parameter) {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
@@ -199,11 +205,7 @@ public class MilkAccessAPI {
         return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.IMMEDIATEJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
     }
 
-    public Map<String, Object> startJob(Parameter parameter) {
-        MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
-        return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.STARTJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
-    }
-
+   
     /**
      * read a parameter file, and send the result in the outputStream (send to the browser)
      * 
@@ -254,7 +256,8 @@ public class MilkAccessAPI {
 
     public Map<String, Object> schedulerMaintenance(Parameter parameter) {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
-        return milkCmdControlAPI.schedulerMaintenance(parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.platFormAPI, parameter.getTenantId());
+        Map<String, Object> result= milkCmdControlAPI.schedulerMaintenance(parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.platFormAPI, parameter.getTenantId());
+        return result;
     }
 
 }
