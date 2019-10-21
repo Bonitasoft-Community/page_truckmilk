@@ -24,7 +24,10 @@ import org.bonitasoft.engine.scheduler.model.SJobParameter;
 import org.bonitasoft.engine.scheduler.trigger.Trigger;
 import org.bonitasoft.engine.scheduler.trigger.UnixCronTrigger;
 import org.bonitasoft.engine.service.PlatformServiceAccessor;
+import org.bonitasoft.engine.service.TenantServiceAccessor;
+import org.bonitasoft.engine.service.TenantServiceSingleton;
 import org.bonitasoft.engine.service.impl.ServiceAccessorFactory;
+import org.bonitasoft.engine.sessionaccessor.SessionAccessor;
 import org.bonitasoft.engine.transaction.TransactionService;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
@@ -252,44 +255,54 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
         logger.info(logHeader + "Startup QuartzJob");
 
         try {
-            SchedulerService bonitaScheduler = ServiceAccessorFactory.getInstance().createPlatformServiceAccessor()
-                    .getSchedulerService();
+            final TenantServiceAccessor tenantAccessor = TenantServiceSingleton.getInstance(tenantId);
+            tenantAccessor.getUserTransactionService().executeInTransaction(  () -> {
+                SchedulerService bonitaScheduler = ServiceAccessorFactory.getInstance().createPlatformServiceAccessor()
+                        .getSchedulerService();
 
-            List<String> allJobs = bonitaScheduler.getAllJobs();
-            for (String jobName : allJobs) {
-                if (jobName.equals(getJobTriggerName(tenantId))) {
-                    logger.info(logHeader + " QuartzJob[" + getJobTriggerName(tenantId) + "] already exist," + (forceReset ? "Delete and schedule it" : ""));
-                    if (forceReset)
-                        bonitaScheduler.delete(jobName);
-                    else
-                        return listEvents;
+
+                SessionAccessor sessionAccessor = tenantAccessor.getSessionAccessor();
+                sessionAccessor.setTenantId( tenantId );
+                        
+                        
+                List<String> allJobs = bonitaScheduler.getAllJobs();
+                for (String jobName : allJobs) {
+                    if (jobName.equals(getJobTriggerName(tenantId))) {
+                        logger.info(logHeader + " QuartzJob[" + getJobTriggerName(tenantId) + "] already exist," + (forceReset ? "Delete and schedule it" : ""));
+                        if (forceReset)
+                            bonitaScheduler.delete(jobName);
+                        else
+                            return null;
+                    }
                 }
-            }
-            // Trigger is the WHEN job has to start
-            // every minutes : see https://www.freeformatter.com/cron-expression-generator-quartz.html
-            String cronString;
+                // Trigger is the WHEN job has to start
+                // every minutes : see https://www.freeformatter.com/cron-expression-generator-quartz.html
+                String cronString;
 
-            cronString = "0 0/1 * 1/1 * ? *"; // every minutes
-            // cronString = "0/20 0 0 ? * * *"; // every 20 s
+                cronString = "0 0/1 * 1/1 * ? *"; // every minutes
+                // cronString = "0/20 0 0 ? * * *"; // every 20 s
 
-            final Trigger syncJobTrigger = new UnixCronTrigger(
-                    getJobTriggerName(tenantId),
-                    new Date(),
-                    cronString,
-                    org.bonitasoft.engine.scheduler.trigger.Trigger.MisfireRestartPolicy.ALL);
+                final Trigger syncJobTrigger = new UnixCronTrigger(
+                        getJobTriggerName(tenantId),
+                        new Date(),
+                        cronString,
+                        org.bonitasoft.engine.scheduler.trigger.Trigger.MisfireRestartPolicy.ALL);
 
-            // Job descriptor is WHAT to run
-            SJobDescriptorBuilderFactory jobDescriptorBuilder = BuilderFactory.get(SJobDescriptorBuilderFactory.class);
-            SJobDescriptor jobDescriptor = jobDescriptorBuilder
-                    .createNewInstance("org.bonitasoft.truckmilk.schedule.quartz.MilkQuartzJob", getJobTriggerName(tenantId), false).done();
+                // Job descriptor is WHAT to run
+                SJobDescriptorBuilderFactory jobDescriptorBuilder = BuilderFactory.get(SJobDescriptorBuilderFactory.class);
+                SJobDescriptor jobDescriptor = jobDescriptorBuilder
+                        .createNewInstance("org.bonitasoft.truckmilk.schedule.quartz.MilkQuartzJob", getJobTriggerName(tenantId), false).done();
 
-            List<SJobParameter> syncJobParameters = new ArrayList<SJobParameter>();
-            // tenantId in the job param
-            SJobParameterBuilderFactory jobParameterBuilderFactory = BuilderFactory.get(SJobParameterBuilderFactory.class);
-            syncJobParameters.add(jobParameterBuilderFactory.createNewInstance(cstParamTenantId, tenantId).done());
+                List<SJobParameter> syncJobParameters = new ArrayList<SJobParameter>();
+                // tenantId in the job param
+                SJobParameterBuilderFactory jobParameterBuilderFactory = BuilderFactory.get(SJobParameterBuilderFactory.class);
+                syncJobParameters.add(jobParameterBuilderFactory.createNewInstance(cstParamTenantId, tenantId).done());
 
-            bonitaScheduler.schedule(jobDescriptor, syncJobParameters, syncJobTrigger);
-            logger.info(logHeader + " QuartzJob[" + getJobTriggerName(tenantId) + "] Started with Cron[" + cronString + "]");
+                bonitaScheduler.schedule(jobDescriptor, syncJobParameters, syncJobTrigger);
+                logger.info(logHeader + " QuartzJob[" + getJobTriggerName(tenantId) + "] Started with Cron[" + cronString + "]");   
+                return null;
+            });
+            
 
         } catch (final Exception e) {
 
@@ -305,10 +318,11 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
     }
 
     public List<BEvent> shutdown(long tenantId) {
-        // do nothing, it's managed bvy quartz
+        // do nothing, it's managed by quartz
         return new ArrayList<BEvent>();
     }
 
+    
     /* ******************************************************************************** */
     /*                                                                                  */
     /* Schedule Maintenance operation */

@@ -90,7 +90,7 @@
 			var self = this;
 			
 			self.inprogress = true;
-			console.log("loadinit inprogress<=true");
+			console.log("loadinit inprogress<=true. Call now");
 			self.listevents='';
 			
 			// console.log("loadinit Call HTTP");
@@ -146,11 +146,12 @@
 			self.completeStatus = completeStatus;
 			self.listevents='';
 			self.inprogress = true;
-			console.log("refresh: inprogress<=true");
+			console.log("refresh: inprogress<=true. Call now 2.2");
 			// console.log("refresh call HTTP");
-			$http.get('?page=custompage_truckmilk&action='+verb+'&t='+Date.now()).success(function(jsonResult) {
+			$http.get('?page=custompage_truckmilk&action='+verb+'&t='+Date.now())
+			.success(function(jsonResult) {
 				self.inprogress = false;
-				console.log("refresh.receiveData HTTP inprogress<=true");
+				console.log("success.then HTTP inprogress<=true");
 
 				self.deploiment = jsonResult.deploiment;
 				if (self.completeStatus)
@@ -202,17 +203,14 @@
 					}						
 				}
 				self.listplugin 	= jsonResult.listplugin;
-				self.listevents 	= jsonResult.listevents;
-				
+				self.listevents 	= jsonResult.listevents;				
 
-			}).error(function() {
-
+			}).error( function(response){
+				console.log("refresh.then Error HTTP :"+response.status);
 				self.inprogress = false;
 				console.log("refresh.error HTTP - inprogress=false");
-
 				self.listplugtour = [];
 				self.listplugin = [];
-
 			});
 
 		}
@@ -807,7 +805,9 @@
 		this.schedulerMaintenance = function(operation) {
 			var self = this;
 			self.inprogress = true;
-			console.log("SchedulerMaintenance, Inprogress<=true operation=["+operation+"]");
+			self.listevents='';
+
+			console.log("SchedulerMaintenance v2, Inprogress<=true operation=["+operation+"]");
 			var param= { 'operation': operation, 'newscheduler': this.scheduler.selectscheduler };
 			var json = encodeURIComponent(angular.toJson(param, true));
 			self.scheduler = { 'schedulerlistevents' : '' };
@@ -826,7 +826,7 @@
 		
 		this.getListTypeScheduler = function()
 		{
-			console.log("getListTypeScheduler:Start");
+			// console.log("getListTypeScheduler:Start");
 			if (this.scheduler)
 				return this.scheduler.listtypeschedulers;
 			return [];

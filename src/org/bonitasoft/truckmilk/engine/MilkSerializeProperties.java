@@ -5,6 +5,7 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
@@ -13,6 +14,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
+import org.bonitasoft.truckmilk.schedule.MilkScheduleQuartz;
 
 /**
  * this class manage the serialization of the TOur in Bonita Properties
@@ -20,6 +22,9 @@ import org.bonitasoft.truckmilk.job.MilkJob;
  * @author Firstname Lastname
  */
 public class MilkSerializeProperties {
+
+    private static Logger logger = Logger.getLogger(MilkScheduleQuartz.class.getName());
+    private static String logHeader = "MilkScheduleQuartz ~~ ";
 
     BonitaProperties bonitaProperties;
  
@@ -62,17 +67,21 @@ public class MilkSerializeProperties {
      * @param milkJobFactory
      * @return
      */
-    private MilkJob getInstanceFromBonitaProperties(Long idJob) {
-        String jobSt = (String) bonitaProperties.get(idJob.toString());
+    private MilkJob getInstanceFromBonitaProperties(Long jobId) {
+        String jobSt = (String) bonitaProperties.get(jobId.toString());
+        logger.info( getLogHeader()+".getInstanceFromBonitaProperties begin Read JobId["+jobId+"] jsonst="+jobSt);
+        
         MilkJob milkJob = MilkJob.getInstanceFromJson(jobSt, milkJobFactory);
-        if (milkJob == null)
+        if (milkJob == null) {
+            logger.info( getLogHeader()+".getInstanceFromBonitaProperties end because milJob=null ?");
             return null; // not a normal way
+        }
         
         // read the another information
-        Object askStopObj = bonitaProperties.get(idJob.toString()+prefixPropertiesAskStop);
+        Object askStopObj = bonitaProperties.get(jobId.toString()+prefixPropertiesAskStop);
         if (askStopObj !=null)
             milkJob.askForStop = Boolean.valueOf(askStopObj.toString());
-        String jsonStTrackExecution = (String) bonitaProperties.get(idJob.toString()+prefixPropertiesTrackExecution);
+        String jsonStTrackExecution = (String) bonitaProperties.get(jobId.toString()+prefixPropertiesTrackExecution);
         if (jsonStTrackExecution != null)
             milkJob.trackExecution.readFromJson(jsonStTrackExecution);
 
@@ -84,6 +93,7 @@ public class MilkSerializeProperties {
                 milkJob.setParameterStream(parameter, bonitaProperties.getPropertyStream(milkJob.getId() + cstPrefixPropertiesStreamValue + parameter.name));
             }
         }
+        logger.info( getLogHeader()+".getInstanceFromBonitaProperties end");
 
         return milkJob;
     }
@@ -91,7 +101,8 @@ public class MilkSerializeProperties {
     public List<BEvent> dbLoadAllJobs() {
         List<BEvent> listEvents = new ArrayList<BEvent>();
         bonitaProperties.setCheckDatabase(false);
-
+        logger.info( getLogHeader()+" LoadAllJobs-begin");
+        
         /** soon : name is NULL to load all tour */
         listEvents.addAll(bonitaProperties.loaddomainName(BonitaPropertiesDomain));
        // bonitaProperties.traceInLog();
@@ -160,8 +171,12 @@ public class MilkSerializeProperties {
 
         // save it to delete all corrupted tour -- must never arrived
         // bonitaProperties.traceInLog();
-        if (listToursToDelete.size() > 0 || newIdWasGenerated)
+        if (listToursToDelete.size() > 0 || newIdWasGenerated) {
+            logger.info( getLogHeader()+" LoadAllJobs-store()");
+
             listEvents.addAll(bonitaProperties.store());
+        }
+        logger.info( getLogHeader()+" LoadAllJobs-end");
 
         return listEvents;
     }
@@ -170,21 +185,24 @@ public class MilkSerializeProperties {
      * @param idTour
      * @return
      */
-    public MilkJob dbLoadJob(Long idJob) {
+    public MilkJob dbLoadJob(Long jobId) {
         bonitaProperties.setCheckDatabase(false);
+        logger.info( getLogHeader()+".dbLoadJob - begin");
 
         /** soon : name is NULL to load all tour */
         bonitaProperties.loaddomainName(BonitaPropertiesDomain);
       
-        MilkJob milkJob = getInstanceFromBonitaProperties(idJob);
+        MilkJob milkJob = getInstanceFromBonitaProperties(jobId);
         // register in the factory now
         milkJobFactory.putJob(milkJob);
 
         if (milkJob.newIdGenerated) {
             bonitaProperties.put(milkJob.getId(), milkJob.getJsonSt(false));
+            logger.info( getLogHeader()+".dbLoadJob - newIdGenerated, store all ****");
 
             bonitaProperties.store();
         }
+        logger.info( logHeader+".dbLoadJob - end");
 
         return milkJob;
     }
@@ -192,11 +210,14 @@ public class MilkSerializeProperties {
     public List<BEvent> dbSaveAllJobs() {
         List<BEvent> listEvents = new ArrayList<BEvent>();
         bonitaProperties.setCheckDatabase(false);
+        logger.info( getLogHeader()+" saveAllJobs-begin ***");
+        
         listEvents.addAll(bonitaProperties.loaddomainName(BonitaPropertiesDomain));
         for (MilkJob milkJob : milkJobFactory.getMapJobsId().values()) {
             bonitaProperties.put(milkJob.getId(), milkJob.getJsonSt(false));
         }
         listEvents.addAll(bonitaProperties.store());
+        logger.info( getLogHeader()+" saveAllJobs-end");
 
         return listEvents;
     }
@@ -281,7 +302,7 @@ public class MilkSerializeProperties {
     
     public List<BEvent> dbSaveJob(MilkJob milkJob, SaveJobParameters saveParameters) {
         List<BEvent> listEvents = new ArrayList<BEvent>();
-
+    
         bonitaProperties.setCheckDatabase(false);
         listEvents.addAll(bonitaProperties.loaddomainName(BonitaPropertiesDomain));
 
@@ -310,7 +331,10 @@ public class MilkSerializeProperties {
             if (saveFile)
                 bonitaProperties.setPropertyStream(milkJob.getId() +cstPrefixPropertiesStreamValue + parameter.name, milkJob.getParameterStream(parameter));            
         }
+        logger.info( getLogHeader()+".dbSaveJob-begin keys="+listKeys.toString());
+
         listEvents.addAll(bonitaProperties.storeCollectionKeys(listKeys));
+        logger.info( getLogHeader()+".dbSaveJob-end");
 
         return listEvents;
     }
@@ -327,16 +351,24 @@ public class MilkSerializeProperties {
      *        }
      */
 
-    public List<BEvent> dbRemovePlugInTour(MilkJob plugInTour) {
+    public List<BEvent> dbRemovePlugInTour(MilkJob milkJob) {
         List<BEvent> listEvents = new ArrayList<BEvent>();
         bonitaProperties.setCheckDatabase(false);
 
         listEvents.addAll(bonitaProperties.loaddomainName(BonitaPropertiesDomain));
+        logger.info( getLogHeader()+".dbRemovePlugInTour-begin idJob="+milkJob.getId());
 
         // remove(pluginTour.getId() does not work, so let's compare the key
-        bonitaProperties.remove(String.valueOf(plugInTour.getId()));
-
-        listEvents.addAll(bonitaProperties.store());
+        Set<String> listKeys=new HashSet<String>();
+        listKeys.add( milkJob.getId()+prefixPropertiesBase) ;
+        listKeys.add( milkJob.getId()+prefixPropertiesAskStop) ;
+        listKeys.add( milkJob.getId()+prefixPropertiesTrackExecution) ;
+        
+        for (String key : listKeys)
+            bonitaProperties.remove( key );
+        
+        listEvents.addAll(bonitaProperties.storeCollectionKeys(listKeys));
+        logger.info( getLogHeader()+".dbRemovePlugInTour-end");
 
         return listEvents;
     }
@@ -360,11 +392,24 @@ public class MilkSerializeProperties {
     }
 
     public SerializeOperation saveCurrentScheduler(String typeScheduler) {
+        logger.info( getLogHeader()+" saveCurrentScheduler-begin");
+
         SerializeOperation serializeOperation = new SerializeOperation();
         bonitaProperties.setCheckDatabase(false); // we check only when we deploy a new command
         serializeOperation.listEvents.addAll(bonitaProperties.loaddomainName(BonitaPropertiesDomainScheduler));
         bonitaProperties.put(BonitaPropertiesSchedulerType, typeScheduler);
-        serializeOperation.listEvents.addAll(bonitaProperties.store());
+        
+        Set<String> listKeys=new HashSet<String>();
+        listKeys.add(BonitaPropertiesSchedulerType) ;
+        serializeOperation.listEvents.addAll(bonitaProperties.storeCollectionKeys(listKeys));
+        
+        logger.info( getLogHeader()+" saveCurrentScheduler-end");
+        
+        
         return serializeOperation;
+    }
+    
+    private String getLogHeader() {
+        return "#"+Thread.currentThread().getName()+" "+logHeader;
     }
 }

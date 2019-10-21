@@ -727,7 +727,41 @@
 			</div>
 			<button ng-click="ctrl.refresh( true )" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress">Get Status</button>
 		
-	   		<div ng-bind-html="ctrl.getHtml(ctrl.listevents, 'mainlistevents' )"></div>
+	   		<!--  <div ng-bind-html="ctrl.getHtml(ctrl.listevents, 'mainlistevents' )"></div>  -->
+	   		<p>
+			
+			<table style="width:100%;border-spacing: 10px 0px;border-collapse: separate; ">
+			<tr>
+			<td style="vertical-align:top">	
+				<div class="panel panel-info"  class="col-lg-6" >
+					<div class="panel-heading">
+						Last execution status
+					</div>
+					<div>
+						<table class="table table-striped table-hover table-condensed" >
+							<tr ng-repeat="exec in ctrl.scheduler.lastheartbeat"><td>{{exec}}</td></tr>
+						</table>
+					</div>
+				</div>
+			
+			</td><td style="vertical-align:top">			
+				<div class="panel panel-info"  class="col-lg-6" >
+					<div class="panel-heading">
+						Information
+					</div>
+					<div style="border-spacing: 10px 0px;border-collapse: separate;" >
+						<p>
+						<div ng-if="! ctrl.scheduler.details">
+							<div ng-bind-html="ctrl.getHtml(ctrl.scheduler.dashboardsyntheticlistevents, 'scheduler.dashboardsyntheticlistevents' )"></div>
+						</div>
+						<div ng-if="ctrl.scheduler.details">
+							<div ng-bind-html="ctrl.getHtml(ctrl.scheduler.dashboardlistevents, 'scheduler.dashboardlistevents' )"></div>
+						</div>
+						<input type="checkbox" ng-model="ctrl.scheduler.details">Details</input>
+					</div>
+				</div>
+			</td></tr>			
+			</table>
 			<p>
 			
 			<!--  <div class="alert alert-success">Scheduler={{ctrl.scheduler}}</div> -->
@@ -833,40 +867,7 @@
 			</td>
 			</tr>
 			</table>
-			<p>
 			
-			<table style="width:100%;border-spacing: 10px 0px;border-collapse: separate; ">
-			<tr>
-			<td style="vertical-align:top">	
-				<div class="panel panel-info"  class="col-lg-6" >
-					<div class="panel-heading">
-						Last execution status
-					</div>
-					<div>
-						<table class="table table-striped table-hover table-condensed" >
-							<tr ng-repeat="exec in ctrl.scheduler.lastheartbeat"><td>{{exec}}</td></tr>
-						</table>
-					</div>
-				</div>
-			
-			</td><td style="vertical-align:top">			
-				<div class="panel panel-info"  class="col-lg-6" >
-					<div class="panel-heading">
-						Information
-					</div>
-					<div style="border-spacing: 10px 0px;border-collapse: separate;" >
-						<p>
-						<div ng-if="! ctrl.scheduler.details">
-							<div ng-bind-html="ctrl.getHtml(ctrl.scheduler.dashboardsyntheticlistevents, 'scheduler.dashboardsyntheticlistevents' )"></div>
-						</div>
-						<div ng-if="ctrl.scheduler.details">
-							<div ng-bind-html="ctrl.getHtml(ctrl.scheduler.dashboardlistevents, 'scheduler.dashboardlistevents' )"></div>
-						</div>
-						<input type="checkbox" ng-model="ctrl.scheduler.details">Details</input>
-					</div>
-				</div>
-			</td></tr>			
-			</table>
 		</div> <!--  end maintenance -->
 
 		<!-- Register a new plug in 
@@ -918,8 +919,8 @@
 
 
 <!-- Application dependencies -->
-<!--<script src="pageResource?page=custompage_truckmilk&location=truckmilkmonitor.js&v=@_CURRENTTIMEMILIS_@"></script> -->
-<script src="truckmilkmonitor.js?v=@_CURRENTTIMEMILIS_@"></script>
+<script src="pageResource?page=custompage_truckmilk&location=truckmilkmonitor.js&v=@_CURRENTTIMEMILIS_@"></script>
+<!-- <script src="truckmilkmonitor.js?v=@_CURRENTTIMEMILIS_@"></script> -->
 
 </body>
 </html>		

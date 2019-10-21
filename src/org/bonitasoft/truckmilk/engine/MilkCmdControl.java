@@ -540,6 +540,8 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     executeAnswer.listEvents.addAll( listEventsAction );
                 }
                 executeAnswer.result.put(cstJsonSchedulerStatus, statusScheduler.status.toString());
+                executeAnswer.result.put(cstJsonListTypesSchedulers, milkSchedulerFactory.getListTypeScheduler());
+
                 // no need to add the event: it will be done by the getEvent after
 
             } else if (VERBE.SCHEDULERDEPLOY.equals(verbEnum)) {
@@ -556,6 +558,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 // return the status
                 StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(executeParameters.tenantId);
                 executeAnswer.result.put(cstJsonSchedulerStatus, statusScheduler.status.toString());
+                executeAnswer.result.put(cstJsonListTypesSchedulers, milkSchedulerFactory.getListTypeScheduler());
                 executeAnswer.listEvents.addAll(statusScheduler.listEvents);
 
             } else if (VERBE.SCHEDULERRESET.equals(verbEnum)) {
@@ -570,6 +573,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 }
                 StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(executeParameters.tenantId);
                 executeAnswer.result.put(cstJsonSchedulerStatus, statusScheduler.status.toString());
+                executeAnswer.result.put(cstJsonListTypesSchedulers, milkSchedulerFactory.getListTypeScheduler());
                 executeAnswer.listEvents.addAll(statusScheduler.listEvents);
 
             } else if (VERBE.SCHEDULERCHANGE.equals(verbEnum)) {
@@ -583,6 +587,8 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     executeAnswer.result.put(cstJsonSchedulerStatus, statusScheduler.status.toString());
                     executeAnswer.listEvents.addAll(statusScheduler.listEvents);
                 }
+                executeAnswer.result.put(cstJsonListTypesSchedulers, milkSchedulerFactory.getListTypeScheduler());
+
             }
 
             //------------------------------ Check Environment

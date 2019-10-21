@@ -1,0 +1,11 @@
+
+
+JOB; Execute Command
+JOB: Execute Command Meteor
+JOB : create case sur directory / sur Email
+
+BonitaProperties : Too long => Save as Stream
+
+
+
+Disconnect : il faut le detecter dans la page pour afficher une reconnection
