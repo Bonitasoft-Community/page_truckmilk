@@ -188,6 +188,8 @@
 								localPlugTour.lastexecutionstatus				= serverPlugTour.lastexecutionstatus;
 								localPlugTour.savedExecution					= serverPlugTour.savedExecution;
 								localPlugTour.askForStop						= serverPlugTour.askForStop;
+								localPlugTour.listevents						= serverPlugTour.listevents;
+								
 							}
 
 						}
@@ -215,7 +217,12 @@
 
 		}
 		this.addJob = function(plugin, nameJob) {
-			console.log("addJob:Start");
+			console.log("addJob: add["+nameJob+"]");
+			if (! nameJob || nameJob === '')
+			{
+				alert("Name is mandatory");
+				return;
+			}
 			var param = {
 				'plugin' : plugin,
 				'name' : nameJob
@@ -536,7 +543,7 @@
 		}
 
 		this.getJobStyle= function(plugtour) {
-			console.log("getTourStyle:Start (r/o) plugtour="+plugtour.id+" imediateExecution="+plugtour.imediateExecution+" inExecution="+plugtour.trackExecution.inExecution+" enable="+plugtour.enable+" askForStop="+plugtour.askForStop);
+			// console.log("getTourStyle:Start (r/o) plugtour="+plugtour.id+" imediateExecution="+plugtour.imediateExecution+" inExecution="+plugtour.trackExecution.inExecution+" enable="+plugtour.enable+" askForStop="+plugtour.askForStop);
 			
 			/* no more color
 			if (plugtour.imediateExecution)
@@ -721,26 +728,57 @@
 		// Timer
 		// -----------------------------------------------------------------------------------------
 	
+		var timerRefreshTime=120000;
 		this.armTimer = function()
 		{
 			var self=this;
 			console.log("armTimer: timerRefresh");
-			$scope.timer = $timeout(function() { self.fireTimer( false ) }, 120000);
+			$scope.timer = $timeout(function() { self.fireTimer() }, 120000);
 		}
 		this.fireTimer = function() {
 			var self=this;
 			console.log("FireTimer: autoRefresh="+this.autorefresh);
-			// rearm the timer first
-			$scope.timer = $timeout(function() { self.fireTimer( false ) }, 120000);
 			
 			if (this.autorefresh)
 			{
 				this.refresh( false );
 			}
+			// then rearm the timer
+			$scope.timer = $timeout(function() { self.fireTimer() }, 120000); 
 		}
 		this.armTimer();
 		
+		// -----------------------------------------------------------------------------------------
+		// Command adminstration
+		// -----------------------------------------------------------------------------------------
+		this.commandRedeploy = function() {
+			var self=this;
+			self.inprogress=true;
+			self.listevents="";
+			self.commandredeploy.deploimentsuc='';
+			self.commandredeploy.deploimenterr='';
+			self.commandredeploy.listevents = '';
+			
+			var param= { 'redeploydependencies' : this.commandredeploy.redeploydependencies};
+			var json = encodeURIComponent(angular.toJson(param, true));
+			var result = confirm("Do you want to redeploy the command?");
+			if (result) {
+				$http.get('?page=custompage_truckmilk&action=commandredeploy&paramjson=' + json+'&t='+Date.now()).success(function(jsonResult) {
+					self.inprogress = false;
+					console.log("commandRedeploy.receiveData HTTP inprogress<=false jsonResult="+angular.toJson(jsonResult));
 	
+					self.commandredeploy.status 		= jsonResult.status;
+					self.commandredeploy.deploimentsuc	= jsonResult.deploimentsuc;
+					self.commandredeploy.deploimenterr	= jsonResult.deploimenterr;
+					self.commandredeploy.listevents		= jsonResult.listevents;
+
+				}).error(function() {
+					self.inprogress = false;
+					console.log("scheduler.error HTTP inprogress<=false ");
+				});
+			}	
+		}
+		
 		// -----------------------------------------------------------------------------------------
 		// Scheduler
 		// -----------------------------------------------------------------------------------------

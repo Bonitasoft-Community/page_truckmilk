@@ -98,7 +98,7 @@ public class Actions {
 
     public static Index.ActionAnswer doAction(HttpServletRequest request, String paramJsonSt, HttpServletResponse response, PageResourceProvider pageResourceProvider, PageContext pageContext) {
                 
-        // logger.info("#### cockpit:Actions start");
+        // logger.fine("#### cockpit:Actions start");
         Index.ActionAnswer actionAnswer = new Index.ActionAnswer(); 
         List<BEvent> listEvents=new ArrayList<BEvent>();
         
@@ -109,7 +109,7 @@ public class Actions {
             if (action==null || action.length()==0 )
             {
                 actionAnswer.isManaged=false;
-                // logger.info("#### log:Actions END No Actions");
+                // logger.fine("#### log:Actions END No Actions");
                 return actionAnswer;
             }
             actionAnswer.isManaged=true;
@@ -127,7 +127,7 @@ public class Actions {
             parameter.pageDirectory = pageResourceProvider.getPageDirectory();
             MilkAccessAPI milkAccessAPI = MilkAccessAPI.getInstance();
 
-            // logger.info("#### log:Actions_2 ["+action+"]");
+            // logger.fine("#### log:Actions_2 ["+action+"]");
             if ("startup".equals(action))
             {
                actionAnswer.responseMap = milkAccessAPI.startup( parameter);
@@ -169,14 +169,14 @@ public class Actions {
               String paramJsonPartial = request.getParameter("paramjsonpartial");
               if (paramJsonPartial==null)
                 paramJsonPartial="";
-              logger.info("collect_reset  paramJsonPartial=["+paramJsonPartial+"]");
+              logger.fine("collect_reset  paramJsonPartial=["+paramJsonPartial+"]");
               httpSession.setAttribute("accumulate", paramJsonPartial );              
               actionAnswer.responseMap.put("status", "ok");
             }
             else if ("collect_add".equals(action))
             {
               String paramJsonPartial = request.getParameter("paramjsonpartial");
-              logger.info("collect_add paramJsonPartial=["+paramJsonPartial+"] json=["+paramJsonSt+"]");
+              logger.fine("collect_add paramJsonPartial=["+paramJsonPartial+"] json=["+paramJsonSt+"]");
         
               String accumulateJson = (String) httpSession.getAttribute("accumulate" );
               accumulateJson+=paramJsonPartial;
@@ -186,10 +186,10 @@ public class Actions {
             else if ("updateJob".equals(action))
             {
               String accumulateJson = (String) httpSession.getAttribute("accumulate" );
-              logger.info("update Job accumulateJson=["+accumulateJson+"]");
+              logger.fine("update Job accumulateJson=["+accumulateJson+"]");
               if (accumulateJson !=null && accumulateJson.length() >0)
               {
-                logger.info("collect_end use the saved value ["+accumulateJson+"]");
+                logger.fine("collect_end use the saved value ["+accumulateJson+"]");
                 // recalculate the parameters from accumate mechanism
                 parameter.setInformation(accumulateJson);
               }
@@ -199,10 +199,10 @@ public class Actions {
             else if ("testButton".equals(action))
             {
               String accumulateJson = (String) httpSession.getAttribute("accumulate" );
-              logger.info("update Job accumulateJson=["+accumulateJson+"]");
+              logger.fine("update Job accumulateJson=["+accumulateJson+"]");
               if (accumulateJson !=null && accumulateJson.length() >0)
               {
-                logger.info("collect_end use the saved value ["+accumulateJson+"]");
+                logger.fine("collect_end use the saved value ["+accumulateJson+"]");
                 // recalculate the parameters from accumate mechanism
                 parameter.setInformation(accumulateJson);
               }
@@ -211,10 +211,10 @@ public class Actions {
             }
             else if ("immediateExecution".equals(action))
             {
-                logger.info("#### TruckMilk:Actions call immediateExecution");
+                logger.fine("#### TruckMilk:Actions call immediateExecution");
                 
                actionAnswer.responseMap = milkAccessAPI.immediateExecution( parameter);
-               logger.info("#### TruckMilk:Actions call immediateExecution : YES");
+               logger.fine("#### TruckMilk:Actions call immediateExecution : YES");
             }     
             else if ("downloadParamFile".equals(action))
             {
@@ -223,7 +223,7 @@ public class Actions {
               actionAnswer.isResponseMap=false;
               
               OutputStream output = response.getOutputStream();
-              logger.info("#### TruckMilk:Actions write To Output=["+parameter.toString()+"]");
+              logger.fine("#### TruckMilk:Actions write To Output=["+parameter.toString()+"]");
               
               
               Map<String,String> mapHeaders = milkAccessAPI.readParameterFile(parameter, output );
@@ -239,16 +239,21 @@ public class Actions {
             } 
             else if ("uploadParamFile".equals(action))
             {
-                logger.info("#### TruckMilk:Actions call immediateExecution");
+                logger.fine("#### TruckMilk:Actions call immediateExecution");
                 
                actionAnswer.responseMap = milkAccessAPI.updateJob( parameter);
-               logger.info("#### TruckMilk:Actions call immediateExecution : YES");
+               logger.fine("#### TruckMilk:Actions call immediateExecution : YES");
 
             }
             else  if ("scheduler".equals(action))
             {
                 actionAnswer.responseMap = milkAccessAPI.scheduler( parameter);                
-             }             
+             }     
+             
+            else  if ("commandredeploy".equals(action))
+            {
+                actionAnswer.responseMap = milkAccessAPI.commandReploy( parameter);                
+             } 
             else  if ("schedulermaintenance".equals(action))
             {
                 actionAnswer.responseMap = milkAccessAPI.schedulerMaintenance( parameter);                
@@ -264,7 +269,7 @@ public class Actions {
               searchOptionsBuilder.sort(  ProcessDeploymentInfoSearchDescriptor.VERSION,  Order.ASC);
               
               SearchResult<ProcessDeploymentInfo> searchResult = processAPI.searchProcessDeploymentInfos(searchOptionsBuilder.done() );
-              logger.info("TruckMilk:Search process deployment containing ["+processFilter+"] - found "+searchResult.getCount());
+              logger.fine("TruckMilk:Search process deployment containing ["+processFilter+"] - found "+searchResult.getCount());
 
               for (final ProcessDeploymentInfo processDeploymentInfo : searchResult.getResult())
               {
@@ -299,7 +304,7 @@ public class Actions {
               actionAnswer.responseMap.put("listUsers", listUsers);
 
             } 
-            logger.info("#### TruckMilk:Actions END responseMap ="+actionAnswer.responseMap.size());
+            logger.fine("#### TruckMilk:Actions END responseMap.size()="+actionAnswer.responseMap.size());
             return actionAnswer;
         } catch (Exception e) {
             StringWriter sw = new StringWriter();

@@ -267,7 +267,11 @@ public class MilkScheduleThreadSleep implements MilkSchedulerInt {
                     MilkCmdControl milkCmdControl = MilkCmdControl.getStaticInstance();
                     MilkPlugInFactory milkPlugInFactory = MilkPlugInFactory.getInstance(tenantId);
                     MilkJobFactory milkPlugInTourFactory = MilkJobFactory.getInstance(milkPlugInFactory);
-
+                    // note : we can call directly the heartbeat. To start this scheduler, a command is called, and the thread is started from the command.
+                    // so 
+                    // -  Any initialisation is already done (first call the command is called)
+                    // -  Command start the thread, so the thread is correctly directly on the server side
+                    
                     milkCmdControl.doTheHeartBeat(milkPlugInTourFactory);
                     nextHeartBeat = new Date(System.currentTimeMillis() + 60000);
                     Thread.sleep(60000);

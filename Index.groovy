@@ -113,17 +113,17 @@ public class Index implements PageController {
                   out.close();
                   return;
             }
-            loggerCustomPage.info("#### "+pageName+": requestParamJsonSt=["+requestParamJsonSt+"] (source is["+requestParamJson+"])" );
+            loggerCustomPage.fine("#### "+pageName+": requestParamJsonSt=["+requestParamJsonSt+"] (source is["+requestParamJson+"])" );
             
             
             Index.ActionAnswer actionAnswer = Actions.doAction( request, requestParamJsonSt,  response, pageResourceProvider, pageContext );
             if (! actionAnswer.isManaged)
             {
-                loggerCustomPage.info("#### "+pageName+": NoAction, return index.html" );
+                loggerCustomPage.fine("#### "+pageName+": NoAction, return index.html" );
                 runTheBonitaIndexDoGet( request, response,pageResourceProvider,pageContext);
                 return;
             }
-            loggerCustomPage.info("#### "+pageName+": ResponseMap="+actionAnswer.responseMap.size() );
+            loggerCustomPage.fine("#### "+pageName+": ResponseMap="+actionAnswer.responseMap.size() );
             
             if ((actionAnswer.responseMap.size()>0) || (actionAnswer.responseJsonSt != null))
             {
@@ -145,7 +145,7 @@ public class Index implements PageController {
             
                 
             // assuming the DoAction did the job (export a ZIP file for example)
-            loggerCustomPage.info("#### "+pageName+": AssumingDoAction did the job (export a file)" );
+            loggerCustomPage.fine("#### "+pageName+": AssumingDoAction did the job (export a file)" );
                 
             return;
         } catch (Exception e) {
@@ -222,7 +222,7 @@ public class Index implements PageController {
                }
                
                File pageDirectory = pageResourceProvider.getPageDirectory();
-               loggerCustomPage.info("#### "+pageName+": pageDirectory st="+pageDirectory.getAbsolutePath() );
+               loggerCustomPage.fine("#### "+pageName+": pageDirectory st="+pageDirectory.getAbsolutePath() );
                        
                // def String pageResource="pageResource?&page="+ request.getParameter("page")+"&location=";
                // indexContent= indexContent.replace("@_USER_LOCALE_@", request.getParameter("locale"));
@@ -236,7 +236,7 @@ public class Index implements PageController {
                out.print(indexContent);
                out.flush();
                out.close();
-               loggerCustomPage.info("#### "+pageName+": return index.hml size("+indexContent.length()+"]");
+               loggerCustomPage.fine("#### "+pageName+": return index.hml size("+indexContent.length()+"]");
                
        } catch (Exception e) {
            loggerCustomPage.severe("#### "+pageName+":Error "+e.toString());

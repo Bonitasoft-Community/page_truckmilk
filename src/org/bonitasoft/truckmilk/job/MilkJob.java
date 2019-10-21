@@ -839,7 +839,15 @@ public class MilkJob {
             Long execDateLong = (Long) jsonMap.get(cstJsonSaveExecDate);
             if (execDateLong != null && execDateLong != 0)
                 savedExecution.executionDate = new Date(execDateLong);
-            savedExecution.executionStatus = ExecutionStatus.valueOf((String) jsonMap.get(cstJsonSaveExecStatus));
+            try
+            {
+                savedExecution.executionStatus = ExecutionStatus.valueOf((String) jsonMap.get(cstJsonSaveExecStatus));
+            }
+            catch(Exception e)
+            {
+                // anormal
+                savedExecution.executionStatus = ExecutionStatus.ERROR;
+            }
             savedExecution.listEventSt = (String) jsonMap.get(cstJsonSaveExecListEventsSt);
             savedExecution.explanation = (String) jsonMap.get(cstJsonSaveExecExplanation);
             savedExecution.nbItemsProcessed = (Long) jsonMap.get(cstJsonSaveExecItemsProcessed);

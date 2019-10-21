@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.StringWriter;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -184,10 +186,48 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
      * @param tenantId
      * @return
      */
-    public ExecuteAnswer afterDeployment(ExecuteParameters executeParameters, TenantServiceAccessor serviceAccessor) {
+    public ExecuteAnswer afterDeployment(ExecuteParameters executeParameters, APIAccessor apiAccessor) {
         ExecuteAnswer executeAnswer = new ExecuteAnswer();
         executeAnswer.listEvents = checkAndUpdateEnvironment(executeParameters.tenantId);
         executeAnswer.result.put("status", BEventFactory.isError(executeAnswer.listEvents) ? "FAIL" : "OK");
+        return executeAnswer;
+    }
+    /**
+     * Do all action after the deployement
+     * 
+     * @param tenantId
+     * @return
+     */
+    public ExecuteAnswer afterRestart(ExecuteParameters executeParameters, APIAccessor apiAccessor) {
+        ExecuteAnswer executeAnswer = new ExecuteAnswer();
+        MilkPlugInFactory milkPlugInFactory = null;
+        MilkJobFactory milkJobFactory = null;
+        try
+        {
+            InetAddress ip = InetAddress.getLocalHost();
+        
+                
+            milkPlugInFactory = MilkPlugInFactory.getInstance(executeParameters.tenantId);
+            milkJobFactory = MilkJobFactory.getInstance(milkPlugInFactory);
+            for (MilkJob milkJob :getListJobs(milkJobFactory)) {
+                if (milkJob.inExecution() && milkJob.getHostRegistered().equals(ip.getHostAddress()))
+                {
+                    logger.info(logHeader+" Server Restart reset jobId["+milkJob.getId()+"]");
+                    // cancel the job: server restart
+                    milkJob.lastExecutionDate = new Date();
+                    milkJob.lastExecutionStatus = ExecutionStatus.KILL;
+                    milkJob.trackExecution.inExecution = false;
+                    milkJob.isImmediateExecution = false;
+                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceAllInformations()));
+                }
+            }
+
+        }
+        catch(Exception e)
+        {
+            executeAnswer.listEvents.add( new BEvent( EVENT_INTERNAL_ERROR, e, "During restart server"));
+        }
+        
         return executeAnswer;
     }
 
@@ -286,7 +326,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 }
                 String jobName = executeParameters.getParametersString("name");
                 logger.info(logHeader + "Add jobName[" + jobName + "] PlugIn[" + executeParameters.getParametersString("plugin") + "]");
-                
+               
                 CreateJobStatus createJobStatus = milkJobFactory.createMilkJob(jobName, plugIn);
                 executeAnswer.listEvents.addAll( createJobStatus.listEvents );
                 if (!BEventFactory.isError(executeAnswer.listEvents)) {

@@ -19,7 +19,10 @@ public class MilkJobFactory {
 
     public static BEvent EVENT_JOB_ALREADY_EXIST = new BEvent(MilkJobFactory.class.getName(), 2, Level.APPLICATIONERROR,
             "Job already exist", "The job already exist with this name, a job must have a uniq name",
-            "Job is not register", "Choose a different name");
+            "Job is not registered", "Choose a different name");
+    public static BEvent EVENT_JOB_WITHOUT_NAME = new BEvent(MilkJobFactory.class.getName(), 3, Level.APPLICATIONERROR,
+            "A job must have a name", "The job does not have a name, it can't be registered",
+            "Job is not registered", "Give a name");
 
     // private static MilkPlugInTourFactory milkPlugInTourFactory = new MilkPlugInTourFactory();
     private MilkPlugInFactory milkPlugInFactory = null;
@@ -116,16 +119,22 @@ public class MilkJobFactory {
         return listEvents;
     }
 
-    public synchronized List<BEvent> registerAJob(MilkJob plugInTour) {
+    public synchronized List<BEvent> registerAJob(MilkJob milkJob) {
         List<BEvent> listEvents = new ArrayList<BEvent>();
+        // name must exist
+        if (milkJob.getName()==null || milkJob.getName().trim().length()==0)
+        {
+            listEvents.add( EVENT_JOB_WITHOUT_NAME);
+            return listEvents;
+        }
         // name must be unique
         for (MilkJob plugI : listJobsId.values()) {
-            if (plugI.getName().equals(plugInTour.getName())) {
-                listEvents.add(new BEvent(EVENT_JOB_ALREADY_EXIST, plugInTour.getName()));
+            if (plugI.getName().equals(milkJob.getName())) {
+                listEvents.add(new BEvent(EVENT_JOB_ALREADY_EXIST, milkJob.getName()));
                 return listEvents;
             }
         }
-        listJobsId.put(plugInTour.getId(), plugInTour);
+        listJobsId.put(milkJob.getId(), milkJob);
         return listEvents;
     }
 

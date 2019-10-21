@@ -112,6 +112,7 @@ public class MilkAccessAPI {
         List<BEvent> listEvents = new ArrayList<BEvent>();
         Map<String, Object> result = new HashMap<String, Object>();
 
+        
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         DeployStatus deployStatus = milkCmdControlAPI.checkAndDeployCommand(parameter.pageDirectory, parameter.commandAPI,
                 parameter.platFormAPI, parameter.getTenantId());
@@ -138,6 +139,30 @@ public class MilkAccessAPI {
 
         result.put(cstJsonDeploimentsuc, statusDeployment);
         return result;
+    }
+    
+    /**
+     * redeploy the command
+     * @param parameter
+     * @return
+     */
+    public Map<String, Object> commandReploy(Parameter parameter) {
+        // first, deploy the command if needed
+        List<BEvent> listEvents = new ArrayList<BEvent>();
+        Map<String, Object> result = new HashMap<String, Object>();
+
+        MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
+        DeployStatus deployStatus = milkCmdControlAPI.forceDeployCommand(parameter.information, parameter.pageDirectory, parameter.commandAPI,
+                parameter.platFormAPI, parameter.getTenantId());
+        listEvents.addAll(deployStatus.listEvents);
+        if (BEventFactory.isError(listEvents)) {
+            result.put(cstJsonListEvents, BEventFactory.getHtml(listEvents));
+            result.put(cstJsonDeploimenterr, "Error during deploiment");
+            return result;
+        }
+        result.put(cstJsonDeploimentsuc, "Command redeployed deployed;");
+        return result;
+ 
     }
 
     public Map<String, Object> getRefreshInformation(Parameter parameter) {

@@ -1,5 +1,7 @@
 package org.bonitasoft.truckmilk.engine;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -157,9 +159,14 @@ public class MilkExecuteJobThread extends Thread {
                 if (milkJob.askForStop && ( output.executionStatus == ExecutionStatus.SUCCESS || output.executionStatus == ExecutionStatus.SUCCESSPARTIAL))
                     output.executionStatus = ExecutionStatus.SUCCESSABORT;
             } catch (Exception e) {
+
+                StringWriter sw = new StringWriter();
+                 e.printStackTrace(new PrintWriter(sw));
+                 String exceptionDetails = sw.toString();
+                 logger.severe("MilkExecuteThread : JobId["+milkJob.getId()+"] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception "+e.getMessage()+" at "+exceptionDetails);
                 if (output == null) {
                     output = new PlugTourOutput(milkJob);
-                    output.addEvent(new BEvent(EVENT_PLUGIN_VIOLATION, "PlugIn[" + plugIn.getName() + "] Exception " + e.getMessage()));
+                    output.addEvent(new BEvent(EVENT_PLUGIN_VIOLATION, "JobId["+milkJob.getId()+"] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + e.getMessage()+" at "+exceptionDetails));
                     output.executionStatus = ExecutionStatus.CONTRACTVIOLATION;
                 }
             }

@@ -11,6 +11,7 @@ import java.util.logging.Logger;
 import org.bonitasoft.command.BonitaCommandDeployment;
 import org.bonitasoft.command.BonitaCommandDeployment.DeployStatus;
 import org.bonitasoft.command.BonitaCommandDescription;
+import org.bonitasoft.command.BonitaCommandDescription.CommandJarDependency;
 import org.bonitasoft.engine.api.CommandAPI;
 import org.bonitasoft.engine.api.PlatformAPI;
 import org.bonitasoft.log.event.BEvent;
@@ -71,9 +72,51 @@ public class MilkCmdControlAPI {
     public DeployStatus checkAndDeployCommand(File pageDirectory, CommandAPI commandAPI, PlatformAPI platFormAPI,
             long tenantId) {
 
-        BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(MilkCmdControl.cstCommandName);
+        BonitaCommandDescription commandDescription = getMilkCommandDescription(pageDirectory);
+        BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(commandDescription);
 
-        BonitaCommandDescription commandDescription = new BonitaCommandDescription(bonitaCommand, pageDirectory);
+        DeployStatus deployStatus = bonitaCommand.checkAndDeployCommand(commandDescription, true, tenantId, commandAPI, platFormAPI);
+        return deployStatus;
+    }
+
+    /**
+     * @param pageDirectory
+     * @param commandAPI
+     * @param platFormAPI
+     * @param tenantId
+     * @return
+     */
+    public DeployStatus forceDeployCommand(Map<String, Object> parameter, File pageDirectory, CommandAPI commandAPI, PlatformAPI platFormAPI,
+            long tenantId) {
+
+        boolean redeployDependency = false;
+        try {
+            redeployDependency = Boolean.valueOf(parameter.get("redeploydependencies").toString());
+        } catch (Exception e) {
+            redeployDependency = false;
+        }
+        BonitaCommandDescription commandDescription = getMilkCommandDescription(pageDirectory);
+        BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(commandDescription);
+        commandDescription.forceDeploy = false;
+
+        if (redeployDependency) {
+            for (CommandJarDependency jarDependency : commandDescription.getListDependencies())
+                jarDependency.forceDeploy = true;
+        }
+        DeployStatus deployStatus = bonitaCommand.deployCommand(commandDescription, true, tenantId, commandAPI, platFormAPI);      
+        return deployStatus;
+
+    }
+
+    /**
+     * geth the command description
+     * 
+     * @param pageDirectory
+     * @return
+     */
+    private BonitaCommandDescription getMilkCommandDescription(File pageDirectory) {
+
+        BonitaCommandDescription commandDescription = new BonitaCommandDescription(MilkCmdControl.cstCommandName, pageDirectory);
         commandDescription.forceDeploy = false;
         commandDescription.mainCommandClassName = MilkCmdControl.class.getName();
         commandDescription.mainJarFile = "TruckMilk-2.1-Page.jar";
@@ -82,10 +125,8 @@ public class MilkCmdControlAPI {
         // commandDescription.dependencyJars = new String[] { "bonita-event-1.5.0.jar", "bonita-properties-2.0.0.jar" }; // "mail-1.5.0-b01.jar", "activation-1.1.jar"};
 
         commandDescription.addJarDependencyLastVersion("bonita-event", "1.6.0", "bonita-event-1.6.0.jar");
-        commandDescription.addJarDependencyLastVersion("bonita-properties", "2.1.0", "bonita-properties-2.1.0.jar");
-
-        DeployStatus deployStatus = bonitaCommand.checkAndDeployCommand(commandDescription, true, tenantId, commandAPI, platFormAPI);
-        return deployStatus;
+        commandDescription.addJarDependencyLastVersion("bonita-properties", "2.0.0", "bonita-properties-2.0.0.jar");
+        return commandDescription;
     }
 
     /**
