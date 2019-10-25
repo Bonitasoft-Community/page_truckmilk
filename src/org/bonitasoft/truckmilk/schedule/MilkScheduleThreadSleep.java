@@ -65,61 +65,6 @@ public class MilkScheduleThreadSleep implements MilkSchedulerInt {
     }
 
     /**
-     * start the scheduler
-     * 
-     * @return
-     */
-    public List<BEvent> start(long tenantId) {
-        ArrayList<BEvent> listEvents = new ArrayList<BEvent>();
-
-        // already register ? 
-        synchronized (listSchedulerThread) {
-            SchedulerThread sch = getSchedulerThread(tenantId);
-            if (sch != null) {
-                if (sch.status == TypeStatus.STARTED)
-                    listEvents.add(eventSchedulerAlreadyStarted);
-                else {
-                    sch.status = TypeStatus.STARTED;
-                    listEvents.add(eventSchedulerStarted);
-                }
-            } else {
-                sch = new SchedulerThread(tenantId);
-                listSchedulerThread.add(sch);
-                sch.start();
-                listEvents.add(eventSchedulerStarted);
-            }
-        }
-        return listEvents;
-
-    }
-
-    /**
-     * stop it
-     * 
-     * @return
-     */
-    public List<BEvent> stop(long tenantId) {
-        ArrayList<BEvent> listEvents = new ArrayList<BEvent>();
-
-        // already register ? 
-        synchronized (listSchedulerThread) {
-            SchedulerThread sch = getSchedulerThread(tenantId);
-            if (sch != null) {
-                if (sch.status == TypeStatus.STARTED) {
-                    sch.shutdown();
-                    listEvents.add(eventSchedulerStoppedInProgress);
-                } else {
-                    listEvents.add(eventSchedulerStopped);
-                }
-            } else {
-                listEvents.add(eventSchedulerStopped);
-            }
-        }
-        return listEvents;
-
-    }
-
-    /**
      * return the scheduler type
      */
 
@@ -165,16 +110,22 @@ public class MilkScheduleThreadSleep implements MilkSchedulerInt {
                         if (sch.status == TypeStatus.STARTED)
                             sch.shutdown(); // shutdown to restart it
                         listSchedulerThread.remove(sch);
-                    } else
+                    } else {
+                        listEvents.add(eventSchedulerAlreadyStarted);
                         return listEvents; // already registered
+                    }
                 }
 
                 // Create a new thread in any case : a thread can be start only one time
                 sch = new SchedulerThread(tenantId);
                 listSchedulerThread.add(sch);
                 sch.start();
+                listEvents.add(eventSchedulerStarted);
             } // end synchronized
 
+            return listEvents;
+            
+            
         } catch (Exception e) {
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
@@ -187,11 +138,27 @@ public class MilkScheduleThreadSleep implements MilkSchedulerInt {
     }
 
     public List<BEvent> shutdown(long tenantId) {
+        
         List<BEvent> listEvents = new ArrayList<BEvent>();
-        SchedulerThread sch = getSchedulerThread(tenantId);
-        if (sch != null)
-            sch.shutdown();
-        listSchedulerThread.remove(sch);
+        
+
+        // already register ? 
+        synchronized (listSchedulerThread) {
+            SchedulerThread sch = getSchedulerThread(tenantId);
+            if (sch != null) {
+                if (sch.status == TypeStatus.STARTED) {
+                    sch.shutdown();
+                    listSchedulerThread.remove(sch);
+
+                    listEvents.add(eventSchedulerStoppedInProgress);
+                } else {
+                    listEvents.add(eventSchedulerStopped);
+                }
+            } else {
+                listEvents.add(eventSchedulerStopped);
+            }
+        }
+
         return listEvents;
 
     }

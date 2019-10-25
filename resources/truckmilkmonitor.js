@@ -176,17 +176,17 @@
 								foundIt= true;
 								// localPlugTour.name		= serverPlugTour.name;
 								// cron
-								localPlugTour.nextexecutionst					= serverPlugTour.nextexecutionst;
+								localPlugTour.trackExecution					= serverPlugTour.trackExecution;
+
+								
+								
 								localPlugTour.lastexecutionlistevents			= serverPlugTour.lastexecutionlistevents;
 								
-								localPlugTour.lastexecutionstatus				= serverPlugTour.lastexecutionstatus;
+								
 								localPlugTour.enable							= serverPlugTour.enable;
 								localPlugTour.hostsrestriction					= serverPlugTour.hostsrestriction;
-								localPlugTour.imediateExecution					= serverPlugTour.imediateExecution;
-								localPlugTour.trackExecution					= serverPlugTour.trackExecution;
-								localPlugTour.lastexecution						= serverPlugTour.lastexecution; 
-								localPlugTour.lastexecutionst					= serverPlugTour.lastexecutionst;
-								localPlugTour.lastexecutionstatus				= serverPlugTour.lastexecutionstatus;
+
+								
 								localPlugTour.savedExecution					= serverPlugTour.savedExecution;
 								localPlugTour.askForStop						= serverPlugTour.askForStop;
 								localPlugTour.listevents						= serverPlugTour.listevents;
@@ -562,14 +562,14 @@
 		this.getNowStyle= function( plugtour )
 		{
 			// console.log("getNowStyle:Start (r/o) plugtour="+plugtour.id);
-			if (plugtour.imediateExecution)
+			if (plugtour.trackExecution.imediateExecution)
 				return "btn btn-success btn-xs"
 			return "btn btn-info btn-xs";
 		}		
 		this.getNowTitle=function( plugtour )
 		{
 			// console.log("getNowTitle:Start (r/o) plugtour="+plugtour.id);
-			if (plugtour.imediateExecution)
+			if (plugtour.trackExecution.imediateExecution)
 				return "An execution will start as soon as possible, at the next round"
 			return "Click to have an immediat execution (this does not change the schedule, or the activate state)";
 		}
@@ -808,7 +808,7 @@
 			self.listevents='';
 
 			console.log("SchedulerMaintenance v2, Inprogress<=true operation=["+operation+"]");
-			var param= { 'operation': operation, 'newscheduler': this.scheduler.selectscheduler };
+			var param= { 'operation': operation, 'newscheduler': this.scheduler.selectscheduler, 'reset':true };
 			var json = encodeURIComponent(angular.toJson(param, true));
 			self.scheduler = { 'schedulerlistevents' : '' };
 			

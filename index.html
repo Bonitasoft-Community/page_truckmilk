@@ -123,6 +123,9 @@
 					<span class="Loading">.</span>Please wait, work in progress
 				</div>
 			</td>
+			<td>
+				<button ng-click="ctrl.refresh( false )" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress">Refresh</button>		
+			</td>
 		</tr>		
 		</table>
 			
@@ -136,38 +139,9 @@
 		
 			<div class="alert alert-danger" role="alert" ng-if="ctrl.timererror.length > 0">{{ctrl.timererror}}</div>
 			
-			<button ng-click="ctrl.refresh( false )" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress">Refresh</button>
 			
 			
-			<!-- ----------------------- Drop file ? -->
-			<!-- Keep it ng-show, else the file drop will not work ! -->
-			<div ng-show="ctrl.listParameterUpload.length > 0">
-				<p>
-				<table style="width:100%">
-				<tr><td style="width:30%"></td>
-					<td><div class="panel panel-info"  class="col-lg-4">
-						<div class="panel-heading">
-							Upload file
-						</div>
-						<div>
-							<select ng-model="ctrl.parameterToUpload"  >
-								<option ng-repeat="item in ctrl.listParameterUpload" value="{{item.internalid}}">{{item.displayname}}</option>
-							</select>
-							
-							<div ng-show="ctrl.parameterToUpload.id !== null">
-							<div ng-file-drop ng-model="files"
-								class="drop-box ng-isolate-scope ng-valid ng-dirty"
-								drag-over-class="{accept:'dragover', reject:'dragover-err', delay:100}"
-								multiple="false" allow-dir="false">Drop your file here</div>
-							<div ng-no-file-drop class="drop-box" style="display: none;">File Drop is not supported for this browser</div>
-								
-							{{ctrl.parameterToUploadStatus}}
-							</div>
-						</div>
-					</div>
-					</td></tr>
-				</table>
-			</div>
+			
 			
 	
 				
@@ -190,7 +164,7 @@
 					<tr style="border-top: 1px solid black;"> 
 						<td style="{{ctrl.getJobStyle(plugtour)}}">
 							<div ng-if="plugtour.enable">
-								<div ng-if="! (plugtour.trackExecution.inExecution || plugtour.imediateExecution)">
+								<div ng-if="! (plugtour.trackExecution.inExecution || plugtour.trackExecution.imediateExecution)">
 									<label class="label label-success btn-xs" >
 										<span class="glyphicon glyphicon-ok-circle" > ACTIF
 									</label>
@@ -203,7 +177,7 @@
 							</div>
 							
 							</div>
-								<div ng-if="plugtour.imediateExecution">
+								<div ng-if="plugtour.trackExecution.imediateExecution">
 									<label class="label label-info btn-xs" >
 										<span class="glyphicon glyphicon-ok-circle" > PENDING START
 									</label>
@@ -227,22 +201,23 @@
 							
 						<!--  last execution information -->
 						</td><td style="{{ctrl.getJobStyle(plugtour)}}">
-							<div ng-if="plugtour.lastexecutionstatus == 'success' || plugtour.lastexecutionstatus=='successpartial'">
+
+							<div ng-if="plugtour.trackExecution.lastexecutionstatus == 'success' || plugtour.trackExecution.lastexecutionstatus=='successpartial'">
 								<label class="label label-success btn-xs" >
-									{{plugtour.lastexecutionstatus}}
+									{{plugtour.trackExecution.lastexecutionstatus}}
 								</label>
 							</div>
-							<div ng-if="plugtour.lastexecutionstatus == 'error' ">
+							<div ng-if="plugtour.trackExecution.lastexecutionstatus == 'error' ">
 								<label class="label label-danger btn-xs" >
-									{{plugtour.lastexecutionstatus}}
+									{{plugtour.trackExecution.lastexecutionstatus}}
 								</label>
 							</div>
-							<div ng-if=" ! (plugtour.lastexecutionstatus == 'success' || plugtour.lastexecutionstatus=='successpartial' || plugtour.lastexecutionstatus == 'error')">
+							<div ng-if=" ! (plugtour.trackExecution.lastexecutionstatus == 'success' || plugtour.trackExecution.lastexecutionstatus=='successpartial' || plugtour.trackExecution.lastexecutionstatus == 'error')">
 								<label class="label label-default btn-xs" >
-									{{plugtour.lastexecutionstatus}}
+									{{plugtour.trackExecution.lastexecutionstatus}}
 								</label>
 							</div>
-							{{plugtour.lastexecutionst}}
+							{{plugtour.trackExecution.lastexecutionst}}
 							
 						</td><td style="{{ctrl.getJobStyle(plugtour)}}">
 							<a ng-click="ctrl.showreport( plugtour )">
@@ -257,7 +232,7 @@
 								&nbsp;
 								{{plugtour.cron}}
 						</td><td style="{{ctrl.getJobStyle(plugtour)}}">
-							{{plugtour.nextexecutionst}}
+							{{plugtour.trackExecution.nextexecutionst}}
 							
 						
 								
@@ -265,12 +240,12 @@
 						<!--  controls -->
 						</td><td style="{{ctrl.getJobStyle(plugtour)}}">							
 							<table><tr><td style="vertical-align:top">						
-								<div ng-if="! (plugtour.trackExecution.inExecution || plugtour.imediateExecution)">
-									<button ng-click="ctrl.immediateJob( plugtour )" class="{{ctrl.getNowStyle( plugtour)}}" ng-disabled="ctrl.inprogress || plugtour.imediateExecution || plugtour.trackExecution.inExecution" title="{{ctrl.getNowTitle( plugtour)}}">
+								<div ng-if="! (plugtour.trackExecution.inExecution || plugtour.trackExecution.imediateExecution)">
+									<button ng-click="ctrl.immediateJob( plugtour )" class="{{ctrl.getNowStyle( plugtour)}}" ng-disabled="ctrl.inprogress || plugtour.trackExecution.imediateExecution || plugtour.trackExecution.inExecution" title="{{ctrl.getNowTitle( plugtour)}}">
 										Now
 									</button>
 								</div>
-							</td><td ng-if="plugtour.trackExecution.inExecution || plugtour.imediateExecution" style="vertical-align:top">					
+							</td><td ng-if="plugtour.trackExecution.inExecution || plugtour.trackExecution.imediateExecution" style="vertical-align:top">					
 									<button ng-click="ctrl.abortJob( plugtour )" class="{{ctrl.getAbortStyle( plugtour)}}" title="{{ctrl.getAbortTitle( plugtour)}}">
 										Abort
 									</button>
@@ -320,7 +295,7 @@
 					<tr><td colspan="5">
 												
 							inExecution={{plugtour.trackExecution.inExecution}}
-							imediateExecution={{plugtour.imediateExecution}}
+							imediateExecution={{plugtour.trackExecution.imediateExecution}}
 							AskForStop={{plugtour.askForStop}}<p>
 							{{plugtour}}
 						 
@@ -634,9 +609,9 @@
 									<div class="panel-body">	
 									
 										<table style="border-spacing: 10px 0px;border-collapse: separate;">
-											<tr><td>Last execution</td><td><small>{{plugtour.lastexecutionst}}</small></td></tr>
-											<tr><td>Next execution</td><td>{{plugtour.nextexecutionst}}</td></tr>
-											<tr><td>Status</td><td>{{plugtour.lastexecutionstatus}}</td></tr>
+											<tr><td>Last execution</td><td><small>{{plugtour.trackExecution.lastexecutionst}}</small></td></tr>
+											<tr><td>Next execution</td><td>{{plugtour.trackExecution.nextexecutionst}}</td></tr>
+											<tr><td>Status</td><td>{{plugtour.trackExecution.lastexecutionstatus}}</td></tr>
 											<tbody ng-repeat="parameterdef in plugtour.parametersdef"> 
 											<tr ng-if="parameterdef.type ==='FILEWRITE' || parameterdef.type ==='FILEREADWRITE'">
 												<td>{{parameterdef.name}}</td>
@@ -677,9 +652,8 @@
 					</tr>
 					<!-- 
 					<tr><td colspan="7">
-					 <div class="alert alert-success">{{plugtour.parametersvalue}}</div> 
-					 <div class="alert alert-primary">{{plugtour}}</div> 
-					 
+					 <div class="alert alert-success">{{plugtour.trackExecution}}</div> 
+					 <div class="alert alert-primary">{{plugtour}}</div> 					 
 					</td></tr>
 					 -->
 					<tr >
@@ -689,6 +663,38 @@
 					
 					</tbody>
 				</table>
+				
+				
+				<!-- ----------------------- Drop file ? -->
+			<!-- Keep it ng-show, else the file drop will not work ! -->
+			<div ng-show="ctrl.listParameterUpload.length > 0">
+				<p>
+				<table style="width:100%">
+				<tr><td style="width:30%"></td>
+					<td><div class="panel panel-info"  class="col-lg-4">
+						<div class="panel-heading">
+							Upload file
+						</div>
+						<div>
+							<select ng-model="ctrl.parameterToUpload"  >
+								<option ng-repeat="item in ctrl.listParameterUpload" value="{{item.internalid}}">{{item.displayname}}</option>
+							</select>
+							
+							<div ng-show="ctrl.parameterToUpload.id !== null">
+							<div ng-file-drop ng-model="files"
+								class="drop-box ng-isolate-scope ng-valid ng-dirty"
+								drag-over-class="{accept:'dragover', reject:'dragover-err', delay:100}"
+								multiple="false" allow-dir="false">Drop your file here</div>
+							<div ng-no-file-drop class="drop-box" style="display: none;">File Drop is not supported for this browser</div>
+								
+							{{ctrl.parameterToUploadStatus}}
+							</div>
+						</div>
+					</div>
+					</td></tr>
+				</table>
+			</div>
+				
 		</div>
 		
 		<!--  ************************************************************  -->	
@@ -820,11 +826,14 @@
 						
 						<table >
 							<tr>
+							<!--  Deploy does not work
 								<td style="padding: 10px;">	
 									<button ng-click="ctrl.schedulerMaintenance('deploy')" class="btn btn-warning btn-xs" ng-disabled="ctrl.inprogress">
 										Deploy
 									</button>
-								</td><td style="padding: 10px;">
+								</td>
+								 -->
+								 <td style="padding: 10px;">
 									<button ng-click="ctrl.schedulerMaintenance('reset')" class="btn btn-warning btn-xs" ng-disabled="ctrl.inprogress">
 										Reset
 									</button>

@@ -262,7 +262,7 @@ public class MilkJobExecution {
         startTimeMs = System.currentTimeMillis();
         pleaseStop = false;
 
-        milkJob.isImmediateExecution = false;
+        milkJob.trackExecution.isImmediateExecution = false;
         milkJob.trackExecution.inExecution = true;
         milkJob.trackExecution.startTime = startTimeMs;
         milkJob.trackExecution.percent = 0;

@@ -261,7 +261,7 @@ public class MilkJobFactory {
      * @return
      */
     public List<BEvent> dbSaveJob(MilkJob job, SaveJobParameters saveParameters) {
-        return milkSerialize.dbSaveJob(job, saveParameters);
+        return milkSerialize.dbSaveMilkJob(job, saveParameters);
     }
 
     /**
@@ -271,7 +271,7 @@ public class MilkJobFactory {
      * @return
      */
     private List<BEvent> dbRemoveJob(MilkJob plugInTour) {
-        return milkSerialize.dbRemovePlugInTour(plugInTour);
+        return milkSerialize.dbRemoveMilkJob(plugInTour);
     }
 
     // load all tour execution

@@ -14,6 +14,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
+import org.bonitasoft.truckmilk.job.MilkJob.MapContentParameter;
 import org.bonitasoft.truckmilk.schedule.MilkScheduleQuartz;
 
 /**
@@ -26,11 +27,14 @@ public class MilkSerializeProperties {
     private static Logger logger = Logger.getLogger(MilkScheduleQuartz.class.getName());
     private static String logHeader = "MilkScheduleQuartz ~~ ";
 
+    /*
+     * we can use multiple bonitaProperties at a time (multithread), assuming the store() is a transaction in the database and protect multiple write
+     */
     BonitaProperties bonitaProperties;
  
     public final static String BonitaPropertiesName = "MilkTour";
     private final static String BonitaPropertiesDomain = "tour";
-    private final static String BonitaPropertiesMainInfo = "maininfo";
+    // private final static String BonitaPropertiesMainInfo = "maininfo";
     private MilkJobFactory milkJobFactory;
 
     private static BEvent eventBadTourJsonFormat = new BEvent(MilkSerializeProperties.class.getName(), 1,
@@ -45,11 +49,14 @@ public class MilkSerializeProperties {
 
     public MilkSerializeProperties(MilkJobFactory milkPlugInTourFactory) {
         this.milkJobFactory = milkPlugInTourFactory;
-        this.bonitaProperties = new BonitaProperties(BonitaPropertiesName, milkPlugInTourFactory.getTenantId());
+        bonitaProperties = new BonitaProperties(BonitaPropertiesName, milkPlugInTourFactory.getTenantId());
+        bonitaProperties.setLogLevel(java.util.logging.Level.FINE);
+        
     }
 
     public MilkSerializeProperties(long tenantId) {
-        this.bonitaProperties = new BonitaProperties(BonitaPropertiesName, tenantId);
+        bonitaProperties = new BonitaProperties(BonitaPropertiesName, tenantId);
+        bonitaProperties.setLogLevel(java.util.logging.Level.FINE);
     }
 
     public List<BEvent> checkAndUpdateEnvironment() {
@@ -77,13 +84,20 @@ public class MilkSerializeProperties {
             return null; // not a normal way
         }
         
-        // read the another information
-        Object askStopObj = bonitaProperties.get(jobId.toString()+prefixPropertiesAskStop);
-        if (askStopObj !=null)
-            milkJob.askForStop = Boolean.valueOf(askStopObj.toString());
+        //-----------------------  read the another information
+          
         String jsonStTrackExecution = (String) bonitaProperties.get(jobId.toString()+prefixPropertiesTrackExecution);
         if (jsonStTrackExecution != null)
             milkJob.trackExecution.readFromJson(jsonStTrackExecution);
+        
+        // askstop has its own variable, so read it after the track execution
+        Object askStopObj = bonitaProperties.get(jobId.toString()+prefixPropertiesAskStop);
+        if (askStopObj !=null)
+            milkJob.trackExecution.askForStop = Boolean.valueOf(askStopObj.toString());
+   
+        String jsonStSavedExecution = (String) bonitaProperties.get(jobId.toString()+prefixPropertiesSavedExecution);
+        if (jsonStSavedExecution != null)
+            milkJob.readSavedExecutionFromJson(jsonStSavedExecution);
 
         
         // load File Parameters
@@ -99,6 +113,9 @@ public class MilkSerializeProperties {
     }
 
     public List<BEvent> dbLoadAllJobs() {
+        return dbLoadAllJobsAndPurge( false );
+    }
+    public List<BEvent> dbLoadAllJobsAndPurge( boolean purge) {
         List<BEvent> listEvents = new ArrayList<BEvent>();
         bonitaProperties.setCheckDatabase(false);
         logger.info( getLogHeader()+" LoadAllJobs-begin");
@@ -108,7 +125,6 @@ public class MilkSerializeProperties {
        // bonitaProperties.traceInLog();
         List<String> listToursToDelete = new ArrayList<String>();
         Enumeration<?> enumKey = bonitaProperties.propertyNames();
-        boolean newIdWasGenerated = false;
         while (enumKey.hasMoreElements()) {
             String idTourSt = (String) enumKey.nextElement();
             // String plugInTourSt = (String) bonitaProperties.get(idTour);
@@ -126,8 +142,6 @@ public class MilkSerializeProperties {
             MilkJob plugInTour = getInstanceFromBonitaProperties(idTour);
 
             if (plugInTour != null) {
-                if (plugInTour.newIdGenerated)
-                    newIdWasGenerated = true;
                 // register in the factory now
                 milkJobFactory.putJob(plugInTour);
             } else {
@@ -135,47 +149,49 @@ public class MilkSerializeProperties {
                 listEvents.add(new BEvent(eventBadTourJsonFormat, "Id[" + idTour + "]"));
             }
         }
-        if (listToursToDelete.size() > 0 || newIdWasGenerated) {
-            for (String idTour : listToursToDelete)
-                bonitaProperties.remove(idTour);
-        }
-
-        // check the properties name
-        Enumeration<?> enumStream = bonitaProperties.propertyStream();
-        List<String> listStreamToDelete = new ArrayList<String>();
-
-        while (enumStream.hasMoreElements()) {
-            // is the Id still exist?
-            String idStream = (String) enumStream.nextElement();
-            // expect <idTour>_<parameterName>
-            if (idStream.indexOf("_") == -1)
-                continue;
-            String idTour = idStream.substring(0, idStream.indexOf("_"));
-            try {
-                Long idTourL = Long.valueOf(idTour);
-                if (!milkJobFactory.existJob(idTourL)) {
-                    listStreamToDelete.add(idStream);
-                }
-            } catch (Exception e) {
-            } ; // idTour is not a long... strange, then do nothing
-        }
-
-        if (listStreamToDelete.size() > 0) {
-            for (String idStream : listStreamToDelete)
-            {
-                bonitaProperties.removeStream(idStream);
+        
+       if (purge)
+       {
+           Set<String> keysToDelete = new HashSet<String>();
+           keysToDelete.addAll(listToursToDelete);
+            if (listToursToDelete.size() > 0 ) {
+                for (String idTour : listToursToDelete)
+                    bonitaProperties.remove(idTour);
             }
-            // do the deletion now
-            bonitaProperties.storeCollectionKeys(listStreamToDelete);
-        }
-
-        // save it to delete all corrupted tour -- must never arrived
-        // bonitaProperties.traceInLog();
-        if (listToursToDelete.size() > 0 || newIdWasGenerated) {
-            logger.info( getLogHeader()+" LoadAllJobs-store()");
-
-            listEvents.addAll(bonitaProperties.store());
-        }
+    
+            // check the properties name
+            Enumeration<?> enumStream = bonitaProperties.propertyStream();
+            List<String> listStreamToDelete = new ArrayList<String>();
+    
+            while (enumStream.hasMoreElements()) {
+                // is the Id still exist?
+                String idStream = (String) enumStream.nextElement();
+                // expect <idTour>_<parameterName>
+                if (idStream.indexOf("_") == -1)
+                    continue;
+                String idTour = idStream.substring(0, idStream.indexOf("_"));
+                try {
+                    Long idTourL = Long.valueOf(idTour);
+                    if (!milkJobFactory.existJob(idTourL)) {
+                        listStreamToDelete.add(idStream);
+                    }
+                } catch (Exception e) {
+                } ; // idTour is not a long... strange, then do nothing
+            }
+            if (listStreamToDelete.size() > 0) {
+                for (String idStream : listStreamToDelete)
+                {
+                    bonitaProperties.removeStream(idStream);
+                }
+            }
+            keysToDelete.addAll(listToursToDelete);
+            if (keysToDelete.size()>0)
+            {
+                // do the deletion now
+                logger.info( getLogHeader()+" Delete Key and Stream ["+keysToDelete+"]");
+                bonitaProperties.storeCollectionKeys(keysToDelete);
+            }
+       }
         logger.info( getLogHeader()+" LoadAllJobs-end");
 
         return listEvents;
@@ -187,6 +203,7 @@ public class MilkSerializeProperties {
      */
     public MilkJob dbLoadJob(Long jobId) {
         bonitaProperties.setCheckDatabase(false);
+        
         logger.info( getLogHeader()+".dbLoadJob - begin");
 
         /** soon : name is NULL to load all tour */
@@ -196,12 +213,6 @@ public class MilkSerializeProperties {
         // register in the factory now
         milkJobFactory.putJob(milkJob);
 
-        if (milkJob.newIdGenerated) {
-            bonitaProperties.put(milkJob.getId(), milkJob.getJsonSt(false));
-            logger.info( getLogHeader()+".dbLoadJob - newIdGenerated, store all ****");
-
-            bonitaProperties.store();
-        }
         logger.info( logHeader+".dbLoadJob - end");
 
         return milkJob;
@@ -211,12 +222,11 @@ public class MilkSerializeProperties {
         List<BEvent> listEvents = new ArrayList<BEvent>();
         bonitaProperties.setCheckDatabase(false);
         logger.info( getLogHeader()+" saveAllJobs-begin ***");
-        
+
         listEvents.addAll(bonitaProperties.loaddomainName(BonitaPropertiesDomain));
         for (MilkJob milkJob : milkJobFactory.getMapJobsId().values()) {
-            bonitaProperties.put(milkJob.getId(), milkJob.getJsonSt(false));
+            dbSaveMilkJob( milkJob, SaveJobParameters.getInstanceAllInformations() );
         }
-        listEvents.addAll(bonitaProperties.store());
         logger.info( getLogHeader()+" saveAllJobs-end");
 
         return listEvents;
@@ -233,6 +243,7 @@ public class MilkSerializeProperties {
         boolean saveFileWrite = false;
         boolean saveAskStop=false;
         boolean saveTrackExecution=false;
+        boolean savedExecution=false;
         boolean saveBase=false;
         
         public static SaveJobParameters getInstanceTrackExecution() {
@@ -262,11 +273,23 @@ public class MilkSerializeProperties {
 
             return saveParameters;
         }
+        public static SaveJobParameters getInstanceStartExecutionJob() {
+            SaveJobParameters saveParameters = new SaveJobParameters();
+            saveParameters.saveTrackExecution = true;
+            saveParameters.savedExecution = false;
+            saveParameters.saveAskStop = true;            
+            saveParameters.saveBase = false;  
+            saveParameters.saveFileRead = false;
+            saveParameters.saveFileWrite = false;
+
+            return saveParameters;
+        }
         public static SaveJobParameters getInstanceEndExecutionJob() {
             SaveJobParameters saveParameters = new SaveJobParameters();
             saveParameters.saveTrackExecution = true;
+            saveParameters.savedExecution = true;
             saveParameters.saveAskStop = true;            
-            saveParameters.saveBase = true;  
+            saveParameters.saveBase = false;  
             saveParameters.saveFileRead = false;
             saveParameters.saveFileWrite = true;
 
@@ -298,9 +321,11 @@ public class MilkSerializeProperties {
 
     public static String prefixPropertiesAskStop = "_askStop";
     public static String prefixPropertiesTrackExecution = "_trackExec";
+    public static String prefixPropertiesSavedExecution= "_savedExecution";
+    
    //  public static String prefixPropertiesTrackStream = "_stream";
     
-    public List<BEvent> dbSaveJob(MilkJob milkJob, SaveJobParameters saveParameters) {
+    public List<BEvent> dbSaveMilkJob(MilkJob milkJob, SaveJobParameters saveParameters) {
         List<BEvent> listEvents = new ArrayList<BEvent>();
     
         bonitaProperties.setCheckDatabase(false);
@@ -309,12 +334,21 @@ public class MilkSerializeProperties {
         Set<String> listKeys=new HashSet<String>();
         // save the job
         if (saveParameters.saveBase) {
-            bonitaProperties.put(String.valueOf(milkJob.getId())+prefixPropertiesBase, milkJob.getJsonSt(false));
+            MapContentParameter mapContentParameter = new MapContentParameter();
+            mapContentParameter.askStop= false;
+            mapContentParameter.savedExecution= false;
+            mapContentParameter.trackExecution= false;
+
+            bonitaProperties.put(String.valueOf(milkJob.getId())+prefixPropertiesBase, milkJob.getJsonSt(mapContentParameter));
             listKeys.add( milkJob.getId()+prefixPropertiesBase) ;
         } 
         if (saveParameters.saveAskStop) {
-            bonitaProperties.put(String.valueOf(milkJob.getId())+prefixPropertiesAskStop, milkJob.askForStop);
+            bonitaProperties.put(String.valueOf(milkJob.getId())+prefixPropertiesAskStop, milkJob.trackExecution.askForStop);
             listKeys.add( milkJob.getId()+prefixPropertiesAskStop) ;
+          } 
+        if (saveParameters.savedExecution) {
+            bonitaProperties.put(String.valueOf(milkJob.getId())+prefixPropertiesSavedExecution, milkJob.getListSavedExecutionJsonSt());
+            listKeys.add( milkJob.getId()+prefixPropertiesSavedExecution) ;
           } 
         if (saveParameters.saveTrackExecution) {
             bonitaProperties.put(String.valueOf(milkJob.getId())+prefixPropertiesTrackExecution, milkJob.trackExecution.getJsonSt());
@@ -328,8 +362,10 @@ public class MilkSerializeProperties {
                 saveFile=true;
             if ( saveParameters.saveFileRead && (parameter.typeParameter == TypeParameter.FILEREADWRITE || parameter.typeParameter == TypeParameter.FILEREAD)) 
                 saveFile=true;
-            if (saveFile)
-                bonitaProperties.setPropertyStream(milkJob.getId() +cstPrefixPropertiesStreamValue + parameter.name, milkJob.getParameterStream(parameter));            
+            if (saveFile) {
+                bonitaProperties.setPropertyStream(milkJob.getId() +cstPrefixPropertiesStreamValue + parameter.name, milkJob.getParameterStream(parameter));
+                listKeys.add(milkJob.getId() +cstPrefixPropertiesStreamValue + parameter.name);
+            }
         }
         logger.info( getLogHeader()+".dbSaveJob-begin keys="+listKeys.toString());
 
@@ -351,7 +387,7 @@ public class MilkSerializeProperties {
      *        }
      */
 
-    public List<BEvent> dbRemovePlugInTour(MilkJob milkJob) {
+    public List<BEvent> dbRemoveMilkJob(MilkJob milkJob) {
         List<BEvent> listEvents = new ArrayList<BEvent>();
         bonitaProperties.setCheckDatabase(false);
 

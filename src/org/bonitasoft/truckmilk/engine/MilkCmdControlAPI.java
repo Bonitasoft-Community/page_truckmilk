@@ -29,22 +29,8 @@ public class MilkCmdControlAPI {
 
     private static String logHeader = "TruckMilk.cmd";
 
-    private static BEvent EVENT_ALREADY_DEPLOYED = new BEvent(MilkCmdControlAPI.class.getName(), 1, Level.INFO,
-            "Command already deployed", "The command at the same version is already deployed");
-    private static BEvent EventDeployedWithSuccess = new BEvent(MilkCmdControlAPI.class.getName(), 2, Level.INFO,
-            "Command deployed with success", "The command are correctly deployed");
-    private static BEvent EventErrorAtDeployment = new BEvent(MilkCmdControlAPI.class.getName(), 3,
-            Level.APPLICATIONERROR, "Error during deployment of the command", "The command are not deployed",
-            "The pâge can not work", "Check the exception");
-    private static BEvent EventNotDeployed = new BEvent(MilkCmdControlAPI.class.getName(), 4, Level.ERROR,
-            "Command not deployed", "The command is not deployed");
-    private static BEvent EVENT_CALL_COMMAND = new BEvent(MilkCmdControlAPI.class.getName(), 5, Level.ERROR,
-            "Error during calling a command", "Check the error", "Function can't be executed", "See the error");
 
-    private static BEvent eventPingError = new BEvent(MilkCmdControlAPI.class.getName(), 6, Level.ERROR,
-            "Ping error", "Command does not response", "A command is not responding", "See the error");
-
-    private static BEvent eventUnkownSchedulerMaintenance = new BEvent(MilkCmdControlAPI.class.getName(), 7,
+    private static BEvent EVENT_UNKNOWN_SCHEDULEROPERATION = new BEvent(MilkCmdControlAPI.class.getName(), 1,
             Level.ERROR,
             "Unkown maintenance operation", "This operation is not known", "Operation not performed",
             "See the requested maintenance operation");
@@ -170,7 +156,7 @@ public class MilkCmdControlAPI {
         // unknow command
         if (!operationManaged) {
             logger.severe(logHeader + " Unkown schedulerOperation[" + operation + "]");
-            listEvents.add(new BEvent(eventUnkownSchedulerMaintenance, "Operation[" + operation + "]"));
+            listEvents.add(new BEvent(EVENT_UNKNOWN_SCHEDULEROPERATION, "Operation[" + operation + "]"));
             result.put(MilkCmdControl.cstResultListEvents, BEventFactory.getHtml(listEvents));
         }
 

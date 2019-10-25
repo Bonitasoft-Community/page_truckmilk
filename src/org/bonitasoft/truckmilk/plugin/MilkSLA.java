@@ -39,6 +39,7 @@ import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.PlaceHolder;
 import org.bonitasoft.truckmilk.toolbox.SendMail;
 import org.bonitasoft.truckmilk.toolbox.SendMailEnvironment;
+import org.bonitasoft.truckmilk.toolbox.SendMailParameters;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
 public class MilkSLA extends MilkPlugIn {
@@ -305,7 +306,7 @@ public class MilkSLA extends MilkPlugIn {
         plugInDescription.addParameter(cstParamAnalyseCaseId);
 
         try {
-            SendMail.addPlugInParameter(SendMail.MAIL_DIRECTION.SENDONLY, plugInDescription);
+            SendMailParameters.addPlugInParameter(SendMailParameters.MAIL_DIRECTION.SENDONLY, plugInDescription);
         } catch (Error er) {
             // do nothing here, the error will show up again in the check Environment
             // Cause : the Email Jar file is not installed, then java.lang.NoClassDefFoundError: javax/mail/Address
@@ -326,7 +327,7 @@ public class MilkSLA extends MilkPlugIn {
     /* ******************************************************************************** */
     @Override
     public List<BEvent> buttonParameters(String buttonName, MilkJobExecution input, Map<String, Object> argsParameters, APIAccessor apiAccessor) {
-        if (buttonName.equals(SendMail.cstParamTestSendMail.name)) {
+        if (buttonName.equals(SendMailParameters.cstParamTestSendMail.name)) {
             SendMail sendMail = new SendMail(input);
             return sendMail.testEmail(argsParameters);
         }

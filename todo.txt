@@ -9,3 +9,14 @@ BonitaProperties : Too long => Save as Stream
 
 
 Disconnect : il faut le detecter dans la page pour afficher une reconnection
+
+1571674614021_trackExec
+1571616575673_trackExec
+1571616575673_trackExec
+1571674602303_trackExec
+
+
+1571625938426_trackExec
+
+1571703395914 => Get List
+1571703369499==> Ping

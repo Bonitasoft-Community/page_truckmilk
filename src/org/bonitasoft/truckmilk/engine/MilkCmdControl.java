@@ -5,7 +5,6 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.StringWriter;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,6 +29,7 @@ import org.bonitasoft.truckmilk.engine.MilkJobFactory.CreateJobStatus;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.ExecutionStatus;
 import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SaveJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
+import org.bonitasoft.truckmilk.job.MilkJob.MapContentParameter;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerFactory;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt;
@@ -214,10 +214,10 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 {
                     logger.info(logHeader+" Server Restart reset jobId["+milkJob.getId()+"]");
                     // cancel the job: server restart
-                    milkJob.lastExecutionDate = new Date();
-                    milkJob.lastExecutionStatus = ExecutionStatus.KILL;
+                    milkJob.trackExecution.lastExecutionDate = new Date();
+                    milkJob.trackExecution.lastExecutionStatus = ExecutionStatus.KILL;
                     milkJob.trackExecution.inExecution = false;
-                    milkJob.isImmediateExecution = false;
+                    milkJob.trackExecution.isImmediateExecution = false;
                     executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceAllInformations()));
                 }
             }
@@ -378,7 +378,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                             executeAnswer.listEvents.add(new BEvent(EVENT_JOB_DEACTIVATED, "Job Deactived[" + milkJob.getName() + "]"));
 
                         executeAnswer.result.put("enable", milkJob.isEnable);
-                        executeAnswer.result.put("tour", milkJob.getMap(true,true));
+                        executeAnswer.result.put("tour", milkJob.getMap(MapContentParameter.getInstanceWeb()));
                     } else
                         executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 }
@@ -432,7 +432,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     if (milkJob != null) {
                         milkJob.setImmediateExecution(true);
                         milkJob.setAskForStop(false);
-                        executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getBaseInformations()));
+                        executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceTrackExecution()));
                         executeAnswer.listEvents.add(new BEvent(EVENT_JOB_UPDATED, "Job updated[" + milkJob.getName() + "]"));
                     } else {
                         executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobId[" + idJob + "]"));
@@ -463,10 +463,10 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     MilkJob milkJob = getJobById(idJob, milkJobFactory);
 
                     if (milkJob != null) {
-                        milkJob.lastExecutionDate = new Date();
-                        milkJob.lastExecutionStatus = ExecutionStatus.KILL;
+                        milkJob.trackExecution.lastExecutionDate = new Date();
+                        milkJob.trackExecution.lastExecutionStatus = ExecutionStatus.KILL;
                         milkJob.trackExecution.inExecution = false;
-                        milkJob.isImmediateExecution = false;
+                        milkJob.trackExecution.isImmediateExecution = false;
                         executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceAllInformations()));
                         executeAnswer.listEvents.add(new BEvent(EVENT_JOB_UPDATED, "Job updated[" + milkJob.getName() + "]"));
                     } else {
@@ -519,10 +519,11 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     startScheduler = true;
                 if (milkSchedulerFactory.getScheduler() != null && startScheduler != null) {
                     if (startScheduler) {
+                        Boolean reset = executeParameters.getParametersBoolean("reset");
                         synchronizeHeart.heartBeatInProgress = false; // prevention, reset it to false
-                        listEventsAction.addAll(milkSchedulerFactory.getScheduler().start(executeParameters.tenantId));
+                        listEventsAction.addAll(milkSchedulerFactory.getScheduler().startup(executeParameters.tenantId, reset==null ? false : reset));
                     } else
-                        listEventsAction.addAll(milkSchedulerFactory.getScheduler().stop(executeParameters.tenantId));
+                        listEventsAction.addAll(milkSchedulerFactory.getScheduler().shutdown(executeParameters.tenantId));
                 }
                 StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(executeParameters.tenantId);
                 // so, if the status return an error, do not return the listEventActions, only errors
@@ -855,6 +856,27 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
     public Collection<MilkJob> getListJobs(MilkJobFactory milkJobFactory) {
         return milkJobFactory.getMapJobsId().values();
     }
+    /**
+     * get the list, ordered
+     * @param milkJobFactory
+     * @return
+     */
+    public List<MilkJob> getListJobsOrdered(MilkJobFactory milkJobFactory) {
+        List<MilkJob> listJobs = new ArrayList<MilkJob>();
+        listJobs.addAll( getListJobs( milkJobFactory ) );
+        // order now
+        Collections.sort(listJobs, new Comparator<MilkJob>()
+        {
+          public int compare(MilkJob s1,
+                  MilkJob s2)
+          {
+            return s1.getName().toUpperCase().compareTo(s2.getName().toUpperCase());
+          }
+        });
+        return listJobs;
+
+
+    }
 
     /**
      * return a list ordered by name
@@ -864,29 +886,13 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
     public List<Map<String, Object>> getListMilkJobsMap(MilkJobFactory milkJobFactory) {
         List<Map<String, Object>> listJobMap = new ArrayList<Map<String, Object>>();
 
-        for (MilkJob milkJob : getListJobs(milkJobFactory)) {
+        
+        for (MilkJob milkJob : getListJobsOrdered(milkJobFactory)) {
 
             milkJob.checkByPlugIn();
 
-            listJobMap.add(milkJob.getMap(true,true));
+            listJobMap.add(milkJob.getMap(MapContentParameter.getInstanceWeb() ));
         }
-
-        // order now
-        Collections.sort(listJobMap, new Comparator<Map<String, Object>>() {
-
-            public int compare(Map<String, Object> s1,
-                    Map<String, Object> s2) {
-                String s1name = (String) s1.get("name");
-                String s2name = (String) s2.get("name");
-                if (s1name == null)
-                    s1name = "";
-                if (s2name == null)
-                    s2name = "";
-
-                return s1name.compareTo(s2name);
-            }
-        });
-
         return listJobMap;
     }
 

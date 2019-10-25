@@ -40,20 +40,7 @@ public interface MilkSchedulerInt {
 
     public StatusScheduler getStatus(long tenantId);
 
-    /**
-     * start the scheduler
-     * 
-     * @return
-     */
-    public List<BEvent> start(long tenantId);
-
-    /**
-     * stop it
-     * 
-     * @return
-     */
-    public List<BEvent> stop(long tenantId);
-
+   
     /**
      * return the scheduler type
      */

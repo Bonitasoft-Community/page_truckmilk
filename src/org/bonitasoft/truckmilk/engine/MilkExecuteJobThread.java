@@ -26,7 +26,9 @@ import org.bonitasoft.truckmilk.job.MilkJobExecution;
  */
 public class MilkExecuteJobThread extends Thread {
 
+    
     static Logger logger = Logger.getLogger(MilkExecuteJobThread.class.getName());
+    private static String logHeader = "TruckMilk.MilkExecuteJobThread ~~ ";
 
     private static BEvent EVENT_PLUGIN_VIOLATION = new BEvent(MilkExecuteJobThread.class.getName(), 1, Level.ERROR,
             "Plug in violation",
@@ -61,11 +63,11 @@ public class MilkExecuteJobThread extends Thread {
             return executionDescription;
         if (milkJob.isEnable || milkJob.isImmediateExecution()) {
             // protection : recalculate a date then
-            if (milkJob.nextExecutionDate == null)
+            if (milkJob.trackExecution.nextExecutionDate == null)
                 milkJob.calculateNextExecution();
 
-            if (milkJob.isImmediateExecution() || milkJob.nextExecutionDate != null
-                    && milkJob.nextExecutionDate.getTime() < currentDate.getTime()) {
+            if (milkJob.isImmediateExecution() || milkJob.trackExecution.nextExecutionDate != null
+                    && milkJob.trackExecution.nextExecutionDate.getTime() < currentDate.getTime()) {
 
                 // Attention, in a Cluster environment, we must not start the job on two different node.
                 if ( ! synchronizeClusterDoubleStart() )
@@ -77,7 +79,7 @@ public class MilkExecuteJobThread extends Thread {
                 
                 
                 
-                if (milkJob.isImmediateExecution)
+                if (milkJob.trackExecution.isImmediateExecution)
                     executionDescription += "(i)";
                 executionDescription += " " + milkJob.getName() + " ";
 
@@ -94,13 +96,15 @@ public class MilkExecuteJobThread extends Thread {
         try {
             ip = InetAddress.getLocalHost();
         } catch (UnknownHostException e1) {
-            logger.severe("MilkExecuteJobThread: can't get the ipAddress, synchronization on a cluster can't work");
+            logger.severe(logHeader+"MilkExecuteJobThread: can't get the ipAddress, synchronization on a cluster can't work");
             return true;
         }
         MilkJobFactory milkJobFactory = milkJob.milkJobFactory;
         // register this host to start
         milkJob.registerExecutionOnHost(ip.getHostAddress());
-        
+
+        logger.info(logHeader+"Save StartJob - instantiationHost ["+ip.getHostAddress()+"]");
+
         milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceTrackExecution());
         
         try {
@@ -114,6 +118,8 @@ public class MilkExecuteJobThread extends Thread {
             return true; // that's me ! 
 
         // someone else steel my job, be fair, do nothing
+        logger.info(logHeader+"Save StartJob - Something else register for this job["+(milkJobRead.job == null? "Can't read job" :milkJobRead.job.getHostRegistered())+"] myself=["+ip.getHostAddress()+"]");
+
         return false;
     }
     
@@ -147,7 +153,7 @@ public class MilkExecuteJobThread extends Thread {
                 
                 // save the status in the database
                 // save the start Status (so general) and the track Status, plus askStop to false
-                listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceAllInformations()));
+                listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceStartExecutionJob()));
                 
                 output = plugIn.execute(milkJobExecution, connectorAccessorAPI);
                 output.hostName = hostName;
@@ -156,14 +162,14 @@ public class MilkExecuteJobThread extends Thread {
                 if (milkJobExecution.pleaseStop() && ( output.executionStatus == ExecutionStatus.SUCCESS) )
                     output.executionStatus = ExecutionStatus.SUCCESSABORT;
                 // if the user ask to stop, then this is a successabort if this is correct (do not change a ERROR)
-                if (milkJob.askForStop && ( output.executionStatus == ExecutionStatus.SUCCESS || output.executionStatus == ExecutionStatus.SUCCESSPARTIAL))
+                if (milkJob.trackExecution.askForStop && ( output.executionStatus == ExecutionStatus.SUCCESS || output.executionStatus == ExecutionStatus.SUCCESSPARTIAL))
                     output.executionStatus = ExecutionStatus.SUCCESSABORT;
             } catch (Exception e) {
 
                 StringWriter sw = new StringWriter();
                  e.printStackTrace(new PrintWriter(sw));
                  String exceptionDetails = sw.toString();
-                 logger.severe("MilkExecuteThread : JobId["+milkJob.getId()+"] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception "+e.getMessage()+" at "+exceptionDetails);
+                 logger.severe(logHeader+" JobId["+milkJob.getId()+"] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception "+e.getMessage()+" at "+exceptionDetails);
                 if (output == null) {
                     output = new PlugTourOutput(milkJob);
                     output.addEvent(new BEvent(EVENT_PLUGIN_VIOLATION, "JobId["+milkJob.getId()+"] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + e.getMessage()+" at "+exceptionDetails));
@@ -181,6 +187,7 @@ public class MilkExecuteJobThread extends Thread {
             output = new PlugTourOutput(milkJob);
             output.addEvent(new BEvent(EVENT_PLUGIN_ERROR, e, "PlugIn[" + plugIn.getName() + "]"));
             output.executionStatus = ExecutionStatus.ERROR;
+            logger.severe(logHeader+" Execution error "+e.getMessage());
         }
         if (output != null) {
             // maybe the plugin forgot to setup the execution ? So set it.

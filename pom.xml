@@ -2,10 +2,12 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bonitasoft.custompage</groupId>
 	<artifactId>TruckMilk</artifactId>
-	<!--  Attention, when number change here, update MilkCmdControlAPI.checkAndDeployCommand -->
+	<!--  Attention, when number change here, update -->
+	<!--   * MilkCmdControlAPI.checkAndDeployCommand -->
+	<!--   * MilkScheduleQuartz (File fileQuartzJar = new File(pageDirectory.getAbsolutePath() + "/lib/TruckMilk-2.1-Quartzjob.jar")  -->
 	<version>2.1</version>
  	<properties>
-        <bonita.version>7.9.0</bonita.version>
+        <bonita.version>7.8.4</bonita.version>
   	</properties>
 	<name>TruckMilk</name>
 	<dependencies>
