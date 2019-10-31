@@ -27,6 +27,7 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
 /**
@@ -34,7 +35,7 @@ import org.bonitasoft.truckmilk.toolbox.TypesCast;
  */
 public class MilkPurgeArchivedListGetList extends MilkPlugIn {
 
-    static Logger logger = Logger.getLogger(MilkPurgeArchive.class.getName());
+    static MilkLog logger = MilkLog.getLogger(MilkPurgeArchive.class.getName());
 
     private static BEvent eventNoProcessMatchFilter = new BEvent(MilkPurgeArchivedListGetList.class.getName(), 1,
             Level.APPLICATIONERROR,
@@ -53,12 +54,16 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
     private static BEvent EVENT_WRITEREPORT_ERROR = new BEvent(MilkPurgeArchivedListGetList.class.getName(), 6, Level.ERROR,
             "Report generation error", "Error arrived during the generation of the report", "No report is available", "Check the error");
 
+    private static BEvent EVENT_SYNTHESISREPORT = new BEvent(MilkPurgeArchivedListGetList.class.getName(), 7, Level.INFO,
+            "Report Synthesis", "Result of search", "", "");
+
+ 
     private static PlugInParameter cstParamDelayInDay = PlugInParameter.createInstance("delayinday", "Delai in days", TypeParameter.LONG, 10L, "Only cases archived before this delay are in the perimeter");
     private static PlugInParameter cstParamMaximumInReport = PlugInParameter.createInstance("maximuminreport", "Maximum in report", TypeParameter.LONG, 10000L, "Job stops when then number of case to delete reach this limit, in order to not create a very huge file");
     private static PlugInParameter cstParamMaximumInMinutes = PlugInParameter.createInstance("maximuminminutes", "Maximum in minutes", TypeParameter.LONG, 3L, "Job stops when the execution reach this limit, in order to not overload the server.");
     private static PlugInParameter cstParamProcessfilter = PlugInParameter.createInstance("processfilter", "Process filter", TypeParameter.ARRAY, null, "Only processes in the list will be in the perimeter. No filter means all processes will be in the perimeter. Tips: give 'processName;version' to specify a special version of the process, else all versions of the process are processed");
     private static PlugInParameter cstParamSeparatorCSV = PlugInParameter.createInstance("separatorCSV", "Separator CSV", TypeParameter.STRING, ",", "CSV use a separator. May be ; or ,");
-    private static PlugInParameter cstParamReport = PlugInParameter.createInstanceFile("report", "Report", TypeParameter.FILEWRITE, null, "List is calculated and saved in this parameter", "ListToPurge.csv", "text/csv");
+    private static PlugInParameter cstParamReport = PlugInParameter.createInstanceFile("report", "List of cases", TypeParameter.FILEWRITE, null, "List is calculated and saved in this parameter", "ListToPurge.csv", "application/CSV");
 
     public MilkPurgeArchivedListGetList() {
         super(TYPE_PLUGIN.EMBEDED);
@@ -157,10 +162,12 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
             w.write(cstColCaseId + separatorCSV+"processname"+separatorCSV+"processversion"+separatorCSV+"archiveddate" + separatorCSV+ cstColStatus + "\n");
 
             // loop on archive
+            int countInArchive=0;
             for (ArchivedProcessInstance archivedProcessInstance : searchArchivedProcessInstance.getResult()) {
             
                 if (jobExecution.pleaseStop())
                     break;
+                countInArchive++;
                 String line = String.valueOf(archivedProcessInstance.getSourceObjectId()) + separatorCSV;
                 long processId = archivedProcessInstance.getProcessDefinitionId();
                 if (!cacheProcessDefinition.containsKey(processId)) {
@@ -181,6 +188,8 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
             plugTourOutput.nbItemsProcessed = searchArchivedProcessInstance.getCount();
             plugTourOutput.setParameterStream(cstParamReport, new ByteArrayInputStream(arrayOutputStream.toByteArray()));
 
+            plugTourOutput.addEvent(new BEvent(EVENT_SYNTHESISREPORT, "Total cases:"+searchArchivedProcessInstance.getCount()+", In list:"+countInArchive));
+            
             if (searchArchivedProcessInstance.getCount() == 0) {
                 plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
                 plugTourOutput.nbItemsProcessed = 0;

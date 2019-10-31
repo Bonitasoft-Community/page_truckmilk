@@ -24,6 +24,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugTourOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory.MilkFactoryOp;
@@ -44,8 +45,7 @@ import org.quartz.CronExpression;
 
 public class MilkJob {
 
-    public static Logger logger = Logger.getLogger(MilkJob.class.getName());
-    public static String logHeader = "MilkPlugInTour";
+    public static MilkLog logger = MilkLog.getLogger(MilkJob.class.getName());
 
     private static BEvent eventCronParseError = new BEvent(MilkJob.class.getName(), 1, Level.APPLICATIONERROR,
             "Bad cron expression ", "Cron expression is not correct", "The next date can't be calculated",
@@ -294,7 +294,7 @@ public class MilkJob {
             listParentTmpFile.add(pageDirectory.getCanonicalPath() + "/../../../tmp/");
             listParentTmpFile.add(pageDirectory.getCanonicalPath() + "/../../");
         } catch (Exception e) {
-            logger.info(logHeader + ".setTourFileParameter: error get CanonicalPath of pageDirectory[" + e.toString() + "]");
+            logger.info( ".setTourFileParameter: error get CanonicalPath of pageDirectory[" + e.toString() + "]");
             listEvents.add(EVENT_CANT_FIND_TEMPORARY_PATH);
             return listEvents;
         }
@@ -317,7 +317,7 @@ public class MilkJob {
                         }
                     }
                 } catch (Exception e) {
-                    logger.info(logHeader + ".setTourFileParameter: File[" + pathTemp + temporaryFileName + "] Exception " + e.getMessage());
+                    logger.severeException(e, ".setTourFileParameter: File[" + pathTemp + temporaryFileName + "] ");
                     listEvents.add(new BEvent(EVENT_CANT_FIND_TEMPORARY_FILE, e, "Path:" + pathTemp + "]File[" + temporaryFileName + "] Complete file[" + pathTemp + temporaryFileName + "]"));
 
                 }
@@ -406,7 +406,7 @@ public class MilkJob {
             }
         } catch (IOException e) {
             listEvents.add(new BEvent(EVENT_ERROR_READING_PARAMFILE, e, "ParameterFile[" + plugInParameter.name + "]"));
-            logger.severe(logHeader + ".getParameterStream:Error writing parameter " + e.getMessage());
+            logger.severeException(e, ".getParameterStream:Error writing parameter ");
         }
         return listEvents;
     }
@@ -508,7 +508,7 @@ public class MilkJob {
 
         String lastExecutionStatus = (String) jsonMap.get(cstJsonlastExecutionStatus);
         if (lastExecutionStatus != null)
-            milkJob.trackExecution.lastExecutionStatus = ExecutionStatus.valueOf(lastExecutionStatus.toUpperCase());
+            milkJob.trackExecution.lastExecutionStatus = ExecutionStatus.valueOf( lastExecutionStatus.toUpperCase());
 
         milkJob.trackExecution.isImmediateExecution = getBooleanValue(jsonMap.get(cstJsonImmediateExecution), false);
         milkJob.trackExecution.inExecution = getBooleanValue(jsonMap.get(cstJsonInExecution), false);

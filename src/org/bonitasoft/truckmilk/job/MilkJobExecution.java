@@ -10,6 +10,8 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugTourOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SaveJobParameters;
+import org.bonitasoft.truckmilk.plugin.MilkSLA;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
 /* ******************************************************************************** */
@@ -20,6 +22,8 @@ import org.bonitasoft.truckmilk.toolbox.TypesCast;
 /* ******************************************************************************** */
 
 public class MilkJobExecution {
+
+    static MilkLog logger = MilkLog.getLogger(MilkSLA.class.getName());
 
     public String tourName;
     // this parameters is initialised with the value in the PlugTour, and may change after
@@ -80,7 +84,7 @@ public class MilkJobExecution {
             // update the PLUGIN parameters
             milkJob.getParameterStream(plugInParameter, output);
         } else {
-            MilkPlugIn.logger.severe("setParameterStream not allowed on parameter[" + plugInParameter.name + "] (plugin " + milkJob.getPlugIn().getName() + "]");
+            logger.severe("setParameterStream not allowed on parameter[" + plugInParameter.name + "] (plugin " + milkJob.getPlugIn().getName() + "]");
         }
     }
 

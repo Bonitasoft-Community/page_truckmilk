@@ -30,13 +30,14 @@ import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.SendMail;
 import org.bonitasoft.truckmilk.toolbox.SendMailEnvironment;
 import org.bonitasoft.truckmilk.toolbox.SendMailParameters;
 
 public class MilkEmailUsersTasks extends MilkPlugIn {
 
-    public static Logger logger = Logger.getLogger(MilkEmailUsersTasks.class.getName());
+    public static MilkLog logger = MilkLog.getLogger(MilkEmailUsersTasks.class.getName());
 
     private static BEvent EVENT_SEND_EMAIL = new BEvent(MilkEmailUsersTasks.class.getName(), 1, Level.APPLICATIONERROR,
             "Mail send failed", "Email can't be send", "No email send", "Check the error");
@@ -279,9 +280,11 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
 
     private String getHtmlListTasks(List<HumanTaskInstance> listHumanTasks, String bonitaHost, Long bonitaPort, ProcessAPI processAPI) {
         StringBuffer content = new StringBuffer();
-        content.append("<table><tr><th>Case Id</th><th>Task</th><th>Due date</th></tr>");
+        content.append("<table style=\"border-collapse: collapse;border-spacing: 0;padding: 8px;line-height: 1.42857143;vertical-align: top;border-top: 1px solid #ecf0f1;background-color: #d9edf7\">");
+        content.append("<tr  style=\"background-color: #dd0033;color: white;font-size: small;border-bottom-color: #666;border-bottom: 2px solid #ecf0f1;font-family: 'Lato', 'Helvetica Neue', Helvetica, Arial, sans-serif;\">");
+         content.append("<th>Case Id</th><th>Task</th><th>Due date</th></tr>");
         for (HumanTaskInstance task : listHumanTasks) {
-            content.append("<tr>");
+            content.append("<tr style=\"color: #323232;box-sizing: border-box;\">");
 
             content.append("<td>"+task.getRootContainerId()+"</td>");
 

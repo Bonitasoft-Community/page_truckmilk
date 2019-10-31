@@ -77,7 +77,7 @@
 					<div class="font-style: italic;">
 					The <span style="color: red;font-weight: bold;">B</span>onita <span style="color: red;font-weight: bold;">SC</span>heduler&nbsp;
 					</div>
-					<a href="" ng-click="ctrl.showhistory( ! ctrl.isshowhistory )">V2.1</a>
+					<a href="" ng-click="ctrl.showhistory( ! ctrl.isshowhistory )">V2.1.1</a>
 				</center>
 			</td></tr>
 			<tr><td>
@@ -528,7 +528,7 @@
 													<div ng-if="parameterdef.type ==='FILEWRITE' || parameterdef.type ==='FILEREADWRITE' || parameterdef.type ==='FILEREAD'" >
 														<div ng-if="plugtour.parametersvalue[ parameterdef.name ] === 'AVAILABLE'">
 															
-															<a class="btn btn-info" href="{{ctrl.downloadParameterFile(plugtour, parameterdef)}}" target="top">Download the Document</a>
+															<a class="btn btn-info" style="color: white;" href="{{ctrl.downloadParameterFile(plugtour, parameterdef)}}" target="top">Download the Document</a>
 															
 														</div>
 														<div ng-if="plugtour.parametersvalue[ parameterdef.name ] !== 'AVAILABLE'">
@@ -614,9 +614,9 @@
 											<tr><td>Status</td><td>{{plugtour.trackExecution.lastexecutionstatus}}</td></tr>
 											<tbody ng-repeat="parameterdef in plugtour.parametersdef"> 
 											<tr ng-if="parameterdef.type ==='FILEWRITE' || parameterdef.type ==='FILEREADWRITE'">
-												<td>{{parameterdef.name}}</td>
+												<td>{{parameterdef.label}}</td>
 												<td><div ng-if="plugtour.parametersvalue[ parameterdef.name ] === 'AVAILABLE'">										
-													<a class="btn btn-info" href="{{ctrl.downloadParameterFile(plugtour, parameterdef)}}" target="top">Download the Document</a>
+													<a class="btn btn-info" style="color: white;"  href="{{ctrl.downloadParameterFile(plugtour, parameterdef)}}" target="top">Download the Document</a>
 													</div>
 												</td>
 											</tr>

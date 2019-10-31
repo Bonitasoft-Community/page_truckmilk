@@ -1,22 +1,21 @@
 
 
 JOB; Execute Command
+JOB: execute groovy
 JOB: Execute Command Meteor
 JOB : create case sur directory / sur Email
+JOB: ajouter une categorie CASE, TASK, NONITOR, EXTERNAL
+Job getlist : parametre "liste de variable" et "filtre sur variable"
+Job parametres : ajouter un "panel" de regroupement de l'affichage
+
 
 BonitaProperties : Too long => Save as Stream
 
 
-
+Scheduler : ajouter un "Detail report" et si positionné, on log chaque heart breast
+           ajouter un bouton "heart breast" pour envoyer une impulsion
+           
+ Jobs list : un icone pour acceder a l'historique, un bouton par rapport généré
+  
+   
 Disconnect : il faut le detecter dans la page pour afficher une reconnection
-
-1571674614021_trackExec
-1571616575673_trackExec
-1571616575673_trackExec
-1571674602303_trackExec
-
-
-1571625938426_trackExec
-
-1571703395914 => Get List
-1571703369499==> Ping

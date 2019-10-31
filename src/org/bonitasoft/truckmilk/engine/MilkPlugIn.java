@@ -12,6 +12,7 @@ import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.json.simple.JSONValue;
 
@@ -50,8 +51,8 @@ public abstract class MilkPlugIn {
             "Unknow button", "A button is executed, but no action is known for this button", "No action executed.",
             "Reference the error");
 
-    public static Logger logger = Logger.getLogger(MilkPlugIn.class.getName());
-
+    public static MilkLog logger = MilkLog.getLogger(MilkPlugIn.class.getName());
+ 
     /**
      * the base keep the description available.
      * To be sure this is correclty initialised, the factoryPlugIn, who create object, call the

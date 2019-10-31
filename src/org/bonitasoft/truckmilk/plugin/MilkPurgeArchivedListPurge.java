@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.ProcessAPI;
@@ -23,11 +22,12 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
 public class MilkPurgeArchivedListPurge extends MilkPlugIn {
 
-    static Logger logger = Logger.getLogger(MilkPurgeArchivedListPurge.class.getName());
+    static MilkLog logger = MilkLog.getLogger(MilkPurgeArchivedListPurge.class.getName());
 
     private static BEvent eventDeletionSuccess = new BEvent(MilkPurgeArchivedListPurge.class.getName(), 1, Level.SUCCESS,
             "Deletion done with success", "Archived Cases are deleted with success");
@@ -88,13 +88,14 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
         
         statistic.totalLineCsv = nbLinesInCsv(outputByte);
         List<Long> sourceProcessInstanceIds = new ArrayList<Long>();
+        long nbAnalyseAlreadyReported=0;
         try {
             jobExecution.setAvancementTotalStep(statistic.totalLineCsv);
             
             BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(outputByte.toByteArray())));
             String line = reader.readLine();
             // read the header
-            String[] header = line == null ? new String[0] : line.split(";");
+            String[] header = line == null ? new String[0] : line.split(separatorCSV);
             
             long lineNumber = 1;
             StringBuffer analysis = new StringBuffer();
@@ -115,7 +116,10 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
                 String status = TypesCast.getString(record.get(MilkPurgeArchivedListGetList.cstColStatus), null);
 
                 if (caseId == null) {
-                    analysis.append("Line[" + lineNumber + "] " + MilkPurgeArchivedListGetList.cstColCaseId + " undefined;");
+                    if (analysis.length()<300)
+                        analysis.append("Line[" + lineNumber + "] " + MilkPurgeArchivedListGetList.cstColCaseId + " undefined;");
+                    else 
+                        nbAnalyseAlreadyReported++;
                     statistic.countBadDefinition++;
                 }
                 else if (status == null) {
@@ -146,12 +150,18 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
             }
             // calculated the last ignore  
             statistic.countStillToAnalyse += statistic.totalLineCsv - lineNumber;
+            String reportEvent = "AlreadyDone: "+statistic.countAlreadyDone+"; Purged:" + plugTourOutput.nbItemsProcessed+" Ignored(no status DELETED):"+statistic.countIgnored+" StillToAnalyse:"+statistic.countStillToAnalyse+" Bad Definition(noCaseid):"+statistic.countBadDefinition;
+            if (statistic.countBadDefinition>0)
+                reportEvent+=" Bad Definition(noCaseid):"+statistic.countBadDefinition+" : "+analysis.toString();
+            if (nbAnalyseAlreadyReported>0)
+                reportEvent+=" ("+nbAnalyseAlreadyReported+") more errors";
             
-            plugTourOutput.addEvent(new BEvent(eventDeletionSuccess, "AlreadyDone: "+statistic.countAlreadyDone+"; Purged:" + plugTourOutput.nbItemsProcessed+" Ignored(no status DELETED):"+statistic.countIgnored+" StillToAnalyse:"+statistic.countStillToAnalyse+" Bad Definition(noCaseid):"+statistic.countBadDefinition));
+            BEvent eventFinal = (statistic.countBadDefinition==0) ? new BEvent(eventDeletionSuccess, reportEvent) : new BEvent(EVENT_REPORT_ERROR,  reportEvent);
+            
+            plugTourOutput.addEvent( eventFinal );
             plugTourOutput.executionStatus = (jobExecution.pleaseStop() || statistic.countStillToAnalyse>0) ? ExecutionStatus.SUCCESSPARTIAL : ExecutionStatus.SUCCESS;
             if (statistic.countBadDefinition>0)
             {
-                plugTourOutput.addEvent(new BEvent(EVENT_REPORT_ERROR, " Bad Definition(noCaseid):"+statistic.countBadDefinition+" : "+analysis.toString()));
                 plugTourOutput.executionStatus= ExecutionStatus.ERROR;    
             }
             

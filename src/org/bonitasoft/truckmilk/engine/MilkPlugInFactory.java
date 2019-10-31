@@ -16,6 +16,7 @@ import org.bonitasoft.truckmilk.plugin.MilkPurgeArchivedListGetList;
 import org.bonitasoft.truckmilk.plugin.MilkPurgeArchivedListPurge;
 import org.bonitasoft.truckmilk.plugin.MilkReplayFailedTask;
 import org.bonitasoft.truckmilk.plugin.MilkSLA;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 /**
  * Contains all PlugIn (not the tourn only the plug in)
@@ -25,10 +26,9 @@ import org.bonitasoft.truckmilk.plugin.MilkSLA;
  */
 public class MilkPlugInFactory {
 
-    static Logger logger = Logger.getLogger(MilkPlugInFactory.class.getName());
+    static MilkLog logger = MilkLog.getLogger(MilkPlugInFactory.class.getName());
 
-    static String logHeader = "MilkPlugInFactory:";
-
+   
     private static BEvent EVENT_INTERNAL_ERROR = new BEvent(MilkPlugInFactory.class.getName(), 1, Level.ERROR,
             "Internal error", "Internal error, check the log");
     private static BEvent EVENT_NOT_INITIALIZED = new BEvent(MilkPlugInFactory.class.getName(), 2, Level.ERROR,
@@ -106,7 +106,7 @@ public class MilkPlugInFactory {
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();
-            logger.severe(logHeader + "ERROR " + e + " at " + exceptionDetails);
+            logger.severe("ERROR " + e + " at " + exceptionDetails);
 
             listInitialiseEvent.add(new BEvent(EVENT_INTERNAL_ERROR, e.getMessage()));
 
@@ -114,7 +114,7 @@ public class MilkPlugInFactory {
             StringWriter sw = new StringWriter();
             er.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();
-            logger.severe(logHeader + "ERROR " + er + " at " + exceptionDetails);
+            logger.severe("ERROR " + er + " at " + exceptionDetails);
 
             listInitialiseEvent.add(new BEvent(EVENT_INTERNAL_ERROR, er.getMessage()));
         }

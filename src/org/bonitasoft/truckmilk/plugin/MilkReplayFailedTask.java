@@ -24,10 +24,11 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkCmdControl;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 public class MilkReplayFailedTask extends MilkPlugIn {
 
-    static Logger logger = Logger.getLogger(MilkReplayFailedTask.class.getName());
+    static MilkLog logger = MilkLog.getLogger(MilkReplayFailedTask.class.getName());
 
     private static BEvent eventNoProcessMatchFilter = new BEvent(MilkCmdControl.class.getName(), 1,
             Level.APPLICATIONERROR,

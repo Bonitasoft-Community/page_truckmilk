@@ -12,13 +12,13 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkCmdControl;
 import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory;
 
 public class MilkScheduleThreadSleep implements MilkSchedulerInt {
 
-    private static Logger logger = Logger.getLogger(MilkScheduleQuartz.class.getName());
-    private static String logHeader = "MilkScheduleThreadSleep ~~ ";
-
+    private static MilkLog logger = MilkLog.getLogger(MilkScheduleQuartz.class.getName());
+ 
     private static List<SchedulerThread> listSchedulerThread = new ArrayList<SchedulerThread>();
 
     private static BEvent eventSchedulerTreadSetup = new BEvent(MilkScheduleThreadSleep.class.getName(), 1, Level.ERROR,
@@ -130,7 +130,7 @@ public class MilkScheduleThreadSleep implements MilkSchedulerInt {
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();
-            logger.severe(logHeader + " ERROR startup scheduler " + e + " at " + exceptionDetails);
+            logger.severeException(e,  " ERROR startup scheduler " );
             listEvents.add(new BEvent(eventSchedulerTreadSetup, e, ""));
         }
         return listEvents;
@@ -222,7 +222,7 @@ public class MilkScheduleThreadSleep implements MilkSchedulerInt {
         };
 
         public void run() {
-            logger.info(logHeader + " SchedulerThread [" + tenantId + "] started");
+            logger.info(" SchedulerThread [" + tenantId + "] started");
             status = TypeStatus.STARTED;
 
             countToDebug = 0;
@@ -230,7 +230,7 @@ public class MilkScheduleThreadSleep implements MilkSchedulerInt {
             while (status == TypeStatus.STARTED && countToDebug < 259200) {
                 countToDebug++;
                 try {
-                    logger.info(logHeader + " SchedulerThread [" + tenantId + "] weakup (" + countToDebug + "/100)");
+                    logger.info( " SchedulerThread [" + tenantId + "] weakup (" + countToDebug + "/100)");
                     MilkCmdControl milkCmdControl = MilkCmdControl.getStaticInstance();
                     MilkPlugInFactory milkPlugInFactory = MilkPlugInFactory.getInstance(tenantId);
                     MilkJobFactory milkPlugInTourFactory = MilkJobFactory.getInstance(milkPlugInFactory);
@@ -248,7 +248,7 @@ public class MilkScheduleThreadSleep implements MilkSchedulerInt {
             }
             nextHeartBeat = null;
             status = TypeStatus.STOPPED;
-            logger.info(logHeader + " SchedulerThread [\"+tenantId+\"] stopped");
+            logger.info( " SchedulerThread [\"+tenantId+\"] stopped");
 
         }
 

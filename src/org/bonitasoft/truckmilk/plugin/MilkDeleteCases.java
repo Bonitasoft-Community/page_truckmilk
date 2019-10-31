@@ -19,13 +19,14 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 /**
  * Delete all cases in a process
  */
 public class MilkDeleteCases extends MilkPlugIn {
 
-    static Logger logger = Logger.getLogger(MilkDeleteCases.class.getName());
+    static MilkLog logger = MilkLog.getLogger(MilkDeleteCases.class.getName());
 
     private static BEvent eventNoProcessMatchFilter = new BEvent(MilkDeleteCases.class.getName(), 1,
             Level.APPLICATIONERROR,

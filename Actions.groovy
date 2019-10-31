@@ -222,15 +222,26 @@ public class Actions {
               actionAnswer.isManaged=true;
               actionAnswer.isResponseMap=false;
               
-              OutputStream output = response.getOutputStream();
-              logger.fine("#### TruckMilk:Actions write To Output=["+parameter.toString()+"]");
+              // ATTENTION : on a Linux Tomcat, order is important : first, HEADER then CONTENT. on Windows Tomcat, don't care
+              logger.fine("#### TruckMilk:Actions downloadParamFile write To Output=["+parameter.toString()+"]");
               
-              
-              Map<String,String> mapHeaders = milkAccessAPI.readParameterFile(parameter, output );
+              String logHeaders="";
+              Map<String,String> mapHeaders = milkAccessAPI.readParameterHeader( parameter );
               for (String key  : mapHeaders.keySet())
               {
-               response.addHeader( key, mapHeaders.get( key ));
+                  response.addHeader( key, mapHeaders.get( key ));
+                  logHeaders += key+"="+mapHeaders.get( key )+"; ";
               }
+             
+                  
+              logger.fine("#### TruckMilk:Actions downloadParamFile addHeaders:["+logHeaders+"]");
+              
+              OutputStream output = response.getOutputStream();
+               
+              
+             milkAccessAPI.readParameterContent(parameter, output );
+              /*
+              */
               // response.addHeader("content-disposition", "attachment; filename=LogFiles.zip");
               // response.addHeader("content-type", "application/zip");
               output.flush();

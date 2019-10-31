@@ -22,6 +22,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory;
 import org.bonitasoft.truckmilk.job.MilkJob;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 import org.json.simple.JSONValue;
 
@@ -52,7 +53,7 @@ import org.json.simple.JSONValue;
  */
 public class MilkAccessAPI {
 
-    static Logger logger = Logger.getLogger(MilkAccessAPI.class.getName());
+    static MilkLog logger = MilkLog.getLogger(MilkAccessAPI.class.getName());
 
     public static String cstJsonListEvents = MilkCmdControl.cstResultListEvents;
     public static String cstJsonDeploimentsuc = "deploimentsuc";
@@ -230,7 +231,36 @@ public class MilkAccessAPI {
         return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.IMMEDIATEJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
     }
 
-   
+    /**
+     * produce the Header
+     * @param parameter
+     * @return
+     */
+    public Map<String, String> readParameterHeader(Parameter parameter) {
+        Map<String, String> mapHeaders = new HashMap<String, String>();
+
+        Long plugInTourId = TypesCast.getLong(parameter.information.get("plugintour"), 0L);
+        long tenantId = parameter.apiSession.getTenantId();
+        String paramname = TypesCast.getString(parameter.information.get("parametername"), null);
+
+        MilkPlugInFactory milkPlugInFactory = MilkPlugInFactory.getInstance(tenantId);
+        MilkJobFactory milkPlugInTourFactory = MilkJobFactory.getInstance(milkPlugInFactory);
+
+        MilkJob milkPlugInTour = milkPlugInTourFactory.getById(plugInTourId);
+        if (milkPlugInTour == null)
+            logger.severe("Can't access plugInParameter[" + paramname + "]");
+        else {
+            // load the file then
+            PlugInParameter plugInParameter = milkPlugInTour.getPlugIn().getDescription().getPlugInParameter(paramname);
+            if (plugInParameter == null)
+                logger.severe("Can't access plugInParameter[" + paramname + "] in Tour[" + milkPlugInTour.name + "]");
+            else {
+                mapHeaders.put("content-disposition", "attachment; filename=" + plugInParameter.fileName);
+                mapHeaders.put("content-type", plugInParameter.contentType);
+            }
+        }
+        return mapHeaders;
+    }
     /**
      * read a parameter file, and send the result in the outputStream (send to the browser)
      * 
@@ -238,7 +268,7 @@ public class MilkAccessAPI {
      * @param output
      * @return
      */
-    public Map<String, String> readParameterFile(Parameter parameter, OutputStream output) {
+    public Map<String, String> readParameterContent(Parameter parameter, OutputStream output) {
         Map<String, String> mapHeaders = new HashMap<String, String>();
 
         Long plugInTourId = TypesCast.getLong(parameter.information.get("plugintour"), 0L);
@@ -266,14 +296,15 @@ public class MilkAccessAPI {
             else {
                 milkPlugInTour.getParameterStream(plugInParameter, output);
                 mapHeaders.put("content-disposition", "attachment; filename=" + plugInParameter.fileName);
-                mapHeaders.put("content-type", "attachment; filename=" + plugInParameter.contentType);
+                mapHeaders.put("content-type", plugInParameter.contentType);
             }
         }
         // response.addHeader("content-disposition", "attachment; filename=LogFiles.zip");
         // response.addHeader("content-type", "application/zip");
         return mapHeaders;
     }
-
+    
+  
     public Map<String, Object> scheduler(Parameter parameter) {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.SCHEDULERSTARTSTOP, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());

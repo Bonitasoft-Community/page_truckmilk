@@ -18,6 +18,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugTourOutput;
 import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SaveJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 /**
  * Create a Thread to execute a job
@@ -27,9 +28,8 @@ import org.bonitasoft.truckmilk.job.MilkJobExecution;
 public class MilkExecuteJobThread extends Thread {
 
     
-    static Logger logger = Logger.getLogger(MilkExecuteJobThread.class.getName());
-    private static String logHeader = "TruckMilk.MilkExecuteJobThread ~~ ";
-
+    static MilkLog logger = MilkLog.getLogger(MilkExecuteJobThread.class.getName());
+   
     private static BEvent EVENT_PLUGIN_VIOLATION = new BEvent(MilkExecuteJobThread.class.getName(), 1, Level.ERROR,
             "Plug in violation",
             "A plug in must return a status on each execution. The plug in does not respect the contract",
@@ -96,14 +96,14 @@ public class MilkExecuteJobThread extends Thread {
         try {
             ip = InetAddress.getLocalHost();
         } catch (UnknownHostException e1) {
-            logger.severe(logHeader+"MilkExecuteJobThread: can't get the ipAddress, synchronization on a cluster can't work");
+            logger.severe("MilkExecuteJobThread: can't get the ipAddress, synchronization on a cluster can't work");
             return true;
         }
         MilkJobFactory milkJobFactory = milkJob.milkJobFactory;
         // register this host to start
         milkJob.registerExecutionOnHost(ip.getHostAddress());
 
-        logger.info(logHeader+"Save StartJob - instantiationHost ["+ip.getHostAddress()+"]");
+        logger.info("Save StartJob - instantiationHost ["+ip.getHostAddress()+"]");
 
         milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceTrackExecution());
         
@@ -118,7 +118,7 @@ public class MilkExecuteJobThread extends Thread {
             return true; // that's me ! 
 
         // someone else steel my job, be fair, do nothing
-        logger.info(logHeader+"Save StartJob - Something else register for this job["+(milkJobRead.job == null? "Can't read job" :milkJobRead.job.getHostRegistered())+"] myself=["+ip.getHostAddress()+"]");
+        logger.info("Save StartJob - Something else register for this job["+(milkJobRead.job == null? "Can't read job" :milkJobRead.job.getHostRegistered())+"] myself=["+ip.getHostAddress()+"]");
 
         return false;
     }
@@ -169,7 +169,7 @@ public class MilkExecuteJobThread extends Thread {
                 StringWriter sw = new StringWriter();
                  e.printStackTrace(new PrintWriter(sw));
                  String exceptionDetails = sw.toString();
-                 logger.severe(logHeader+" JobId["+milkJob.getId()+"] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception "+e.getMessage()+" at "+exceptionDetails);
+                 logger.severe(" JobId["+milkJob.getId()+"] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception "+e.getMessage()+" at "+exceptionDetails);
                 if (output == null) {
                     output = new PlugTourOutput(milkJob);
                     output.addEvent(new BEvent(EVENT_PLUGIN_VIOLATION, "JobId["+milkJob.getId()+"] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + e.getMessage()+" at "+exceptionDetails));
@@ -187,7 +187,7 @@ public class MilkExecuteJobThread extends Thread {
             output = new PlugTourOutput(milkJob);
             output.addEvent(new BEvent(EVENT_PLUGIN_ERROR, e, "PlugIn[" + plugIn.getName() + "]"));
             output.executionStatus = ExecutionStatus.ERROR;
-            logger.severe(logHeader+" Execution error "+e.getMessage());
+            logger.severe(" Execution error "+e.getMessage());
         }
         if (output != null) {
             // maybe the plugin forgot to setup the execution ? So set it.

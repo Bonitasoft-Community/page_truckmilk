@@ -35,6 +35,7 @@ import org.bonitasoft.truckmilk.schedule.MilkSchedulerFactory;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt.StatusScheduler;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt.TypeStatus;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 /* ******************************************************************************** */
 /*                                                                                  */
@@ -68,10 +69,9 @@ import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt.TypeStatus;
 
 public class MilkCmdControl extends BonitaCommandApiAccessor {
 
-    static Logger logger = Logger.getLogger(MilkCmdControl.class.getName());
+    static MilkLog logger = MilkLog.getLogger(MilkCmdControl.class.getName());
 
-    static String logHeader = "TruckMilkCommand ~~~";
-
+  
     private static BEvent EVENT_INTERNAL_ERROR = new BEvent(MilkCmdControl.class.getName(), 1, Level.ERROR,
             "Internal error", "Internal error, check the log");
 
@@ -173,7 +173,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
 
     /** Not the correct Command library if the call come here */
     public ExecuteAnswer executeCommandVerbe(String verbSt, Map<String, Serializable> parameters, TenantServiceAccessor serviceAccessor) {
-        logger.severe(logHeader + "ERROR: the Command Library is not the correct one");
+        logger.severe( "ERROR: the Command Library is not the correct one");
 
         ExecuteAnswer executeAnswer = new ExecuteAnswer();
         return executeAnswer;
@@ -212,7 +212,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
             for (MilkJob milkJob :getListJobs(milkJobFactory)) {
                 if (milkJob.inExecution() && milkJob.getHostRegistered().equals(ip.getHostAddress()))
                 {
-                    logger.info(logHeader+" Server Restart reset jobId["+milkJob.getId()+"]");
+                    logger.info(" Server Restart reset jobId["+milkJob.getId()+"]");
                     // cancel the job: server restart
                     milkJob.trackExecution.lastExecutionDate = new Date();
                     milkJob.trackExecution.lastExecutionStatus = ExecutionStatus.KILL;
@@ -265,7 +265,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
             // ------------------- ping ?
             verbEnum = VERBE.valueOf(executeParameters.verb);
 
-            logger.fine(logHeader + "command Verb2[" + verbEnum.toString() + "] Tenant[" + executeParameters.tenantId + "]");
+            logger.fine( "command Verb2[" + verbEnum.toString() + "] Tenant[" + executeParameters.tenantId + "]");
 
             boolean addSchedulerStatus = false;
 
@@ -319,13 +319,13 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
 
                 MilkPlugIn plugIn = milkPlugInFactory.getPluginFromName(executeParameters.getParametersString("plugin"));
                 if (plugIn == null) {
-                    logger.severe(logHeader + "No job found with name[" + executeParameters.getParametersString("plugin") + "]");
+                    logger.severe( "No job found with name[" + executeParameters.getParametersString("plugin") + "]");
                     executeAnswer.listEvents.add(new BEvent(EVENT_INTERNAL_ERROR, "No job found with name[" + executeParameters.getParametersString("plugin") + "]"));
 
                     return null;
                 }
                 String jobName = executeParameters.getParametersString("name");
-                logger.info(logHeader + "Add jobName[" + jobName + "] PlugIn[" + executeParameters.getParametersString("plugin") + "]");
+                logger.info( "Add jobName[" + jobName + "] PlugIn[" + executeParameters.getParametersString("plugin") + "]");
                
                 CreateJobStatus createJobStatus = milkJobFactory.createMilkJob(jobName, plugIn);
                 executeAnswer.listEvents.addAll( createJobStatus.listEvents );
@@ -389,7 +389,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 if (idJob == null) {
                     executeAnswer.listEvents.add(EVENT_MISSING_ID);
                 } else {
-                    logger.info(logHeader + "Update Job[" + idJob + "]");
+                    logger.info( "Update Job[" + idJob + "]");
                     MilkJob milkJob = getJobById(idJob, milkJobFactory);
                     SaveJobParameters saveJobParameters = SaveJobParameters.getBaseInformations();                    
                     if (milkJob != null) {
@@ -513,7 +513,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
             else if (VERBE.SCHEDULERSTARTSTOP.equals(verbEnum)) {
                 addSchedulerStatus = true; // still add it, why not?
                 Boolean startScheduler = executeParameters.getParametersBoolean("start");
-                logger.info(logHeader + "SchedulerStartStop requested[" + startScheduler + "] - ");
+                logger.info( "SchedulerStartStop requested[" + startScheduler + "] - ");
                 ArrayList<BEvent> listEventsAction = new ArrayList<BEvent>();
                 if (startScheduler == null && "true".equals(executeParameters.parametersCommand.get("start")))
                     startScheduler = true;
@@ -638,25 +638,25 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();
-            logger.severe(logHeader + "ERROR " + e + " at " + exceptionDetails);
+            logger.severe( "ERROR " + e + " at " + exceptionDetails);
 
             executeAnswer.listEvents.add(new BEvent(EVENT_INTERNAL_ERROR, e.getMessage()));
         } catch (Error er) {
             StringWriter sw = new StringWriter();
             er.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();
-            logger.severe(logHeader + "ERROR " + er + " at " + exceptionDetails);
+            logger.severe( "ERROR " + er + " at " + exceptionDetails);
 
             executeAnswer.listEvents.add(new BEvent(EVENT_INTERNAL_ERROR, er.getMessage()));
         } finally {
             executeAnswer.result.put(cstResultTimeInMs, System.currentTimeMillis() - currentTime);
             executeAnswer.result.put(cstResultListEvents, BEventFactory.getHtml(executeAnswer.listEvents));
             if (VERBE.HEARTBEAT.equals(verbEnum))
-                logger.fine(logHeader + "MilkJobCommand Verb[" + (verbEnum == null ? "null" : verbEnum.toString()) + "] Tenant["
+                logger.fine( "MilkJobCommand Verb[" + (verbEnum == null ? "null" : verbEnum.toString()) + "] Tenant["
                         + executeParameters.tenantId + "] Error?" + BEventFactory.isError(executeAnswer.listEvents) + " in "
                         + (System.currentTimeMillis() - startTime) + " ms");
             else
-                logger.info(logHeader + "MilkJobCommand Verb[" + (verbEnum == null ? "null" : verbEnum.toString()) + "] Tenant["
+                logger.info( "MilkJobCommand Verb[" + (verbEnum == null ? "null" : verbEnum.toString()) + "] Tenant["
                         + executeParameters.tenantId + "] Error?" + BEventFactory.isError(executeAnswer.listEvents) + " in "
                         + (System.currentTimeMillis() - startTime) + " ms");
 
@@ -722,12 +722,12 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
         synchronized (synchronizeHeart) {
             // protection : does not start a new Thread if the current one is not finish (no two Hearthread in the same time)
             if (synchronizeHeart.heartBeatInProgress) {
-                logger.fine(logHeader + "heartBeat in progress, does not start a new one");
+                logger.fine( "heartBeat in progress, does not start a new one");
                 return;
             }
             // second protection : Quartz can call the methode TOO MUCH !
             if (System.currentTimeMillis() < heartBeatLastExecution + 60 * 1000) {
-                logger.fine(logHeader + "heartBeat in progress, does not start a new one");
+                logger.fine( "heartBeat in progress, does not start a new one");
                 return;
             }
             synchronizeHeart.heartBeatInProgress = true;
@@ -824,9 +824,9 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 lastHeartBeat.remove(0);
 
         } catch (Exception e) {
-            logger.severe(logHeader + ".executeTimer: Exception " + e.getMessage());
+            logger.severe( ".executeTimer: Exception " + e.getMessage());
         } catch (Error er) {
-            logger.severe(logHeader + ".executeTimer: Error " + er.getMessage());
+            logger.severe( ".executeTimer: Error " + er.getMessage());
         }
         long timeEndHearth = System.currentTimeMillis();
         logger.info("MickCmdControl.beathearth #" + thisThreadId + " : Start at " + sdf.format(currentDate) + ", End in " + (timeEndHearth - timeBeginHearth) + " ms");

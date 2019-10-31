@@ -16,6 +16,7 @@ import org.bonitasoft.engine.api.CommandAPI;
 import org.bonitasoft.engine.api.PlatformAPI;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.log.event.BEventFactory;
 
 /**
@@ -25,10 +26,9 @@ import org.bonitasoft.log.event.BEventFactory;
  */
 public class MilkCmdControlAPI {
 
-    static Logger logger = Logger.getLogger(MilkCmdControlAPI.class.getName());
+    static MilkLog logger = MilkLog.getLogger(MilkCmdControlAPI.class.getName());
 
-    private static String logHeader = "TruckMilk.cmd";
-
+ 
 
     private static BEvent EVENT_UNKNOWN_SCHEDULEROPERATION = new BEvent(MilkCmdControlAPI.class.getName(), 1,
             Level.ERROR,
@@ -155,7 +155,7 @@ public class MilkCmdControlAPI {
 
         // unknow command
         if (!operationManaged) {
-            logger.severe(logHeader + " Unkown schedulerOperation[" + operation + "]");
+            logger.severe( " Unkown schedulerOperation[" + operation + "]");
             listEvents.add(new BEvent(EVENT_UNKNOWN_SCHEDULEROPERATION, "Operation[" + operation + "]"));
             result.put(MilkCmdControl.cstResultListEvents, BEventFactory.getHtml(listEvents));
         }

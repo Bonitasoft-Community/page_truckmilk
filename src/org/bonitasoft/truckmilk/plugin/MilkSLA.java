@@ -36,6 +36,7 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.PlaceHolder;
 import org.bonitasoft.truckmilk.toolbox.SendMail;
 import org.bonitasoft.truckmilk.toolbox.SendMailEnvironment;
@@ -44,7 +45,7 @@ import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
 public class MilkSLA extends MilkPlugIn {
 
-    static Logger logger = Logger.getLogger(MilkSLA.class.getName());
+    static MilkLog logger = MilkLog.getLogger(MilkSLA.class.getName());
 
     private static BEvent EVENT_NO_PROCESS_MATCH_FILTER = new BEvent(MilkPurgeArchive.class.getName(), 1,
             Level.APPLICATIONERROR,
