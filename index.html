@@ -77,7 +77,7 @@
 					<div class="font-style: italic;">
 					The <span style="color: red;font-weight: bold;">B</span>onita <span style="color: red;font-weight: bold;">SC</span>heduler&nbsp;
 					</div>
-					<a href="" ng-click="ctrl.showhistory( ! ctrl.isshowhistory )">V2.1.1</a>
+					<a href="" ng-click="ctrl.showhistory( ! ctrl.isshowhistory )">V2.1.3</a>
 				</center>
 			</td></tr>
 			<tr><td>
@@ -220,10 +220,30 @@
 							{{plugtour.trackExecution.lastexecutionst}}
 							
 						</td><td style="{{ctrl.getJobStyle(plugtour)}}">
-							<a ng-click="ctrl.showreport( plugtour )">
-									<span class="glyphicon glyphicon-file" title="Show the report" ></span>Reports
-							</a>
 						
+						
+							<table><tr>
+							<td style="vertical-align:top;padding: 0px 5px;">
+								<a ng-click="ctrl.showreport( plugtour )" tutle="Show history of execution">
+									<span class="glyphicon glyphicon-list-alt"></span>
+								</a>
+							</td>
+							
+							
+							<!--  one icon per report to download bob -->
+							<td ng-repeat="parameterdef in plugtour.parametersdef" style="text-align:center; vertical-align:top;">											
+								<div ng-if="parameterdef.type ==='FILEWRITE' || parameterdef.type ==='FILEREADWRITE' || parameterdef.type ==='FILEREAD'" >
+									<div ng-if="plugtour.parametersvalue[ parameterdef.name ] === 'AVAILABLE'" style="padding: 0px 5px;">
+										<a  href="{{ctrl.downloadParameterFile(plugtour, parameterdef)}}" title="{{parameterdef.explanation}}" target="top">
+											<span class="glyphicon glyphicon-file"  ></span>
+											<br>
+											<span style="font-size:small">{{parameterdef.label}}</span>
+										</a>
+									</div>
+								</div>				
+							</td>
+							</tr></table>
+								
 						<!--  Next Execution : Cron + Next Exectution -->
 						</td><td style="{{ctrl.getJobStyle(plugtour)}}">							
 								<a  ng-click="ctrl.showSchedule( plugtour )">
@@ -305,7 +325,7 @@
 					<!--  SECOND LINE : parameters -->
 					<tr ng-if="plugtour.show.schedule">
 						<td ></td>
-						<td colspan="6"">
+						<td colspan="7">
 							<div  style="box-shadow: 1px 1px 12px #555;">
 								<div class="panel panel-info">
 									<div class="panel-heading">
@@ -345,7 +365,7 @@
 					
 					<tr ng-if="plugtour.show.hostrestriction">
 						<td style="{{ctrl.getJobStyle(plugtour)}}"></td>
-						<td colspan="6" style="{{ctrl.getJobStyle(plugtour)}}">
+						<td colspan="7" style="{{ctrl.getJobStyle(plugtour)}}">
 							<div  style="box-shadow: 1px 1px 12px #555;">
 								<div class="panel panel-info">
 									<div class="panel-heading">
@@ -387,7 +407,7 @@
 					</tr>
 					<tr ng-if="plugtour.show.parameters">
 						<td style="{{ctrl.getJobStyle(plugtour)}}"></td>
-						<td colspan="6" style="{{ctrl.getJobStyle(plugtour)}}">
+						<td colspan="7" style="{{ctrl.getJobStyle(plugtour)}}">
 							<div  style="box-shadow: 1px 1px 12px #555;">
 								<div class="panel panel-info">
 									<div class="panel-heading">
@@ -595,7 +615,7 @@
 					</tr>
 					<tr ng-if="plugtour.show.report">
 						<td style="{{ctrl.getJobStyle(plugtour)}}"></td>
-						<td colspan="6" style="{{ctrl.getJobStyle(plugtour)}}">
+						<td colspan="7" style="{{ctrl.getJobStyle(plugtour)}}">
 							<div  style="box-shadow: 1px 1px 12px #555;">
 								<div class="panel panel-info">
 									<div class="panel-heading">
@@ -631,15 +651,18 @@
 											<tr>
 												<th>Date</th>
 												<th>Status</th>
+												<th>Host</th>
 												<th>Item processed</th>
-												<th>Execution time (ms)</th>
+												<th>Execution time</th>
 												<th>Details</th>
 												
 											<tr ng-repeat="savedExec in plugtour.savedExecution" >
-												<td>{{savedExec.execDateSt}}</td>
+												<td>{{savedExec.execDatest}}</td>
 												<td>{{savedExec.status}}</td>
+												<td>{{savedExec.hostname}}</td>
 												<td style="text-align:right">{{savedExec.itemprocessed}}</td>
-												<td style="text-align:right">{{savedExec.timeinms}}</td>
+												<td style="text-align:right">{{savedExec.timeinmsst}}<br>
+													<span style="font-size:small">({{savedExec.timeinms}} ms)</span></td>
 												<td><div ng-bind-html="ctrl.getHtml( savedExec.listevents, 'saveExecListEvents plugtour='+plugtour.id+'savedExec.execDateSt='+savedExec.execDateSt )"></div></td>
 											</tr>
 										</table>
@@ -681,13 +704,16 @@
 							</select>
 							
 							<div ng-show="ctrl.parameterToUpload.id !== null">
-							<div ng-file-drop ng-model="files"
-								class="drop-box ng-isolate-scope ng-valid ng-dirty"
-								drag-over-class="{accept:'dragover', reject:'dragover-err', delay:100}"
-								multiple="false" allow-dir="false">Drop your file here</div>
-							<div ng-no-file-drop class="drop-box" style="display: none;">File Drop is not supported for this browser</div>
-								
-							{{ctrl.parameterToUploadStatus}}
+								<div ng-file-drop ng-model="files"
+									class="drop-box ng-isolate-scope ng-valid ng-dirty"
+									drag-over-class="{accept:'dragover', reject:'dragover-err', delay:100}"
+									multiple="false" allow-dir="false">Drop your file here</div>
+								<div ng-no-file-drop class="drop-box" style="display: none;">File Drop is not supported for this browser</div>
+									
+								<center>
+								{{ctrl.parameterToUploadStatus}}
+								<div class="alert alert-success" ng-show="ctrl.showUploadSuccess">File uploaded with success</div>
+								</center>
 							</div>
 						</div>
 					</div>

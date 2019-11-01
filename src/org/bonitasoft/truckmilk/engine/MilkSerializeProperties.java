@@ -77,7 +77,7 @@ public class MilkSerializeProperties {
      */
     private MilkJob getInstanceFromBonitaProperties(Long jobId) {
         String jobSt = (String) bonitaProperties.get(jobId.toString());
-        logger.info( ".getInstanceFromBonitaProperties begin Read JobId["+jobId+"] jsonst="+jobSt);
+        logger.fine( ".getInstanceFromBonitaProperties begin Read JobId["+jobId+"] jsonst="+jobSt);
         
         MilkJob milkJob = MilkJob.getInstanceFromJson(jobSt, milkJobFactory);
         if (milkJob == null) {
@@ -108,7 +108,7 @@ public class MilkSerializeProperties {
                 milkJob.setParameterStream(parameter, bonitaProperties.getPropertyStream(milkJob.getId() + cstPrefixPropertiesStreamValue + parameter.name));
             }
         }
-        logger.info( ".getInstanceFromBonitaProperties end");
+        logger.fine( ".getInstanceFromBonitaProperties end");
 
         return milkJob;
     }
@@ -119,7 +119,7 @@ public class MilkSerializeProperties {
     public List<BEvent> dbLoadAllJobsAndPurge( boolean purge) {
         List<BEvent> listEvents = new ArrayList<BEvent>();
         bonitaProperties.setCheckDatabase(false);
-        logger.info( ".dbLoadAllJobsAndPurge-begin");
+        logger.fine( ".dbLoadAllJobsAndPurge-begin");
         
         /** soon : name is NULL to load all tour */
         listEvents.addAll(bonitaProperties.loaddomainName(BonitaPropertiesDomain));
@@ -193,7 +193,7 @@ public class MilkSerializeProperties {
                 bonitaProperties.storeCollectionKeys(keysToDelete);
             }
        }
-        logger.info( ".dbLoadAllJobsAndPurge-end");
+        logger.fine( ".dbLoadAllJobsAndPurge-end");
 
         return listEvents;
     }
@@ -205,7 +205,7 @@ public class MilkSerializeProperties {
     public MilkJob dbLoadJob(Long jobId) {
         bonitaProperties.setCheckDatabase(false);
         
-        logger.info( ".dbLoadJob - begin");
+        logger.fine( ".dbLoadJob - begin");
 
         /** soon : name is NULL to load all tour */
         bonitaProperties.loaddomainName(BonitaPropertiesDomain);
@@ -214,7 +214,7 @@ public class MilkSerializeProperties {
         // register in the factory now
         milkJobFactory.putJob(milkJob);
 
-        logger.info( ".dbLoadJob - end");
+        logger.fine( ".dbLoadJob - end");
 
         return milkJob;
     }
@@ -368,10 +368,10 @@ public class MilkSerializeProperties {
                 listKeys.add(milkJob.getId() +cstPrefixPropertiesStreamValue + parameter.name);
             }
         }
-        logger.info(".dbSaveJob-begin keys="+listKeys.toString());
+        logger.fine(".dbSaveJob-begin keys="+listKeys.toString());
 
         listEvents.addAll(bonitaProperties.storeCollectionKeys(listKeys));
-        logger.info( ".dbSaveJob-end");
+        logger.fine( ".dbSaveJob-end");
 
         return listEvents;
     }

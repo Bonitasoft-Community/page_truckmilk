@@ -33,6 +33,7 @@ import org.bonitasoft.engine.transaction.UserTransactionService;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 /**
  * Quartz Job
@@ -71,7 +72,7 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
     private static BEvent EVENT_QUARTZ_SCHEDULER_STARTED = new BEvent(MilkScheduleQuartz.class.getName(), 7, Level.SUCCESS,
             "Scheduler is started", "The Scheduler is started");
 
-    private static Logger logger = Logger.getLogger(MilkScheduleQuartz.class.getName());
+    private static MilkLog logger = MilkLog.getLogger(MilkScheduleQuartz.class.getName());
     private static String logHeader = "MilkScheduleQuartz ~~ ";
 
     public String name;
@@ -227,7 +228,7 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
 
     public List<BEvent> startup(long tenantId, boolean forceReset) {
         List<BEvent> listEvents = new ArrayList<BEvent>();
-        logger.info(logHeader + "Startup QuartzJob");
+        logger.info(logHeader + "Startup QuartzJob reset["+forceReset+"]");
         try {
             final TenantServiceAccessor tenantAccessor = TenantServiceSingleton.getInstance(tenantId);
             tenantAccessor.getUserTransactionService().executeInTransaction(() -> {

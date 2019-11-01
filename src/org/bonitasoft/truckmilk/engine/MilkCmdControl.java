@@ -5,6 +5,7 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.StringWriter;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -14,7 +15,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import org.bonitasoft.command.BonitaCommandApiAccessor;
 import org.bonitasoft.engine.api.APIAccessor;
@@ -261,6 +261,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
         long startTime = System.currentTimeMillis();
 
         VERBE verbEnum = null;
+        String detailsLogInfo="";
         try {
             // ------------------- ping ?
             verbEnum = VERBE.valueOf(executeParameters.verb);
@@ -340,10 +341,15 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
             } else if (VERBE.REMOVEJOB.equals(verbEnum)) {
 
                 Long idJob = executeParameters.getParametersLong("id");
-                if (idJob == null) {
+                MilkJob milkJob = idJob==null ? null : getJobById(idJob, milkJobFactory);
+                
+                if (idJob == null ) {
                     executeAnswer.listEvents.add(EVENT_MISSING_ID);
+                } else if ( milkJob==null) {
+                    executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 } else {
-                    MilkJob milkJob = getJobById(idJob, milkJobFactory);
+                    detailsLogInfo+="Job["+milkJob.getName()+"] ("+milkJob.getId()+")";
+                    
                     executeAnswer.listEvents.addAll(removeJob(idJob, executeParameters.tenantId, milkJobFactory));
 
                     if (!BEventFactory.isError(executeAnswer.listEvents)) {
@@ -355,159 +361,161 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
             } else if (VERBE.ACTIVATEJOB.equals(verbEnum) || VERBE.DEACTIVATEJOB.equals(verbEnum)) {
 
                 Long idJob = executeParameters.getParametersLong("id");
-                if (idJob == null) {
+                MilkJob milkJob = idJob==null ? null : getJobById(idJob, milkJobFactory);
+                
+                if (idJob == null ) {
                     executeAnswer.listEvents.add(EVENT_MISSING_ID);
+                } else if ( milkJob==null) {
+                    executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 } else {
-                    MilkJob milkJob = getJobById(idJob, milkJobFactory);
+                    detailsLogInfo+="Job["+milkJob.getName()+"] ("+milkJob.getId()+")";
+                     
+                    // save parameters
+                    Map<String, Object> parametersObject = executeParameters.getParametersMap("parametersvalue");
+                    if (parametersObject != null)
+                        milkJob.setJobParameters(parametersObject);
+                    String cronSt = executeParameters.getParametersString("cron");
+                    if (cronSt != null)
+                        milkJob.setCron(cronSt);
 
-                    if (milkJob != null) {
-                        // save parameters
-                        Map<String, Object> parametersObject = executeParameters.getParametersMap("parametersvalue");
-                        if (parametersObject != null)
-                            milkJob.setJobParameters(parametersObject);
-                        String cronSt = executeParameters.getParametersString("cron");
-                        if (cronSt != null)
-                            milkJob.setCron(cronSt);
+                    milkJob.setEnable(VERBE.ACTIVATEJOB.equals(verbEnum));
+                    executeAnswer.listEvents.addAll(milkJob.calculateNextExecution());
+                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob,  SaveJobParameters.getBaseInformations()));
+                    if (VERBE.ACTIVATEJOB.equals(verbEnum))
+                        executeAnswer.listEvents.add(new BEvent(EVENT_JOB_ACTIVATED, "Job Activated[" + milkJob.getName() + "]"));
+                    else
+                        executeAnswer.listEvents.add(new BEvent(EVENT_JOB_DEACTIVATED, "Job Deactived[" + milkJob.getName() + "]"));
 
-                        milkJob.setEnable(VERBE.ACTIVATEJOB.equals(verbEnum));
-                        executeAnswer.listEvents.addAll(milkJob.calculateNextExecution());
-                        executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob,  SaveJobParameters.getBaseInformations()));
-                        if (VERBE.ACTIVATEJOB.equals(verbEnum))
-                            executeAnswer.listEvents.add(new BEvent(EVENT_JOB_ACTIVATED, "Job Activated[" + milkJob.getName() + "]"));
-                        else
-                            executeAnswer.listEvents.add(new BEvent(EVENT_JOB_DEACTIVATED, "Job Deactived[" + milkJob.getName() + "]"));
-
-                        executeAnswer.result.put("enable", milkJob.isEnable);
-                        executeAnswer.result.put("tour", milkJob.getMap(MapContentParameter.getInstanceWeb()));
-                    } else
-                        executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
+                    executeAnswer.result.put("enable", milkJob.isEnable);
+                    executeAnswer.result.put("tour", milkJob.getMap(MapContentParameter.getInstanceWeb()));
                 }
             }
 
             else if (VERBE.UPDATEJOB.equals(verbEnum)) {
                 Long idJob = executeParameters.getParametersLong("id");
-                if (idJob == null) {
+                MilkJob milkJob = idJob==null ? null : getJobById(idJob, milkJobFactory);
+                
+                if (idJob == null ) {
                     executeAnswer.listEvents.add(EVENT_MISSING_ID);
+                } else if ( milkJob==null) {
+                    executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 } else {
-                    logger.info( "Update Job[" + idJob + "]");
-                    MilkJob milkJob = getJobById(idJob, milkJobFactory);
+                    detailsLogInfo+="Job["+milkJob.getName()+"] ("+milkJob.getId()+")";
+                     
                     SaveJobParameters saveJobParameters = SaveJobParameters.getBaseInformations();                    
-                    if (milkJob != null) {
+                 
+                    // this is maybe a call only to update a file parameters
+                    if (executeParameters.parametersCommand.containsKey("file")) {
+                        String pageDirectory = executeParameters.getParametersString(cstPageDirectory);
+                        File pageDirectoryFile = new File(pageDirectory);
+                        // Yes
+                        String fileName = executeParameters.getParametersString("file");
+                        String parameterName = executeParameters.getParametersString("parameter");
+                        executeAnswer.listEvents.addAll(milkJob.setJobFileParameter(parameterName, fileName, pageDirectoryFile));
+                        saveJobParameters.saveFileRead = true;
+                    } else {
 
-                        // this is maybe a call only to update a file parameters
-                        if (executeParameters.parametersCommand.containsKey("file")) {
-                            String pageDirectory = executeParameters.getParametersString(cstPageDirectory);
-                            File pageDirectoryFile = new File(pageDirectory);
-                            // Yes
-                            String fileName = executeParameters.getParametersString("file");
-                            String parameterName = executeParameters.getParametersString("parameter");
-                            executeAnswer.listEvents.addAll(milkJob.setJobFileParameter(parameterName, fileName, pageDirectoryFile));
-                            saveJobParameters.saveFileRead = true;
-                        } else {
-
-                            Map<String, Object> parametersObject = executeParameters.getParametersMap("parametersvalue");
-                            String cronSt = executeParameters.getParametersString( MilkJob.cstJsonCron);
-                            milkJob.setJobParameters(parametersObject);
-                            milkJob.setCron(cronSt);
-                            milkJob.setHostsRestriction( executeParameters.getParametersString( MilkJob.cstJsonHostsRestriction));
-                            milkJob.setDescription(executeParameters.getParametersString("description"));
-                            String newName = executeParameters.getParametersString("newname");
-                            milkJob.setName(newName);
-                        }
-                        executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, saveJobParameters));
-                        executeAnswer.listEvents.add(new BEvent(EVENT_JOB_UPDATED, "Job updated[" + milkJob.getName() + "]"));
-
-                    } else
-                        executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobId[" + idJob + "]"));
-                    executeAnswer.result.put(cstResultListJobs, getListMilkJobsMap(milkJobFactory));
+                        Map<String, Object> parametersObject = executeParameters.getParametersMap("parametersvalue");
+                        String cronSt = executeParameters.getParametersString( MilkJob.cstJsonCron);
+                        milkJob.setJobParameters(parametersObject);
+                        milkJob.setCron(cronSt);
+                        milkJob.setHostsRestriction( executeParameters.getParametersString( MilkJob.cstJsonHostsRestriction));
+                        milkJob.setDescription(executeParameters.getParametersString("description"));
+                        String newName = executeParameters.getParametersString("newname");
+                        milkJob.setName(newName);
+                    }
+                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, saveJobParameters));
+                    executeAnswer.listEvents.add(new BEvent(EVENT_JOB_UPDATED, "Job updated[" + milkJob.getName() + "]"));
                 }
+                executeAnswer.result.put(cstResultListJobs, getListMilkJobsMap(milkJobFactory));                
 
             } else if (VERBE.IMMEDIATEJOB.equals(verbEnum)) {
                 Long idJob = executeParameters.getParametersLong("id");
-                if (idJob == null) {
+                MilkJob milkJob = idJob==null ? null : getJobById(idJob, milkJobFactory);
+                
+                if (idJob == null ) {
                     executeAnswer.listEvents.add(EVENT_MISSING_ID);
+                } else if ( milkJob==null) {
+                    executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 } else {
-                    MilkJob milkJob = getJobById(idJob, milkJobFactory);
-
-                    if (milkJob != null) {
-                        milkJob.setImmediateExecution(true);
-                        milkJob.setAskForStop(false);
-                        executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceTrackExecution()));
-                        executeAnswer.listEvents.add(new BEvent(EVENT_JOB_UPDATED, "Job updated[" + milkJob.getName() + "]"));
-                    } else {
-                        executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobId[" + idJob + "]"));
-                    }
-                    executeAnswer.result.put(cstResultListJobs, getListMilkJobsMap(milkJobFactory));
+                    detailsLogInfo+="Job["+milkJob.getName()+"] ("+milkJob.getId()+")";
+                     milkJob.setImmediateExecution(true);
+                    milkJob.setAskForStop(false);
+                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceTrackExecution()));
+                    executeAnswer.listEvents.add(new BEvent(EVENT_JOB_UPDATED, "Job updated[" + milkJob.getName() + "]"));
                 }
+                executeAnswer.result.put(cstResultListJobs, getListMilkJobsMap(milkJobFactory));
+                
             } else if (VERBE.ABORTJOB.equals(verbEnum)) {
                 Long idJob = executeParameters.getParametersLong("id");
-                if (idJob == null) {
+                MilkJob milkJob = idJob==null ? null : getJobById(idJob, milkJobFactory);
+                
+                if (idJob == null ) {
                     executeAnswer.listEvents.add(EVENT_MISSING_ID);
+                } else if ( milkJob==null) {
+                    executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 } else {
-                    MilkJob milkJob = getJobById(idJob, milkJobFactory);
-
-                    if (milkJob != null) {
-                        milkJob.setAskForStop(true);
-                        executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getAskStop()));
-                        executeAnswer.listEvents.add(new BEvent(EVENT_JOB_UPDATED, "Job updated[" + milkJob.getName() + "]"));
-                    } else {
-                        executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobId[" + idJob + "]"));
-                    }
-                    executeAnswer.result.put(cstResultListJobs, getListMilkJobsMap(milkJobFactory));
-                }
+                    detailsLogInfo+="Job["+milkJob.getName()+"] ("+milkJob.getId()+")";
+       
+                    milkJob.setAskForStop(true);
+                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getAskStop()));
+                    executeAnswer.listEvents.add(new BEvent(EVENT_JOB_UPDATED, "Job updated[" + milkJob.getName() + "]"));
+                  }
+                executeAnswer.result.put(cstResultListJobs, getListMilkJobsMap(milkJobFactory));
+                
             } else if (VERBE.RESETJOB.equals(verbEnum)) {
                 Long idJob = executeParameters.getParametersLong("id");
-                if (idJob == null) {
+                MilkJob milkJob = idJob==null ? null : getJobById(idJob, milkJobFactory);
+                
+                if (idJob == null ) {
                     executeAnswer.listEvents.add(EVENT_MISSING_ID);
+                } else if ( milkJob==null) {
+                    executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 } else {
-                    MilkJob milkJob = getJobById(idJob, milkJobFactory);
-
-                    if (milkJob != null) {
+                    detailsLogInfo+="Job["+milkJob.getName()+"] ("+milkJob.getId()+")";
+       
                         milkJob.trackExecution.lastExecutionDate = new Date();
                         milkJob.trackExecution.lastExecutionStatus = ExecutionStatus.KILL;
                         milkJob.trackExecution.inExecution = false;
                         milkJob.trackExecution.isImmediateExecution = false;
                         executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceAllInformations()));
                         executeAnswer.listEvents.add(new BEvent(EVENT_JOB_UPDATED, "Job updated[" + milkJob.getName() + "]"));
-                    } else {
-                        executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobId[" + idJob + "]"));
-                    }
-                    executeAnswer.result.put(cstResultListJobs, getListMilkJobsMap(milkJobFactory));
                 }
-
-            
+                executeAnswer.result.put(cstResultListJobs, getListMilkJobsMap(milkJobFactory));
             } else if (VERBE.TESTBUTTONARGS.equals(verbEnum)) {
                 Long idJob = executeParameters.getParametersLong("id");
-                if (idJob == null) {
+                MilkJob milkJob = idJob==null ? null : getJobById(idJob, milkJobFactory);
+                
+                if (idJob == null ) {
                     executeAnswer.listEvents.add(EVENT_MISSING_ID);
+                } else if ( milkJob==null) {
+                    executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 } else {
-                    MilkJob milkJob = getJobById(idJob, milkJobFactory);
+                    detailsLogInfo+="Job["+milkJob.getName()+"] ("+milkJob.getId()+")";
+                    String buttonName = executeParameters.getParametersString(cstButtonName);
+                    Map<String, Object> parametersObject = executeParameters.getParametersMap("parametersvalue");
+                    milkJob.setJobParameters(parametersObject);
 
-                    if (milkJob != null) {
-                        String buttonName = executeParameters.getParametersString(cstButtonName);
-                        Map<String, Object> parametersObject = executeParameters.getParametersMap("parametersvalue");
-                        milkJob.setJobParameters(parametersObject);
+                    Map<String, Object> argsParameters = executeParameters.getParametersMap("args");
 
-                        Map<String, Object> argsParameters = executeParameters.getParametersMap("args");
+                    // execute it!
+                    MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob);
 
-                        // execute it!
-                        MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob);
+                    MySimpleTestThread buttonThread = new MySimpleTestThread(executeParameters.tenantId, buttonName, milkJob, milkJobExecution, argsParameters);
 
-                        MySimpleTestThread buttonThread = new MySimpleTestThread(executeParameters.tenantId, buttonName, milkJob, milkJobExecution, argsParameters);
-
-                        buttonThread.start();
-                        int count = 0;
-                        while (!buttonThread.isFinish && count < 1000) {
-                            count++;
-                            Thread.sleep(1000);
-                        }
-                        if (buttonThread.isFinish)
-                            executeAnswer.listEvents.addAll(buttonThread.listEvents);
-                        else
-                            executeAnswer.listEvents.add(new BEvent(EVENT_BUTTONARG_FAILED, "No answer"));
-
+                    buttonThread.start();
+                    int count = 0;
+                    while (!buttonThread.isFinish && count < 1000) {
+                        count++;
+                        Thread.sleep(1000);
                     }
+                    if (buttonThread.isFinish)
+                        executeAnswer.listEvents.addAll(buttonThread.listEvents);
+                    else
+                        executeAnswer.listEvents.add(new BEvent(EVENT_BUTTONARG_FAILED, "No answer"));
+
                 }
+            
             }
 
             else if (VERBE.SCHEDULERSTARTSTOP.equals(verbEnum)) {
@@ -656,9 +664,20 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                         + executeParameters.tenantId + "] Error?" + BEventFactory.isError(executeAnswer.listEvents) + " in "
                         + (System.currentTimeMillis() - startTime) + " ms");
             else
+            {
+                if(BEventFactory.isError( executeAnswer.listEvents))
+                {
+                    detailsLogInfo += "Errors:";
+                    for(BEvent event : executeAnswer.listEvents) {
+                        detailsLogInfo+= event.toString()+" <~> ";
+                    }
+                }
+                else
+                    detailsLogInfo += "no errors";
                 logger.info( "MilkJobCommand Verb[" + (verbEnum == null ? "null" : verbEnum.toString()) + "] Tenant["
-                        + executeParameters.tenantId + "] Error?" + BEventFactory.isError(executeAnswer.listEvents) + " in "
+                        + executeParameters.tenantId + "] "+detailsLogInfo + " in "
                         + (System.currentTimeMillis() - startTime) + " ms");
+            }
 
         }
 
@@ -722,12 +741,12 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
         synchronized (synchronizeHeart) {
             // protection : does not start a new Thread if the current one is not finish (no two Hearthread in the same time)
             if (synchronizeHeart.heartBeatInProgress) {
-                logger.fine( "heartBeat in progress, does not start a new one");
+                logger.info( "heartBeat in progress, does not start a new one");
                 return;
             }
             // second protection : Quartz can call the methode TOO MUCH !
             if (System.currentTimeMillis() < heartBeatLastExecution + 60 * 1000) {
-                logger.fine( "heartBeat in progress, does not start a new one");
+                logger.info( "heartBeat: last execution was too close (last was "+ (System.currentTimeMillis() - heartBeatLastExecution)+" ms ago)");
                 return;
             }
             synchronizeHeart.heartBeatInProgress = true;
@@ -801,13 +820,16 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
 
         long timeBeginHearth = System.currentTimeMillis();
         Date currentDate = new Date();
-
-        logger.fine("MickCmdControl.beathearth #" + thisThreadId + " : Start at " + sdf.format(currentDate));
+        InetAddress ip=null;
         try {
-           
-
-            String executionDescription = "";
-
+            ip = InetAddress.getLocalHost();
+        } catch (UnknownHostException e1) {
+            logger.severeException(e1,"can't get the ipAddress");
+            
+        }
+        logger.info("MickCmdControl.beathearth #" + thisThreadId + " : Start at " + sdf.format(currentDate) +" on ["+(ip==null ? "":ip.getHostAddress())+"]");
+        String executionDescription = "";
+        try {
             // check all the Job now
             for (MilkJob milkJob : getListJobs(milkJobFactory)) {
                 
@@ -824,12 +846,12 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 lastHeartBeat.remove(0);
 
         } catch (Exception e) {
-            logger.severe( ".executeTimer: Exception " + e.getMessage());
+            logger.severeException(e, ".executeTimer: Exception " + e.getMessage());
         } catch (Error er) {
             logger.severe( ".executeTimer: Error " + er.getMessage());
         }
         long timeEndHearth = System.currentTimeMillis();
-        logger.info("MickCmdControl.beathearth #" + thisThreadId + " : Start at " + sdf.format(currentDate) + ", End in " + (timeEndHearth - timeBeginHearth) + " ms");
+        logger.info("MickCmdControl.beathearth #" + thisThreadId + " : Start at " + sdf.format(currentDate) + ", End in " + (timeEndHearth - timeBeginHearth) + " ms on ["+(ip==null ? "":ip.getHostAddress())+"] "+executionDescription);
 
     }
 
