@@ -29,6 +29,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
+import org.hibernate.internal.util.collections.JoinedIterable;
 
 /**
  * this job calculate the list of case to purge, and save the list in a the FileParameters
@@ -92,6 +93,10 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
         long delayInDay = jobExecution.getInputLongParameter(cstParamDelayInDay);
         jobExecution.setPleaseStopAfterManagedItems(jobExecution.getInputLongParameter(cstParamMaximumInReport), 1000000L);
         jobExecution.setPleaseStopAfterTime(jobExecution.getInputLongParameter(cstParamMaximumInMinutes), 24 * 60L);
+        
+        // 20 for the preparation, 100 to collect cases
+        // Time to run the query take time, and we don't want to show 0% for a long time
+        jobExecution.setAvancementTotalStep(120);
         try {
 
             List<Long> listProcessDefinitionId = new ArrayList<Long>();
@@ -145,6 +150,8 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
 
             } // end list process name
 
+            jobExecution.setAvancementStep(5);
+
             // -------------- now get the list of cases
             Date currentDate = new Date();
             long timeSearch = currentDate.getTime() - delayInDay * 1000 * 60 * 60 * 24;
@@ -154,6 +161,9 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
             SearchResult<ArchivedProcessInstance> searchArchivedProcessInstance;
             searchArchivedProcessInstance = processAPI.searchArchivedProcessInstances(searchActBuilder.done());
 
+            /** ok, we did 15 step */
+            jobExecution.setAvancementStep(20);
+            
             Map<Long, String> cacheProcessDefinition = new HashMap<Long, String>();
 
             ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
@@ -183,6 +193,9 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
                 line += ";";
                 w.write(line + "\n");
                 jobExecution.addManagedItem( 1 );
+                
+                jobExecution.setAvancementStep(20 + (int) (100*countInArchive/searchArchivedProcessInstance.getResult().size()) );
+                
             }
             w.flush();
             plugTourOutput.nbItemsProcessed = searchArchivedProcessInstance.getCount();

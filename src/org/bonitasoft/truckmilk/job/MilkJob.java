@@ -25,6 +25,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugTourOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
+import org.bonitasoft.truckmilk.toolbox.TypesCast;
 import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory.MilkFactoryOp;
@@ -334,7 +335,7 @@ public class MilkJob {
  * @return
  */
     public boolean isInsideHostsRestriction() {
-        if (hostsRestriction == null)
+        if (hostsRestriction == null || hostsRestriction.trim().length()==0 )
             return true; // no limitation
 
         String compareHostRestriction = ";"+hostsRestriction+";";
@@ -418,6 +419,8 @@ public class MilkJob {
      * 
      * @return
      */
+    
+    private final static String cstJsonPrefixHumanReadable="st";
     private final static String cstJsonPluginName = "pluginname";
     private final static String cstJsonEnable = "enable";
 
@@ -704,29 +707,8 @@ public class MilkJob {
        
         public String getHumanTimeEstimated( boolean withMs)
         {
-            String result="";
-            long timeRes= endTimeEstimatedInMs;
-            long nbDays= timeRes / (1000*60*60*24);
-            if ( nbDays > 1)
-                result+= nbDays+" days ";
-            timeRes = timeRes - nbDays*(1000*60*60*24);
-              
-            long nbHours= timeRes / (1000*60*60);
-            result += String.format("%02d", nbHours)+":";
-            timeRes = timeRes - nbHours*(1000*60*60);
-
-            long nbMinutes= timeRes / (1000*60);
-            result += String.format("%02d", nbMinutes)+":";
-            timeRes = timeRes - nbMinutes*(1000*60);
-
-            long nbSecond= timeRes / (1000);
-            result += String.format("%02d", nbSecond)+" ";
-            timeRes = timeRes - nbSecond*(1000);
             
-            if (withMs)
-                result += String.format("%03d", timeRes);
-            
-            return result;
+            return TypesCast.getHumanDuration(endTimeEstimatedInMs, withMs);
         }
         
         public String getJsonSt() {
@@ -740,9 +722,9 @@ public class MilkJob {
             map.put( cstJsonImmediateExecution, trackExecution.isImmediateExecution);
             map.put( cstJsonAskForStop, trackExecution.askForStop);
             map.put( cstJsonNextExecution, trackExecution.nextExecutionDate == null ? 0 : trackExecution.nextExecutionDate.getTime());
-            map.put( cstJsonNextExecution+"st", trackExecution.nextExecutionDate == null ? "" :  sdf.format(trackExecution.nextExecutionDate.getTime()));
+            map.put( cstJsonNextExecution+cstJsonPrefixHumanReadable, trackExecution.nextExecutionDate == null ? "" :  sdf.format(trackExecution.nextExecutionDate.getTime()));
             map.put( cstJsonLastExecution, trackExecution.lastExecutionDate == null ? 0 : trackExecution.lastExecutionDate.getTime());
-            map.put( cstJsonLastExecution+"st", trackExecution.lastExecutionDate == null ? "" : sdf.format(trackExecution.lastExecutionDate));
+            map.put( cstJsonLastExecution+cstJsonPrefixHumanReadable, trackExecution.lastExecutionDate == null ? "" : sdf.format(trackExecution.lastExecutionDate));
             String executionStatus = trackExecution.lastExecutionStatus == null ? null : trackExecution.lastExecutionStatus.toString().toLowerCase();
             map.put( cstJsonlastExecutionStatus, executionStatus);
 
@@ -750,8 +732,8 @@ public class MilkJob {
             map.put( cstJsonInExecutionStartTime, trackExecution.startTime);
             map.put( cstJsonInExecutionPercent, trackExecution.percent);
             map.put( cstJsonInExecutionEndTimeEstimatedInMS, trackExecution.endTimeEstimatedInMs);
-            map.put( cstJsonInExecutionEndTimeEstimatedInMS+"st", trackExecution.getHumanTimeEstimated( false ));
-            map.put( cstJsonInExecutionEndDateEstimated + "st", trackExecution.endDateEstimated==null ? "" : sdf.format(trackExecution.endDateEstimated));
+            map.put( cstJsonInExecutionEndTimeEstimatedInMS+cstJsonPrefixHumanReadable, trackExecution.getHumanTimeEstimated( false ));
+            map.put( cstJsonInExecutionEndDateEstimated + cstJsonPrefixHumanReadable, trackExecution.endDateEstimated==null ? "" : sdf.format(trackExecution.endDateEstimated));
             map.put( cstJsonRegisterInExecutionHost, trackExecution.inExecutionHostName );
             return map;
         }
@@ -851,12 +833,14 @@ public class MilkJob {
         public Map<String, Object> getMap() {
             Map<String, Object> map = new HashMap<String, Object>();
             map.put(cstJsonSaveExecDate, executionDate.getTime());
-            map.put(cstJsonSaveExecDate + "St", sdf.format(executionDate));
+            map.put(cstJsonSaveExecDate + cstJsonPrefixHumanReadable, sdf.format(executionDate));
             map.put(cstJsonSaveExecStatus, executionStatus.toString());
             map.put(cstJsonSaveExecListEventsSt, listEventSt);
             map.put(cstJsonSaveExecExplanation, explanation);
             map.put(cstJsonSaveExecItemsProcessed, nbItemsProcessed);
             map.put(cstJsonSaveExecTimeinMs, executionTimeInMs);
+            map.put(cstJsonSaveExecTimeinMs+ cstJsonPrefixHumanReadable, TypesCast.getHumanDuration(executionTimeInMs, false));
+            
             map.put(cstJsonSaveExecHostName, hostName);
             return map;
         }

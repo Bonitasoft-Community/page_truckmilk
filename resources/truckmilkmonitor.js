@@ -59,14 +59,16 @@
 		this.refreshDate=null;
 		this.scheduler={ 'enable': false, listtypeschedulers:[]};
 		
-		// a new listPlugTour is receive : refresh all what we need in the interface
+		// a new listPlugTour is receive : refresh all what we need in the
+		// interface
 		this.afterRefreshListPlugTour = function() {
 			// console.log("afterRefreshListPlugTour:Start");
 			for ( var i in this.listplugtour) {
 				var plugtourindex = this.listplugtour[i];
 				this.preparePlugTourParameter(plugtourindex);
 			}
-			// calculate a uniq time stamp, to avoid the infinit loop when calculate the downloadParameterFile
+			// calculate a uniq time stamp, to avoid the infinit loop when
+			// calculate the downloadParameterFile
 			this.refreshDate = new Date();
 			
 			this.calculateParameterUpload();
@@ -90,11 +92,21 @@
 			var self = this;
 			
 			self.inprogress = true;
+			self.showUploadSuccess=false;
+
 			console.log("loadinit inprogress<=true. Call now");
 			self.listevents='';
 			
 			// console.log("loadinit Call HTTP");
-			$http.get('?page=custompage_truckmilk&action=startup&t='+Date.now()).success(function(jsonResult) {
+			$http.get('?page=custompage_truckmilk&action=startup&t='+Date.now())
+			.success(function(jsonResult, statusHttp, headers, config) {
+				
+				// connection is lost ?
+				if (statusHttp==401 || typeof jsonResult === 'string') {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+				}
+
 				console.log("loadinit.receiveData HTTP");
 				
 				self.listplugtour 	= jsonResult.listplugtour;
@@ -111,10 +123,16 @@
 				self.inprogress = false;
 				console.log("loadinit.end inprogress<=false");
 
-			}).error(function() {
+			}).error(function(jsonResult, statusHttp, headers, config) {
+				console.log("loadinit.error HTTP statusHttp="+statusHttp);
+
+				// connection is lost ?
+				if (statusHttp==401) {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+				}
 
 				self.inprogress = false;
-				console.log("loadinit.error HTTP inprogress<=false");
 
 				self.listplugtour = [];
 				self.listplugin = [];
@@ -128,7 +146,8 @@
 		this.completeStatus=false;
 		
 		
-		// completeStatus : refresh the complete list + getStatus on scheduler, else refresh only some attributes
+		// completeStatus : refresh the complete list + getStatus on scheduler,
+		// else refresh only some attributes
 		this.refresh = function( completeStatus ) {
 			var self = this;
 			self.deploimentsuc=''; // no need to keep it for ever
@@ -146,13 +165,22 @@
 			self.completeStatus = completeStatus;
 			self.listevents='';
 			self.inprogress = true;
+			self.showUploadSuccess=false;
+
 			console.log("refresh: inprogress<=true. Call now 2.2");
 			// console.log("refresh call HTTP");
 			$http.get('?page=custompage_truckmilk&action='+verb+'&t='+Date.now())
-			.success(function(jsonResult) {
+			.success(function(jsonResult, statusHttp, headers, config) {
 				self.inprogress = false;
-				console.log("success.then HTTP inprogress<=true");
+				console.log("success.then HTTP inprogress<=true, status="+statusHttp);
+				
+				// connection is lost ?
+				if (statusHttp==401 || typeof jsonResult === 'string') {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+				}
 
+					
 				self.deploiment = jsonResult.deploiment;
 				if (self.completeStatus)
 				{
@@ -169,12 +197,15 @@
 						var foundIt = false;
 						for ( var j in self.listplugtour) {
 							var localPlugTour = self.listplugtour[ j ];
-							// console.log("Compare server["+serverPlugTour.name+"]("+serverPlugTour.id+") with ["+localPlugTour.name+"]("+localPlugTour.id+")");
+							// console.log("Compare
+							// server["+serverPlugTour.name+"]("+serverPlugTour.id+")
+							// with
+							// ["+localPlugTour.name+"]("+localPlugTour.id+")");
 							if (serverPlugTour.id == localPlugTour.id)
 							{
 								// console.log("Found it !");
 								foundIt= true;
-								// localPlugTour.name		= serverPlugTour.name;
+								// localPlugTour.name = serverPlugTour.name;
 								// cron
 								localPlugTour.trackExecution					= serverPlugTour.trackExecution;
 
@@ -205,10 +236,15 @@
 				self.listplugin 	= jsonResult.listplugin;
 				self.listevents 	= jsonResult.listevents;				
 
-			}).error( function(response){
-				console.log("refresh.then Error HTTP :"+response.status);
+			}).error( function(jsonResult, statusHttp, headers, config){
+				console.log("refresh.error HTTP statusHttp="+statusHttp);
+				// connection is lost ?
+				if (statusHttp==401) {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+				}
+
 				self.inprogress = false;
-				console.log("refresh.error HTTP - inprogress=false");
 				self.listplugtour = [];
 				self.listplugin = [];
 			});
@@ -281,7 +317,8 @@
 			// first action will be a reset
 			// prepare the string
 			var  plugtourcopy =angular.copy( plugtour );
-			plugtourcopy.parametersdef = null; // parameters are in plugtourcopy.parametersvalue
+			plugtourcopy.parametersdef = null; // parameters are in
+												// plugtourcopy.parametersvalue
 			plugtourcopy.parameters = null;
 			plugtourcopy.lastexecutionlistevents=null;
 			
@@ -338,10 +375,17 @@
 			self.listevents='';
 			// console.log("operationJob Call HTTP");
 
-			$http.get('?page=custompage_truckmilk&action=' + action + '&paramjson=' + json+'&t='+Date.now()).success(function(jsonResult) {
+			$http.get('?page=custompage_truckmilk&action=' + action + '&paramjson=' + json+'&t='+Date.now())
+			.success(function(jsonResult, statusHttp, headers, config) {
 				self.inprogress = false;
 				console.log("operationJob.receiveData HTTP inprogress<=false");
-
+				
+				// connection is lost ?
+				if (statusHttp==401 || typeof jsonResult === 'string') {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+				}
+				
 				if (jsonResult.listplugtour != undefined)
 				{
 					// todo keep the one open
@@ -370,20 +414,25 @@
 					// prepare defaut value
 					self.afterRefreshListPlugTour();
 				}
-			}).error(function() {
+		}).error(function(jsonResult, statusHttp, headers, config) {
+			console.log("operatinoJob.error HTTP statusHttp="+statusHttp);
+			// connection is lost ?
+			if (statusHttp==401) {
+				console.log("Redirected to the login page !");
+				window.location.reload();
+			}
 
-				self.inprogress = false;
-				console.log("operationJob.error HTTP inprogress<=false");
+			self.inprogress = false;		
+			self.listplugtour = [];
+			self.listplugin = [];
 
-				self.listplugtour = [];
-				self.listplugin = [];
-
-			});
+		});
 
 		}
 
 		// preparePlugTourParameter
-		// we copy the different parameters from parameters[SourceRESTAPI] to parametersvalue [ANGULAR MAPPED] 
+		// we copy the different parameters from parameters[SourceRESTAPI] to
+		// parametersvalue [ANGULAR MAPPED]
 		this.preparePlugTourParameter = function(plugtour) {
 			
 			// console.log("preparePlugTourParameter.start: " + plugtour.name);
@@ -392,7 +441,9 @@
 			
 			for ( var key in plugtour.parameters) {
 				plugtour.parametersvalue[key] = JSON.parse( JSON.stringify( plugtour.parameters[key]) );
-				// console.log("Parameter[" + key + "] value[" + angular.toJson( plugtour.parameters[key]) + "] ="+angular.toJson( plugtour.parametersvalue,true ));
+				// console.log("Parameter[" + key + "] value[" + angular.toJson(
+				// plugtour.parameters[key]) + "] ="+angular.toJson(
+				// plugtour.parametersvalue,true ));
 				
 				
 			
@@ -403,7 +454,10 @@
 				if (plugtour.parametersdef[ key ].type==="BUTTONARGS")
 				{
 					var buttonName=plugtour.parametersdef[ key ].name;
-					// console.log("buttonARGS detected key=["+key+"] name=["+buttonName+"] args="+angular.toJson(plugtour.parametersdef[ key ].args));
+					// console.log("buttonARGS detected key=["+key+"]
+					// name=["+buttonName+"]
+					// args="+angular.toJson(plugtour.parametersdef[ key
+					// ].args));
 					// set the default value
 					var listArgs=plugtour.parametersdef[ key ].args;
 					var mapArgsValue={};
@@ -429,7 +483,8 @@
 		this.addInArray = function( valueArray, valueToAdd )
 		{
 			console.log("addInArray:Start");
-			// console.log("addInArray valueArray="+angular.toJson( valueArray ));
+			// console.log("addInArray valueArray="+angular.toJson( valueArray
+			// ));
 			valueArray.push(  valueToAdd );
 			// console.log("add valueArray="+angular.toJson( valueArray ));
 		}
@@ -441,7 +496,8 @@
 			if (index > -1) {
 				valueArray.splice(index, 1);
 			}
-			// console.log("remove value ["+value+"] index ["+index+"] valueArray="+angular.toJson( valueArray ));
+			// console.log("remove value ["+value+"] index ["+index+"]
+			// valueArray="+angular.toJson( valueArray ));
 		}
 		
 		// -----------------------------------------------------------------------------------------
@@ -461,7 +517,8 @@
 			console.log("testbutton:Start");
 			var self=this;
 			var  plugtourcopy =angular.copy( plugtour );
-			plugtourcopy.parametersdef = null; // parameters are in plugtourcopy.parametersvalue
+			plugtourcopy.parametersdef = null; // parameters are in
+												// plugtourcopy.parametersvalue
 			plugtourcopy.parameters = null;
 			plugtourcopy.buttonName= parameterdef.name;
 			plugtourcopy.args = plugtour.parametersvalue[ parameterdef.name ];
@@ -485,21 +542,35 @@
 			var param={ 'userfilter' :  textSearch};
 			
 			var json = encodeURI( angular.toJson( param, false));
-			// 7.6 : the server force a cache on all URL, so to bypass the cache, then create a different URL
+			// 7.6 : the server force a cache on all URL, so to bypass the
+			// cache, then create a different URL
 			var d = new Date();
 			
 			// console.log("query Call HTTP")
 			return $http.get( '?page=custompage_truckmilk&action='+queryName+'&paramjson='+json+'&t='+d.getTime() )
-			.then( function ( jsonResult ) {
+			.success( function ( jsonResult, statusHttp, headers, config ) {
+				
+				// connection is lost ?
+				if (statusHttp==401 || typeof jsonResult === 'string') {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+
+				}
 					self.inprogress=false;
 					console.log("Query.receiveData HTTP inProgress<=false result="+angular.toJson(jsonResult, false));
 				 	self.list =  jsonResult.data.listProcess;
 			
 					return self.list;
-				},  function ( jsonResult ) {
-					
+				})
+				.error( function ( jsonResult, statusHttp, headers, config ) {
+					console.log("query.error HTTP statusHttp="+statusHttp);
+					// connection is lost ?
+					if (statusHttp==401) {
+						console.log("Redirected to the login page !");
+						window.location.reload();
+					}
+
 					self.inprogress=false;
-					console.log("Query.error HTTP inProgress<=false");
 				});
 
 		  };
@@ -541,23 +612,22 @@
 		}
 
 		this.getJobStyle= function(plugtour) {
-			// console.log("getTourStyle:Start (r/o) plugtour="+plugtour.id+" imediateExecution="+plugtour.imediateExecution+" inExecution="+plugtour.trackExecution.inExecution+" enable="+plugtour.enable+" askForStop="+plugtour.askForStop);
+			// console.log("getTourStyle:Start (r/o) plugtour="+plugtour.id+"
+			// imediateExecution="+plugtour.imediateExecution+"
+			// inExecution="+plugtour.trackExecution.inExecution+"
+			// enable="+plugtour.enable+" askForStop="+plugtour.askForStop);
 			
-			/* no more color
-			if (plugtour.imediateExecution)
-				return "background-color: #fafabd80";
-			if (plugtour.inExecution && plugtour.askForStop)
-				return "background-color: #ffa5004f";
-			if (plugtour.inExecution)
-				return "background-color: #f6f696";
-			
-			if (plugtour.lastexecutionstatus == "ERROR")
-				return "background-color: #e7c3c3";
-			if (plugtour.lastexecutionstatus == "WARNING")
-				return "background-color: #fcf8e3";
-			if (plugtour.enable)
-				return "background-color: #ebfae5";
-			*/
+			/*
+			 * no more color if (plugtour.imediateExecution) return
+			 * "background-color: #fafabd80"; if (plugtour.inExecution &&
+			 * plugtour.askForStop) return "background-color: #ffa5004f"; if
+			 * (plugtour.inExecution) return "background-color: #f6f696";
+			 * 
+			 * if (plugtour.lastexecutionstatus == "ERROR") return
+			 * "background-color: #e7c3c3"; if (plugtour.lastexecutionstatus ==
+			 * "WARNING") return "background-color: #fcf8e3"; if
+			 * (plugtour.enable) return "background-color: #ebfae5";
+			 */
 		}
 		this.getNowStyle= function( plugtour )
 		{
@@ -596,10 +666,12 @@
 		// -----------------------------------------------------------------------------------------
 		this.downloadParameterFile = function(plugtour, parameterdef)
 		{
-			console.log("downloadParameterFile:Start (r/o) ["+parameterdef.name+"]");
+			// console.log("downloadParameterFile:Start (r/o)
+			// ["+parameterdef.name+"]");
 			var param={"plugintour": plugtour.id, "parametername":parameterdef.name};			
 			var json = encodeURIComponent(angular.toJson(param, true));
-			// do not calculate a new date now:we will have a recursive call in Angular
+			// do not calculate a new date now:we will have a recursive call in
+			// Angular
 			return "?page=custompage_truckmilk&action=downloadParamFile&paramjson=" + json+'&t='+this.refreshDate;
 		}
 		
@@ -613,18 +685,23 @@
 			this.listParameterUpload = [];
 			for ( var i in this.listplugtour) {
 				var plugtour = this.listplugtour[i];
-				// console.log("calculateParameterUpload - look "+plugtour.name);
+				// console.log("calculateParameterUpload - look
+				// "+plugtour.name);
 				for ( var key in plugtour.parametersdef) {
 					var parameter = plugtour.parametersdef[ key ];
-					// console.log("calculateParameterUpload - look "+plugtour.name+"/"+parameter.name);
+					// console.log("calculateParameterUpload - look
+					// "+plugtour.name+"/"+parameter.name);
 					if (parameter.type ==='FILEREAD' || parameter.type ==='FILEREADWRITE')
 					{
-						// console.log("calculateParameterUpload - Add "+plugtour.name+"/"+parameter.name);
+						// console.log("calculateParameterUpload - Add
+						// "+plugtour.name+"/"+parameter.name);
 						var item = { "plugtour": plugtour.name, "id": plugtour.id, "parameter":parameter.name, "displayname" : plugtour.name+" ("+parameter.label+")"};
 						item.internalid=plugtour.id+"#"+parameter.name;
 						this.listParameterUpload.push( item );
 						// set a default value ?
-						// console.log("Set a default value? "+this.parameterToUpload); //  || this.parameterToUpload===null
+						// console.log("Set a default value?
+						// "+this.parameterToUpload); // ||
+						// this.parameterToUpload===null
 						if (! this.parameterToUpload)
 							this.parameterToUpload=item.internalid;
 					}
@@ -637,6 +714,8 @@
 		var me=this;
 		me.sourceParameterToUpload=null;
 		me.parameterToUploadStatus= " ";
+		me.showUploadSuccess=false;
+
 		$scope.$watch('files', function() {
 			console.log("watch.start");
 
@@ -667,7 +746,8 @@
 					data: {myObj: $scope.myModelObj},
 					file: file
 				}).progress(function(evt) {
-	//				console.log('progress: ' + parseInt(100.0 * evt.loaded / evt.total) + '% file :'+ evt.config.file.name);
+	// console.log('progress: ' + parseInt(100.0 * evt.loaded / evt.total) + '%
+	// file :'+ evt.config.file.name);
 				}).success(function(data, status, headers, config) {
 					console.log('Watch: file is uploaded successfully. Response: ' + data + " Source="+me.sourceParameterToUpload);
 					console.log('SourceId='+me.sourceParameterToUpload.id);
@@ -681,14 +761,29 @@
 					
 					// console.log("watch CALL HTTP");
 					$http.get( '?page=custompage_truckmilk&action=uploadParamFile&paramjson='+json+'&t='+d.getTime() )
-					.then( function ( jsonResult ) {
+					.success( function ( jsonResult, statusHttp, headers, config ) {
+						
+						// connection is lost ?
+						if (statusHttp==401 || typeof jsonResult === 'string') {
+							console.log("Redirected to the login page !");
+							window.location.reload();
+						}
 						me.parameterToUploadStatus="  ";
 						me.inprogress=false;
+						me.showUploadSuccess=true;
 						console.log("Watch.then HTTP inprogres<=false");
 						
-					}, function () {						
+					})
+					.error( function (jsonResult, statusHttp, headers, config) {	
+						console.log("uploadParamFile.error HTTP statusHttp="+statusHttp);
+						// connection is lost ?
+						if (statusHttp==401) {
+							console.log("Redirected to the login page !");
+							window.location.reload();
+						}
+
 						me.inprogress=false;
-						console.log("Watch.error HTTP inProgress<=false");
+						me.showUploadSuccess=true;
 					});
 				}); // end upload
 			} // end loop file
@@ -711,15 +806,30 @@
 			
 			// console.log("uploadParameterFile call HTTP");
 			$http.get('?page=custompage_truckmilk&action=uploadParamFile&paramjson=' + json+'&t='+Date.now())
-				.then( function ( jsonResult ) {
-						self.inprogress=false;
-					    console.log("uploadParameterFile.receivedata HTTP - inprogress<=false result= "+angular.toJson(jsonResult, false));
-					 	return self.list;
-						},  function ( jsonResult ) {
-						self.inprogress=false;
-					    console.log("uploadParameterFile.error HTTP - inprogress<=false ");
-				});
+			.success( function ( jsonResult, statusHttp, headers, config ) {
+				// connection is lost ?
+				if (statusHttp==401 || typeof jsonResult === 'string') {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+				}
+				self.inprogress=false;
+			    console.log("uploadParameterFile.receivedata HTTP - inprogress<=false result= "+angular.toJson(jsonResult, false));
+			 	return self.list;
+				},  function ( jsonResult ) {
+				self.inprogress=false;
+			    console.log("uploadParameterFile.error HTTP - inprogress<=false ");
+			})
+			.error(function(jsonResult, statusHttp, headers, config) {
+				console.log("uploadParamFile.error HTTP statusHttp="+statusHttp);
+				// connection is lost ?
+				if (statusHttp==401) {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+				}
+				self.inprogress=false;
+				 
 				
+			 } );
 		}
 		
 		// -----------------------------------------------------------------------------------------
@@ -761,7 +871,15 @@
 			var json = encodeURIComponent(angular.toJson(param, true));
 			var result = confirm("Do you want to redeploy the command?");
 			if (result) {
-				$http.get('?page=custompage_truckmilk&action=commandredeploy&paramjson=' + json+'&t='+Date.now()).success(function(jsonResult) {
+				$http.get('?page=custompage_truckmilk&action=commandredeploy&paramjson=' + json+'&t='+Date.now())
+				.success(function(jsonResult, statusHttp, headers, config) {
+					
+					// connection is lost ?
+					if (statusHttp==401 || typeof jsonResult === 'string') {
+						console.log("Redirected to the login page !");
+						window.location.reload();
+
+					}
 					self.inprogress = false;
 					console.log("commandRedeploy.receiveData HTTP inprogress<=false jsonResult="+angular.toJson(jsonResult));
 	
@@ -770,9 +888,14 @@
 					self.commandredeploy.deploimenterr	= jsonResult.deploimenterr;
 					self.commandredeploy.listevents		= jsonResult.listevents;
 
-				}).error(function() {
+				}).error(function(jsonResult, statusHttp, headers, config) {
+					console.log("commandRedeploy.error HTTP statusHttp="+statusHttp);
+					// connection is lost ?
+					if (statusHttp==401) {
+						console.log("Redirected to the login page !");
+						window.location.reload();
+					}
 					self.inprogress = false;
-					console.log("scheduler.error HTTP inprogress<=false ");
 				});
 			}	
 		}
@@ -789,15 +912,27 @@
 			self.scheduler.listevents='';
 			
 			// console.log("schedulerOperation call HTTP");
-			$http.get('?page=custompage_truckmilk&action=scheduler&paramjson=' + json+'&t='+Date.now()).success(function(jsonResult) {
+			$http.get('?page=custompage_truckmilk&action=scheduler&paramjson=' + json+'&t='+Date.now())
+			.success(function(jsonResult, statusHttp, headers, config) {
+				// connection is lost ?
+				if (statusHttp==401 || typeof jsonResult === 'string') {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+
+				}
 				self.inprogress = false;
 				console.log("scheduler.receiveData HTTP inprogress<=false jsonResult="+angular.toJson(jsonResult));
 
 				self.scheduler.status 		= jsonResult.status;
 				self.scheduler.listevents	= jsonResult.listevents;
-			}).error(function() {
+			}).error(function(jsonResult, statusHttp, headers, config) {
+				console.log("Scheduler.error HTTP statusHttp="+statusHttp);
+				// connection is lost ?
+				if (statusHttp==401) {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+				}
 				self.inprogress = false;
-				console.log("scheduler.error HTTP inprogress<=false ");
 			});
 		}
 		
@@ -813,14 +948,26 @@
 			self.scheduler = { 'schedulerlistevents' : '' };
 			
 			// console.log("schedulerMaintenance call HTTP");
-			$http.get('?page=custompage_truckmilk&action=schedulermaintenance&paramjson=' + json+'&t='+Date.now()).success(function(jsonResult) {
+			$http.get('?page=custompage_truckmilk&action=schedulermaintenance&paramjson=' + json+'&t='+Date.now())
+			.success(function(jsonResult, statusHttp, headers, config) {
+				// connection is lost ?
+				if (statusHttp==401 || typeof jsonResult === 'string') {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+				}
 				self.inprogress = false;
 				console.log("schedulerMaintenance.receiveData HTTP Finish inprogress<=false"+ angular.toJson(jsonResult,false));
 
 				self.scheduler	= jsonResult;
-			}).error(function() {
+			}).error(function(jsonResult, statusHttp, headers, config) {
+				console.log("SchedulerMaintenance.error HTTP statusHttp="+statusHttp);
+				// connection is lost ?
+				if (statusHttp==401) {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+				}
+				
 				self.inprogress = false;
-				console.log("schedulerMaintenance.error HTTP inprogress<=false");
 			});
 		}
 		
@@ -862,7 +1009,8 @@
 			self.postParams.listUrlCall=[];
 			self.postParams.action= finalaction;
 			var action = "collect_reset";
-			// split the string by packet of 1800 (URL cut at 2800, and we have to encode the string) 
+			// split the string by packet of 1800 (URL cut at 2800, and we have
+			// to encode the string)
 			while (json.length>0)
 			{
 				var jsonSplit= json.substring(0,1500);
@@ -871,7 +1019,7 @@
 				// Attention, the char # is not encoded !!
 				jsonEncodeSplit = jsonEncodeSplit.replace(new RegExp('#', 'g'), '%23');
 				
-				//console.log("collect_add JsonPartial="+jsonSplit);
+				// console.log("collect_add JsonPartial="+jsonSplit);
 				// console.log("collect_add JsonEncode ="+jsonEncodeSplit);
 			
 				
@@ -883,7 +1031,8 @@
 			
 			
 			self.postParams.listUrlIndex=0;
-			self.executeListUrl( self ) // , self.listUrlCall, self.listUrlIndex );
+			self.executeListUrl( self ) // , self.listUrlCall, self.listUrlIndex
+										// );
 			// this.operationTour('updateJob', plugtour, plugtour, true);
 			console.log("sendPost.END")
 			
@@ -897,37 +1046,47 @@
 			// console.log("executeListUrl call HTTP");
 
 			$http.get( '?page=custompage_truckmilk&t='+Date.now()+'&'+self.postParams.listUrlCall[ self.postParams.listUrlIndex ] )
-				.success( function ( jsonResult ) {
-					console.log("executeListUrl receive data HTTP");
-					// console.log("Correct, advance one more",
-					// angular.toJson(jsonResult));
-					self.postParams.listUrlIndex = self.postParams.listUrlIndex+1;
-					if (self.postParams.listUrlIndex  < self.postParams.listUrlCall.length )
-						self.executeListUrl( self ) // , self.listUrlCall,
-													// self.listUrlIndex);
-					else
-					{
-						self.inprogress = false;
-						console.log("sendPost finish inProgress<=false jsonResult="+ angular.toJson(jsonResult));
+			.success( function ( jsonResult, statusHttp, headers, config ) {
+				// connection is lost ?
+				if (statusHttp==401 || typeof jsonResult === 'string') {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+				}
+				console.log("executeListUrl receive data HTTP");
+				// console.log("Correct, advance one more",
+				// angular.toJson(jsonResult));
+				self.postParams.listUrlIndex = self.postParams.listUrlIndex+1;
+				if (self.postParams.listUrlIndex  < self.postParams.listUrlCall.length )
+					self.executeListUrl( self ) // , self.listUrlCall,
+												// self.listUrlIndex);
+				else
+				{
+					self.inprogress = false;
+					console.log("sendPost finish inProgress<=false jsonResult="+ angular.toJson(jsonResult));
 
-						self.postParams.advPercent= 100; 
-		
-						if (self.postParams.action=="updateJob")
-						{
-							self.listeventsexecution    		= jsonResult.listevents;
-							self.listeventsconfig 				= jsonResult.listeventsconfig;
-						}
-						if (self.postParams.action=="testButton")
-						{
-							self.currentButtonExecution.listeventsexecution =  jsonResult.listevents;;			
-						}
-						
+					self.postParams.advPercent= 100; 
+	
+					if (self.postParams.action=="updateJob")
+					{
+						self.listeventsexecution    		= jsonResult.listevents;
+						self.listeventsconfig 				= jsonResult.listeventsconfig;
 					}
-				})
-				.error( function() {
-					self.inprogress = false;				
-					console.log("sendPost.error HTTP inProgress<=false");
-					});	
+					if (self.postParams.action=="testButton")
+					{
+						self.currentButtonExecution.listeventsexecution =  jsonResult.listevents;;			
+					}
+					
+				}
+			})
+			.error( function(jsonResult, statusHttp, headers, config) {
+				console.log("executeListUrl.error HTTP statusHttp="+statusHttp);
+				// connection is lost ?
+				if (statusHttp==401) {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+				}
+				self.inprogress = false;				
+				});	
 			};
 		
 		// -----------------------------------------------------------------------------------------
@@ -936,6 +1095,7 @@
 
 		this.loadinit();
 
+	
 	});
 
 })();
