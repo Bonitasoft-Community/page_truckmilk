@@ -50,15 +50,20 @@ public class MilkCommand extends MilkPlugIn {
      * @return a list of Events.
      */
     @Override
-    public List<BEvent> checkEnvironment(long tenantId, APIAccessor apiAccessor) {
-        // is the command Exist ? 
-        
-        
+    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
         return new ArrayList<BEvent>();
     }
-
+    
     /**
-     * return the description of ping job
+     * check the environment of the job: is the command exist?
+     */
+    @Override
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        // is the command Exist ? 
+        return new ArrayList<BEvent>();
+    }
+    /**
+     * return the description of job
      */
     @Override
     public PlugInDescription getDefinitionDescription() {

@@ -4,10 +4,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import org.bonitasoft.engine.builder.BuilderFactory;
@@ -202,7 +204,9 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
     public Execution getExecution() {
         return mExecution;
     }
+    
 
+   
     /* ******************************************************************************** */
     /*                                                                                  */
     /* Initialize : create the job */
@@ -310,6 +314,19 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
         }
         return listEvents;
     }
+    /* ******************************************************************************** */
+    /*                                                                                  */
+    /* Operations */
+    /*                                                                                  */
+    /*                                                                                  */
+    /* ******************************************************************************** */
+    @Override
+    public List<BEvent> operation(Map<String,Serializable> parameters) {
+        List<BEvent> listEvents = new ArrayList<BEvent>();
+        return listEvents;
+           
+    };
+
 
     /* ******************************************************************************** */
     /*                                                                                  */

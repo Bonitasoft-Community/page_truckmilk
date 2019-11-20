@@ -11,19 +11,12 @@ Job parametres : ajouter un "panel" de regroupement de l'affichage
 
 BonitaProperties : Too long => Save as Stream
 
-2.1.2:
-	upload a file : display a banner to say "Saving done with success" and hide it on refresh
-	Report : add the HOST where the execution was executed
-	Imprive log
 	
-	
-	
+Report "Graph" to list values
 	
  
 Scheduler : ajouter un "Detail report" et si positionné, on log chaque heart breast
            ajouter un bouton "heart breast" pour envoyer une impulsion
            
- Jobs list : un icone pour acceder a l'historique, un bouton par rapport généré
   
    
-Disconnect : il faut le detecter dans la page pour afficher une reconnection

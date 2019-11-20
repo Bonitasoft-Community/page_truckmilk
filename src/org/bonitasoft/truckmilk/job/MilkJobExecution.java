@@ -31,10 +31,15 @@ public class MilkJobExecution {
 
     private MilkJob milkJob;
 
-    public MilkJobExecution(MilkJob milkJob) {
+    /**
+     * tenant where the job is running
+     */
+    public long tenantId;
+    public MilkJobExecution(MilkJob milkJob, long tenantId) {
         this.milkJob = milkJob;
         this.tourParameters = milkJob.getTourParameters();
         tourName = milkJob.getName();
+        this.tenantId= tenantId;
     }
 
     public PlugTourOutput getPlugTourOutput() {
@@ -114,6 +119,13 @@ public class MilkJobExecution {
         }
     }
 
+    /**
+     * get the tenantid
+     * @return
+     */
+    public long getTenantId() {
+        return tenantId;
+    }
     /* ******************************************************************************** */
     /*                                                                                  */
     /* please Stop mechanism */

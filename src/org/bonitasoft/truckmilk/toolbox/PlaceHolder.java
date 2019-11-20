@@ -13,8 +13,8 @@ public class PlaceHolder {
      * @return
      */
 
-    public static Map<String, String> getPlaceHolder(HumanTaskInstance humanTask, String bonitaHeader) {
-        Map<String, String> placeHolder = new HashMap<String, String>();
+    public static Map<String, Object> getPlaceHolder(HumanTaskInstance humanTask, String bonitaHeader) {
+        Map<String, Object> placeHolder = new HashMap<String, Object>();
         placeHolder.put("caseId", String.valueOf(humanTask.getParentProcessInstanceId()));
         String taskUrl = "<a href=\"";
         taskUrl += bonitaHeader;
@@ -32,7 +32,7 @@ public class PlaceHolder {
      * Result is "hello mister walter, welcome to San Francisco"
      */
 
-    public static String replacePlaceHolder(Map<String, String> placeHolder, String content) {
+    public static String replacePlaceHolder(Map<String, Object> placeHolder, String content) {
         // search all place Holder
         int foundBegin = 0;
         int foundEnd = 0;
@@ -44,10 +44,10 @@ public class PlaceHolder {
             if (foundEnd > 0) {
                 // replace !
                 String index = content.substring(foundBegin + 2, foundEnd);
-                String value = placeHolder.get(index);
+                Object value = placeHolder.get(index);
                 if (value == null)
                     value = "";
-                content = content.substring(0, foundBegin) + value + content.substring(foundEnd + 2);
+                content = content.substring(0, foundBegin) + value.toString() + content.substring(foundEnd + 2);
             }
         } while (foundBegin > 0 && foundEnd > 0);
         return content;

@@ -60,9 +60,14 @@ public class MilkDeleteCases extends MilkPlugIn {
     /**
      * check the environment : for the deleteCase, nothing is required
      */
-    public List<BEvent> checkEnvironment(long tenantId, APIAccessor apiAccessor) {
+    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
         return new ArrayList<BEvent>();
     };
+    @Override
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        // is the command Exist ? 
+        return new ArrayList<BEvent>();
+    }
 
     @Override
     public PlugTourOutput execute(MilkJobExecution input, APIAccessor apiAccessor) {

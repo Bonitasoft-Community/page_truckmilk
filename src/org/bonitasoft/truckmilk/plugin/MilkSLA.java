@@ -255,8 +255,15 @@ public class MilkSLA extends MilkPlugIn {
     /**
      * check the environment : for the milkEmailUsersTasks, we require to be able to send an email
      */
-    public List<BEvent> checkEnvironment(long tenantId, APIAccessor apiAccessor) {
+    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
         return SendMailEnvironment.checkEnvironment(tenantId, this);
+    };
+    /**
+     * check the Job's environment
+     */
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        List<BEvent> listEvents = new ArrayList<BEvent>();
+        return listEvents;
     };
 
     /* ******************************************************************************** */
@@ -793,7 +800,7 @@ public class MilkSLA extends MilkPlugIn {
      */
     private String resolvePlaceHolder(HumanTaskInstance humanTask, User user, Rule rule, MilkJobExecution input, String text) {
         String emailBonitaServer = input.getInputStringParameter(cstParamEmailBonitaServer);
-        Map<String, String> placeHolder = PlaceHolder.getPlaceHolder(humanTask, emailBonitaServer);
+        Map<String, Object> placeHolder = PlaceHolder.getPlaceHolder(humanTask, emailBonitaServer);
         placeHolder.put("percentThreashold", String.valueOf(rule.percentThreashold));
         placeHolder.put("userFirstName", user.getFirstName());
         placeHolder.put("userLastName", user.getLastName());

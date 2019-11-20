@@ -1,9 +1,11 @@
 package org.bonitasoft.truckmilk.schedule;
 
 import java.io.File;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.bonitasoft.log.event.BEvent;
 
@@ -40,7 +42,7 @@ public interface MilkSchedulerInt {
 
     public StatusScheduler getStatus(long tenantId);
 
-   
+   public List<BEvent> operation(Map<String,Serializable> parameters);
     /**
      * return the scheduler type
      */

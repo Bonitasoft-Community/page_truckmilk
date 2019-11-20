@@ -40,9 +40,17 @@ public class MilkPing extends MilkPlugIn {
      * @return a list of Events.
      */
     @Override
-    public List<BEvent> checkEnvironment(long tenantId, APIAccessor apiAccessor) {
+    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
         return new ArrayList<BEvent>();
     }
+
+    /**
+     * check the Job's environment
+     */
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        List<BEvent> listEvents = new ArrayList<BEvent>();
+        return listEvents;
+    };
 
     /**
      * return the description of ping job

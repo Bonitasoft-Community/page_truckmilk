@@ -50,11 +50,19 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
     /**
      * check the environment : for the milkEmailUsersTasks, we require to be able to send an email
      */
-    public List<BEvent> checkEnvironment(long tenantId, APIAccessor apiAccessor) {
+    @Override
+    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
         return new ArrayList<BEvent>();
     };
+      
+    /**
+     * check the Job's environment
+     */
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        List<BEvent> listEvents = new ArrayList<BEvent>();
+        return listEvents;
+    };
 
-    
     private class Statistic {
         long pleaseStopAfterManagedItems=0;
         long countIgnored=0;
@@ -327,6 +335,7 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
         }
         
     }
-      
+
+  
     
 }

@@ -154,7 +154,7 @@ public class MilkExecuteJobThread extends Thread {
                 logger.severe("MilkExecuteJobThread: can't get the ipAddress, synchronization on a cluster can't work");                
             }
             // execute it!
-            MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob);
+            MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob, milkJobFactory.getTenantId() );
             
 
             // ----------------- Execution

@@ -147,18 +147,16 @@ public class MilkCmdControlAPI {
             result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULERRESET.toString(), parameters, tenantId, commandAPI);
         }
 
-        if ("changescheduler".equals(operation)) {
+        else if ("changescheduler".equals(operation)) {
             operationManaged = true;
             parameters.put(MilkCmdControl.cstSchedulerChangeType, (String) information.get("newscheduler"));
             result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULERCHANGE.toString(), parameters, tenantId, commandAPI);
         }
-
-        // unknow command
-        if (!operationManaged) {
-            logger.severe( " Unkown schedulerOperation[" + operation + "]");
-            listEvents.add(new BEvent(EVENT_UNKNOWN_SCHEDULEROPERATION, "Operation[" + operation + "]"));
-            result.put(MilkCmdControl.cstResultListEvents, BEventFactory.getHtml(listEvents));
+        else  {
+            parameters.put(MilkCmdControl.cstSchedulerOperation, operation);
+            result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULEROPERATION.toString(), parameters, tenantId, commandAPI);
         }
+       
 
         return result;
     }

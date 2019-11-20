@@ -13,8 +13,11 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugTourOutput;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.json.simple.JSONValue;
+
+import groovy.lang.Category;
 
 /* ******************************************************************************** */
 /*                                                                                  */
@@ -102,8 +105,23 @@ public abstract class MilkPlugIn {
         return typePlugIn;
     };
 
-    public abstract List<BEvent> checkEnvironment(long tenantId, APIAccessor apiAccessor);
+    /**
+     * 
+     * check the PLUG IN environnement, not the MilkJob environement
+     * @param tenantid
+     * @param apiAccessor
+     * @return
+     */
+    public abstract List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor);
 
+    /**
+     * check the JOB environnement, with the job parameters
+     * @param jobExecution
+     * @param apiAccessor
+     * @return
+     */
+    public abstract List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor);
+  
     /**
      * Initialise. This method is call by the Factory, after the object is created.
      * 
@@ -136,7 +154,7 @@ public abstract class MilkPlugIn {
      * FILEREADWRITE : plug in and administrator can read and write the file
      */
     public enum TypeParameter {
-        USERNAME, PROCESSNAME, STRING, TEXT, JSON, LONG, OBJECT, ARRAY, ARRAYPROCESS, BOOLEAN, ARRAYMAP, BUTTONARGS, FILEREAD, FILEWRITE, FILEREADWRITE
+        USERNAME, PROCESSNAME, STRING, TEXT, JSON, LONG, OBJECT, ARRAY, ARRAYPROCESS, BOOLEAN, ARRAYMAP, BUTTONARGS, FILEREAD, FILEWRITE, FILEREADWRITE, LISTVALUES
     };
 
     public static class ColDefinition {
@@ -182,6 +200,7 @@ public abstract class MilkPlugIn {
         public List<String> argsName;
         public List<String> argsValue;
 
+        public String[] listValues=null;
         // a FILEWRITE, FILEREAD, FILEREADWRITE has a content type and a file name
         public String fileName;
         public String contentType;
@@ -256,6 +275,20 @@ public abstract class MilkPlugIn {
 
             return plugInParameter;
         }
+        public static PlugInParameter createInstanceListValues(String name, String label, String[] listValues, Object defaultValue, String explanation) {
+            PlugInParameter plugInParameter = new PlugInParameter();
+            plugInParameter.name = name;
+            plugInParameter.label = label;
+            plugInParameter.typeParameter = TypeParameter.LISTVALUES;
+            plugInParameter.listValues = listValues;
+            plugInParameter.defaultValue = defaultValue;
+            plugInParameter.explanation = explanation;
+            // set an empty value then
+            if (plugInParameter.typeParameter == TypeParameter.ARRAY && defaultValue == null)
+                plugInParameter.defaultValue = new ArrayList<Object>();
+
+            return plugInParameter;
+        }
 
         public static String cstJsonParameterName = "name";
         public static String cstJsonParameterLabel = "label";
@@ -303,6 +336,10 @@ public abstract class MilkPlugIn {
         public String name;
         public String version;
         public String label;
+        
+        public static enum CATEGORY { TASKS, CASES, MONITOR, OTHER };
+        
+        public CATEGORY category = CATEGORY.OTHER;
         /**
          * description is give by the user, to override it
          */
@@ -384,6 +421,7 @@ public abstract class MilkPlugIn {
         result.put("embeded", typePlugIn == TYPE_PLUGIN.EMBEDED);
         result.put("local", typePlugIn == TYPE_PLUGIN.LOCAL);
         result.put("cmd", typePlugIn == TYPE_PLUGIN.COMMAND);
+        result.put("category", description.category.toString());
         result.put("type", typePlugIn.toString());
 
         return result;

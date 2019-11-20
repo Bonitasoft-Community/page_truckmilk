@@ -859,7 +859,19 @@
 									</button>
 								</td>
 								 -->
-								 <td style="padding: 10px;">
+								  <td style="padding: 10px;">
+									<button ng-click="ctrl.schedulerMaintenance('detailheartbeat')" class="btn btn-primary btn-xs" ng-disabled="ctrl.inprogress">
+										Show Detail Heart Beat
+									</button>
+								 </td><td style="padding: 10px;">
+									<button ng-click="ctrl.schedulerMaintenance('syntheticheartbeat')" class="btn btn-primary btn-xs" ng-disabled="ctrl.inprogress">
+										Show synthetic Heart Beat
+									</button>
+								</td><td style="padding: 10px;">
+									<button ng-click="ctrl.schedulerMaintenance('heartbeat')" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress">
+										Heart Beat
+									</button>
+								</td><td style="padding: 10px;">
 									<button ng-click="ctrl.schedulerMaintenance('reset')" class="btn btn-warning btn-xs" ng-disabled="ctrl.inprogress">
 										Reset
 									</button>

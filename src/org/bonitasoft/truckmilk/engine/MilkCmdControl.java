@@ -121,7 +121,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
      * GETSTATUS : refresh + check environment
      */
     public enum VERBE {
-        GETSTATUS, REFRESH, CHECKUPDATEENVIRONMENT, DEPLOYPLUGIN, DELETEPLUGIN, ADDJOB, REMOVEJOB, ACTIVATEJOB, DEACTIVATEJOB, UPDATEJOB, IMMEDIATEJOB, ABORTJOB, RESETJOB, SCHEDULERSTARTSTOP, SCHEDULERDEPLOY, SCHEDULERRESET, SCHEDULERCHANGE, TESTBUTTONARGS, HEARTBEAT
+        GETSTATUS, REFRESH, CHECKUPDATEENVIRONMENT, DEPLOYPLUGIN, DELETEPLUGIN, ADDJOB, REMOVEJOB, ACTIVATEJOB, DEACTIVATEJOB, UPDATEJOB, IMMEDIATEJOB, ABORTJOB, RESETJOB, SCHEDULERSTARTSTOP, SCHEDULERDEPLOY, SCHEDULERRESET, SCHEDULERCHANGE,SCHEDULEROPERATION, TESTBUTTONARGS, HEARTBEAT
     };
 
     public static String cstPageDirectory = "pagedirectory";
@@ -145,6 +145,8 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
     public static String cstJsonListTypesSchedulers = "listtypeschedulers";
     public static String cstJsonLastHeartBeat = "lastheartbeat";
 
+    public static String cstSchedulerOperation = "scheduleroperation";
+    
     public static String cstEnvironmentStatus = "ENVIRONMENTSTATUS";
     public static String cstEnvironmentStatus_V_CORRECT = "OK";
     public static String cstEnvironmentStatus_V_ERROR = "ERROR";
@@ -499,9 +501,9 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     Map<String, Object> argsParameters = executeParameters.getParametersMap("args");
 
                     // execute it!
-                    MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob);
+                    MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob, executeParameters.tenantId);
 
-                    MySimpleTestThread buttonThread = new MySimpleTestThread(executeParameters.tenantId, buttonName, milkJob, milkJobExecution, argsParameters);
+                    MySimpleTestThread buttonThread = new MySimpleTestThread( buttonName, milkJob, milkJobExecution, argsParameters);
 
                     buttonThread.start();
                     int count = 0;
@@ -598,7 +600,17 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 }
                 executeAnswer.result.put(cstJsonListTypesSchedulers, milkSchedulerFactory.getListTypeScheduler());
 
+            } else if (VERBE.SCHEDULEROPERATION.equals(verbEnum)) {
+                executeAnswer.listEvents.addAll(milkSchedulerFactory.getScheduler().operation(executeParameters.parameters));
+
+
+                StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(executeParameters.tenantId);
+                executeAnswer.result.put(cstJsonSchedulerStatus, statusScheduler.status.toString());
+                executeAnswer.result.put(cstJsonListTypesSchedulers, milkSchedulerFactory.getListTypeScheduler());
+                executeAnswer.listEvents.addAll(statusScheduler.listEvents);
+
             }
+                
 
             //------------------------------ Check Environment
             if (addSchedulerStatus) {
@@ -617,12 +629,21 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     mapScheduler.put(cstJsonSchedulerInfo, milkSchedulerFactory.getScheduler().getDescription());
                 }
 
-                // Plug in
+                // Plug in environment
                 List<MilkPlugIn> list = milkPlugInFactory.getListPlugIn();
+                  
                 for (MilkPlugIn plugIn : list) {
-                    listEvents.addAll(plugIn.checkEnvironment(executeParameters.tenantId, apiAccessor));
+                    listEvents.addAll(plugIn.checkPluginEnvironment(executeParameters.tenantId, apiAccessor));
                 }
 
+                // Job environment
+                Collection<MilkJob> listJobs = getListJobs( milkJobFactory);
+               for (MilkJob milkJob : listJobs) {
+                   MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob, milkJobFactory.getTenantId() );
+                   
+                    listEvents.addAll(milkJob.getPlugIn().checkJobEnvironment(milkJobExecution, apiAccessor));
+                }
+                
                 // filter then set status
                 listEvents = BEventFactory.filterUnique(listEvents);
 
@@ -941,7 +962,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
     public class MySimpleTestThread extends Thread {
 
         // private MilkCmdControl cmdControl;
-        private long tenantId;
+        
         public boolean isFinish = false;
         public String buttonName;
         public MilkJobExecution input;
@@ -949,17 +970,16 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
         MilkJob milkJob;
         public Map<String, Object> argsParameters;
 
-        protected MySimpleTestThread(long tenantId, String buttonName, MilkJob milkJob, MilkJobExecution input, Map<String, Object> argsParameters) {
-            this.tenantId = tenantId;
+        protected MySimpleTestThread( String buttonName, MilkJob milkJob, MilkJobExecution jobExecution, Map<String, Object> argsParameters) {
             this.buttonName = buttonName;
-            this.input = input;
+            this.input = jobExecution;
             this.argsParameters = argsParameters;
             this.milkJob = milkJob;
         }
 
         public void run() {
             try {
-                ConnectorAPIAccessorImpl connectorAccessorAPI = new ConnectorAPIAccessorImpl(tenantId);
+                ConnectorAPIAccessorImpl connectorAccessorAPI = new ConnectorAPIAccessorImpl( input.getTenantId() );
                 listEvents = milkJob.getPlugIn().buttonParameters(buttonName, input, argsParameters, connectorAccessorAPI);
             } catch (Exception e) {
                 listEvents.add(new BEvent(EVENT_INTERNAL_ERROR, e.getMessage()));

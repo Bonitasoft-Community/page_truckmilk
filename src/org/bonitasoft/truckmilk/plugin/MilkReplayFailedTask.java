@@ -64,8 +64,15 @@ public class MilkReplayFailedTask extends MilkPlugIn {
     /**
      * check the environment : for the milkEmailUsersTasks, we require to be able to send an email
      */
-    public List<BEvent> checkEnvironment(long tenantId, APIAccessor apiAccessor) {
+    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
         return new ArrayList<BEvent>();
+    };
+    /**
+     * check the Job's environment
+     */
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        List<BEvent> listEvents = new ArrayList<BEvent>();
+        return listEvents;
     };
 
     @Override
