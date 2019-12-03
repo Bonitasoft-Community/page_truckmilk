@@ -1,23 +1,15 @@
 # page_truckmilk
-Execute an BonitaAction at intervalle
+Execute an BonitaAction at intervale
+
+This page propose a list of tools (named plug in), and user use them to create actions to execute at a certain frequencies (named Jobs).
+
+As a user:
+- register a job, define the frequency, gives parameters. 
+- monitor the execution and access the result of execution
+
+As a developper
+- create your own plug in.
 
 
-This page must install first a set of library in your system.
-Look the installation.pdf guide to install the additionnal item
+Look the TruckMilk Manual.pdf guide to install the additionnal item
 
-
-
------------ In progress
-
-
-  Scheduler pause : message dans l'onglet Tour serait bien.
-
-  Scheduler pause : sauver le status 
-
-  Mail non deploye : dans l'évent, indiquer quels plugin ne va pas marcher
-
-  Stop un job en cours d'execution dans l'interface
-
-  GetList
-
-    - mettre dans le rapport d'executionles criteres de filtre (ProcessDefinitionID trouvé, date calculée pour le filtre, etc...
