@@ -4,7 +4,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
@@ -28,7 +27,6 @@ public class MilkPlugInFactory {
 
     static MilkLog logger = MilkLog.getLogger(MilkPlugInFactory.class.getName());
 
-   
     private static BEvent EVENT_INTERNAL_ERROR = new BEvent(MilkPlugInFactory.class.getName(), 1, Level.ERROR,
             "Internal error", "Internal error, check the log");
     private static BEvent EVENT_NOT_INITIALIZED = new BEvent(MilkPlugInFactory.class.getName(), 2, Level.ERROR,

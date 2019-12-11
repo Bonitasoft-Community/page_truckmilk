@@ -2,11 +2,8 @@ package org.bonitasoft.truckmilk.engine;
 
 import java.io.File;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import org.bonitasoft.command.BonitaCommandDeployment;
 import org.bonitasoft.command.BonitaCommandDeployment.DeployStatus;
@@ -14,10 +11,7 @@ import org.bonitasoft.command.BonitaCommandDescription;
 import org.bonitasoft.command.BonitaCommandDescription.CommandJarDependency;
 import org.bonitasoft.engine.api.CommandAPI;
 import org.bonitasoft.engine.api.PlatformAPI;
-import org.bonitasoft.log.event.BEvent;
-import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
-import org.bonitasoft.log.event.BEventFactory;
 
 /**
  * this class is the API to the command. It's deploy the command on demand
@@ -28,13 +22,12 @@ public class MilkCmdControlAPI {
 
     static MilkLog logger = MilkLog.getLogger(MilkCmdControlAPI.class.getName());
 
- 
-
-    private static BEvent EVENT_UNKNOWN_SCHEDULEROPERATION = new BEvent(MilkCmdControlAPI.class.getName(), 1,
-            Level.ERROR,
-            "Unkown maintenance operation", "This operation is not known", "Operation not performed",
-            "See the requested maintenance operation");
-
+    /*
+     * private static BEvent EVENT_UNKNOWN_SCHEDULEROPERATION = new BEvent(MilkCmdControlAPI.class.getName(), 1,
+     * Level.ERROR,
+     * "Unkown maintenance operation", "This operation is not known", "Operation not performed",
+     * "See the requested maintenance operation");
+     */
     public static String cstResultEventJobClassName = "JobClassName";
 
     public static String cstResultStatus_FAIL = "FAIL";
@@ -89,7 +82,7 @@ public class MilkCmdControlAPI {
             for (CommandJarDependency jarDependency : commandDescription.getListDependencies())
                 jarDependency.forceDeploy = true;
         }
-        DeployStatus deployStatus = bonitaCommand.deployCommand(commandDescription, true, tenantId, commandAPI, platFormAPI);      
+        DeployStatus deployStatus = bonitaCommand.deployCommand(commandDescription, true, tenantId, commandAPI, platFormAPI);
         return deployStatus;
 
     }
@@ -105,7 +98,7 @@ public class MilkCmdControlAPI {
         BonitaCommandDescription commandDescription = new BonitaCommandDescription(MilkCmdControl.cstCommandName, pageDirectory);
         commandDescription.forceDeploy = false;
         commandDescription.mainCommandClassName = MilkCmdControl.class.getName();
-        commandDescription.mainJarFile = "TruckMilk-2.1-Page.jar";
+        commandDescription.mainJarFile = "TruckMilk-2.2-Page.jar";
         commandDescription.commandDescription = MilkCmdControl.cstCommandDescription;
         // "bonita-commanddeployment-1.2.jar" is deployed automaticaly with BonitaCommandDeployment
         // commandDescription.dependencyJars = new String[] { "bonita-event-1.5.0.jar", "bonita-properties-2.0.0.jar" }; // "mail-1.5.0-b01.jar", "activation-1.1.jar"};
@@ -127,36 +120,28 @@ public class MilkCmdControlAPI {
      */
     public Map<String, Object> schedulerMaintenance(Map<String, Object> information, File pageDirectory,
             CommandAPI commandAPI, PlatformAPI platFormAPI, long tenantId) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
         Map<String, Object> result = new HashMap<String, Object>();
         String operation = (String) information.get("operation");
-        boolean operationManaged = false;
         HashMap<String, Serializable> parameters = new HashMap<String, Serializable>();
         BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(MilkCmdControl.cstCommandName);
 
         if ("deploy".equals(operation)) {
-            operationManaged = true;
             parameters.put(MilkCmdControl.cstPageDirectory, pageDirectory.getAbsolutePath());
-
             result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULERDEPLOY.toString(), parameters, tenantId, commandAPI);
         }
 
         else if ("reset".equals(operation)) {
-            operationManaged = true;
             // reset scheduler must be send to the command
             result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULERRESET.toString(), parameters, tenantId, commandAPI);
         }
 
         else if ("changescheduler".equals(operation)) {
-            operationManaged = true;
             parameters.put(MilkCmdControl.cstSchedulerChangeType, (String) information.get("newscheduler"));
             result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULERCHANGE.toString(), parameters, tenantId, commandAPI);
-        }
-        else  {
+        } else {
             parameters.put(MilkCmdControl.cstSchedulerOperation, operation);
             result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULEROPERATION.toString(), parameters, tenantId, commandAPI);
         }
-       
 
         return result;
     }

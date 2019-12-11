@@ -6,18 +6,14 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugTourOutput;
-import org.bonitasoft.truckmilk.job.MilkJob;
 import org.json.simple.JSONValue;
-
-import groovy.lang.Category;
 
 /* ******************************************************************************** */
 /*                                                                                  */
@@ -27,9 +23,7 @@ import groovy.lang.Category;
  * All plugin must extends this class.
  * Then, a new plugin will be deployed as a command in the BonitaEngine, in order
  * to be called on demand by the MilkCmdControl.
- * 
  * Register the embeded plug in in MilkPlugInFactory.collectListPlugIn()
- * 
  * Remark: MilkCmdControl is the command who control all plugin execution.
  * Multiple PlugTour can be define for each PlugIn
  * * Example: plugIn 'monitorEmail'
@@ -55,7 +49,7 @@ public abstract class MilkPlugIn {
             "Reference the error");
 
     public static MilkLog logger = MilkLog.getLogger(MilkPlugIn.class.getName());
- 
+
     /**
      * the base keep the description available.
      * To be sure this is correclty initialised, the factoryPlugIn, who create object, call the
@@ -106,8 +100,8 @@ public abstract class MilkPlugIn {
     };
 
     /**
-     * 
      * check the PLUG IN environnement, not the MilkJob environement
+     * 
      * @param tenantid
      * @param apiAccessor
      * @return
@@ -116,12 +110,13 @@ public abstract class MilkPlugIn {
 
     /**
      * check the JOB environnement, with the job parameters
+     * 
      * @param jobExecution
      * @param apiAccessor
      * @return
      */
     public abstract List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor);
-  
+
     /**
      * Initialise. This method is call by the Factory, after the object is created.
      * 
@@ -154,7 +149,7 @@ public abstract class MilkPlugIn {
      * FILEREADWRITE : plug in and administrator can read and write the file
      */
     public enum TypeParameter {
-        USERNAME, PROCESSNAME, STRING, TEXT, JSON, LONG, OBJECT, ARRAY, ARRAYPROCESS, BOOLEAN, ARRAYMAP, BUTTONARGS, FILEREAD, FILEWRITE, FILEREADWRITE, LISTVALUES
+        USERNAME, PROCESSNAME, STRING, TEXT, JSON, LONG, OBJECT, ARRAY, ARRAYPROCESS, BOOLEAN, ARRAYMAP, BUTTONARGS, FILEREAD, FILEWRITE, FILEREADWRITE, LISTVALUES, SEPARATOR
     };
 
     public static class ColDefinition {
@@ -200,7 +195,7 @@ public abstract class MilkPlugIn {
         public List<String> argsName;
         public List<String> argsValue;
 
-        public String[] listValues=null;
+        public String[] listValues = null;
         // a FILEWRITE, FILEREAD, FILEREADWRITE has a content type and a file name
         public String fileName;
         public String contentType;
@@ -275,6 +270,7 @@ public abstract class MilkPlugIn {
 
             return plugInParameter;
         }
+
         public static PlugInParameter createInstanceListValues(String name, String label, String[] listValues, Object defaultValue, String explanation) {
             PlugInParameter plugInParameter = new PlugInParameter();
             plugInParameter.name = name;
@@ -336,9 +332,11 @@ public abstract class MilkPlugIn {
         public String name;
         public String version;
         public String label;
-        
-        public static enum CATEGORY { TASKS, CASES, MONITOR, OTHER };
-        
+
+        public static enum CATEGORY {
+            TASKS, CASES, MONITOR, OTHER
+        };
+
         public CATEGORY category = CATEGORY.OTHER;
         /**
          * description is give by the user, to override it
@@ -349,10 +347,16 @@ public abstract class MilkPlugIn {
          */
         public String explanation;
         public List<PlugInParameter> inputParameters = new ArrayList<PlugInParameter>();
+        public List<PlugInParameter> analysisParameters = new ArrayList<PlugInParameter>();
+
         public String cronSt = "0 0/10 * 1/1 * ? *"; // every 10 mn
 
         public void addParameter(PlugInParameter parameter) {
             inputParameters.add(parameter);
+        }
+
+        public void addAnalysisParameter(PlugInParameter parameter) {
+            analysisParameters.add(parameter);
         }
 
         /**
@@ -502,7 +506,7 @@ public abstract class MilkPlugIn {
         /**
          * host name where execution was done
          */
-        public String hostName; 
+        public String hostName;
         /*
          * return as information, how many item the plug in managed
          */
@@ -578,6 +582,4 @@ public abstract class MilkPlugIn {
         return listEvents;
     }
 
-    
-
-    }
+}

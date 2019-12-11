@@ -77,28 +77,26 @@ public class MilkPing extends MilkPlugIn {
         // if the date has to be added in the result ?
         Boolean addDate = jobExecution.getInputBooleanParameter(cstParamAddDate.name, Boolean.TRUE);
         Long totalMinutesExecution = jobExecution.getInputLongParameter(cstParamTimeExecution.name, 1L);
-        if (totalMinutesExecution>60)
-            totalMinutesExecution=60L;
-        
-        long total10Step = totalMinutesExecution*6;
+        if (totalMinutesExecution > 60)
+            totalMinutesExecution = 60L;
+
+        long total10Step = totalMinutesExecution * 6;
         String parameters = addDate ? "Date: " + sdf.format(new Date()) : "";
-        
+
         jobExecution.setAvancementTotalStep(total10Step);
-        
-        for (long step10s =0; step10s < total10Step;step10s ++)
-        {
+
+        for (long step10s = 0; step10s < total10Step; step10s++) {
             if (jobExecution.pleaseStop())
                 break;
-            jobExecution.setAvancementStep( step10s );
+            jobExecution.setAvancementStep(step10s);
             try {
-                Thread.sleep(1000*10);
+                Thread.sleep(1000 * 10);
             } catch (InterruptedException e) {
-               
+
             }
         }
-        jobExecution.setAvancementStep( totalMinutesExecution);
-        
-        
+        jobExecution.setAvancementStep(totalMinutesExecution);
+
         plugTourOutput.addEvent(new BEvent(eventPing, parameters));
         plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
         if (jobExecution.pleaseStop())

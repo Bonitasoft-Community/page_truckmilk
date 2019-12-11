@@ -42,7 +42,8 @@ public interface MilkSchedulerInt {
 
     public StatusScheduler getStatus(long tenantId);
 
-   public List<BEvent> operation(Map<String,Serializable> parameters);
+    public List<BEvent> operation(Map<String, Serializable> parameters);
+
     /**
      * return the scheduler type
      */

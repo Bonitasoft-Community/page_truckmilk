@@ -13,22 +13,21 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
+import org.bonitasoft.truckmilk.engine.MilkJobFactory;
+import org.bonitasoft.truckmilk.engine.MilkJobFactory.MilkFactoryOp;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.ExecutionStatus;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugTourOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
+import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
-import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
-import org.bonitasoft.truckmilk.engine.MilkJobFactory;
-import org.bonitasoft.truckmilk.engine.MilkJobFactory.MilkFactoryOp;
 import org.json.simple.JSONValue;
 import org.quartz.CronExpression;
 
@@ -74,7 +73,7 @@ public class MilkJob {
      * register the tour factory which create this object
      */
     public MilkJobFactory milkJobFactory;
-    
+
     private static String cstPrefixStreamValue = "_st";
     /**
      * be compatible : old TruckMilk does not have Id
@@ -86,12 +85,12 @@ public class MilkJob {
 
     public boolean isEnable = false;
 
-  
     public String cronSt = "";
-  
-    /** list of host name or ip address separate by a ;
-    public String hostRestriction;
+
     /**
+     * list of host name or ip address separate by a ;
+     * public String hostRestriction;
+     * /**
      * in a Cluster environment, we may want this plugInTour is executed only on a specific node.
      */
     public String hostsRestriction = null;
@@ -104,24 +103,25 @@ public class MilkJob {
     public MilkJob(String name, MilkPlugIn plugIn, MilkJobFactory milkJobFactory) {
         this.plugIn = plugIn;
         this.name = name == null ? MilkJob.DEFAULT_NAME : name;
-        this.milkJobFactory =  milkJobFactory;
+        this.milkJobFactory = milkJobFactory;
         this.generateId();
     }
 
-    public static MilkJob getInstanceFromPlugin(String name, MilkPlugIn plugIn,MilkJobFactory milkPlugInTourFactory) {
+    public static MilkJob getInstanceFromPlugin(String name, MilkPlugIn plugIn, MilkJobFactory milkPlugInTourFactory) {
         MilkJob milkJob = new MilkJob(name, plugIn, milkPlugInTourFactory);
         PlugInDescription description = plugIn.getDescription();
         // clone the parameters !
         // new HashMap<>(description.getParametersMap()) not need at this moment because the maps is created
         milkJob.parameters = description.getParametersMap();
         milkJob.cronSt = description.cronSt;
-        
+
         return milkJob;
     }
 
     public String toString() {
-        return name+" (enable:"+isEnable+" immediateExecution:"+trackExecution.isImmediateExecution+" InExecution:"+trackExecution.inExecution+ (trackExecution.nextExecutionDate==null? " noNextDate":" "+sdf.format(trackExecution.nextExecutionDate))+")";        
+        return name + " (enable:" + isEnable + " immediateExecution:" + trackExecution.isImmediateExecution + " InExecution:" + trackExecution.inExecution + (trackExecution.nextExecutionDate == null ? " noNextDate" : " " + sdf.format(trackExecution.nextExecutionDate)) + ")";
     }
+
     public long getId() {
         return idJob;
     }
@@ -225,10 +225,11 @@ public class MilkJob {
         this.cronSt = cronSt;
         return calculateNextExecution();
     }
-    public void setHostsRestriction(String hostsRestriction )
-    {
+
+    public void setHostsRestriction(String hostsRestriction) {
         this.hostsRestriction = hostsRestriction;
     }
+
     public void setDescription(String description) {
         this.description = description;
     }
@@ -295,7 +296,7 @@ public class MilkJob {
             listParentTmpFile.add(pageDirectory.getCanonicalPath() + "/../../../tmp/");
             listParentTmpFile.add(pageDirectory.getCanonicalPath() + "/../../");
         } catch (Exception e) {
-            logger.info( ".setTourFileParameter: error get CanonicalPath of pageDirectory[" + e.toString() + "]");
+            logger.info(".setTourFileParameter: error get CanonicalPath of pageDirectory[" + e.toString() + "]");
             listEvents.add(EVENT_CANT_FIND_TEMPORARY_PATH);
             return listEvents;
         }
@@ -329,30 +330,30 @@ public class MilkJob {
         return listEvents;
     }
 
-   
-/**
- * if a hostRestriction is on place, then verify it
- * @return
- */
+    /**
+     * if a hostRestriction is on place, then verify it
+     * 
+     * @return
+     */
     public boolean isInsideHostsRestriction() {
-        if (hostsRestriction == null || hostsRestriction.trim().length()==0 )
+        if (hostsRestriction == null || hostsRestriction.trim().length() == 0)
             return true; // no limitation
 
-        String compareHostRestriction = ";"+hostsRestriction+";";
+        String compareHostRestriction = ";" + hostsRestriction + ";";
         try {
             InetAddress ip = InetAddress.getLocalHost();
 
-            if (compareHostRestriction.indexOf(";"+ip.getHostAddress()+";")!= -1)
+            if (compareHostRestriction.indexOf(";" + ip.getHostAddress() + ";") != -1)
                 return true;
-            if (compareHostRestriction.indexOf(";"+ip.getHostName()+";")!= -1)
+            if (compareHostRestriction.indexOf(";" + ip.getHostName() + ";") != -1)
                 return true;
-            
+
             return false;
         } catch (UnknownHostException e) {
             return false;
         }
     }
-    
+
     /* ******************************************************************************** */
     /*                                                                                  */
     /*
@@ -419,12 +420,14 @@ public class MilkJob {
      * 
      * @return
      */
-    
-    private final static String cstJsonPrefixHumanReadable="st";
+
+    private final static String cstJsonPrefixHumanReadable = "st";
     private final static String cstJsonPluginName = "pluginname";
     private final static String cstJsonEnable = "enable";
 
     private final static String cstJsonParametersDef = "parametersdef";
+    private final static String cstJsonAnalysisDef = "analysisdef";
+
     private final static String cstJsonParameters = "parameters";
     // private final static String cstJsonParameterValue = "value";
 
@@ -439,7 +442,7 @@ public class MilkJob {
     private final static String cstJsonId = "id";
     private final static String cstJsonImmediateExecution = "imediateExecution";
     private final static String cstJsonAskForStop = "askForStop";
-    
+
     private final static String cstJsonlastExecutionStatus = "lastexecutionstatus";
     private final static String cstJsonInExecution = "inExecution";
 
@@ -448,8 +451,6 @@ public class MilkJob {
     private final static String cstJsonInExecutionPercent = "inExecutionPercent";
     private final static String cstJsonInExecutionEndTimeEstimatedInMS = "inExecutionEndTimeEstimatedinMS";
     private final static String cstJsonInExecutionEndDateEstimated = "inExecutionEndDateEstimated";
-
-    
 
     // saved last execution  
     private final static String cstJsonSavedExec = "savedExecution";
@@ -463,8 +464,8 @@ public class MilkJob {
 
     /**
      * getInstanceFromMap (the load)
-     * @see getMap()
      * 
+     * @see getMap()
      * @param jsonSt
      * @param milkCmdControl
      * @return
@@ -498,20 +499,19 @@ public class MilkJob {
 
         milkJob.cronSt = (String) jsonMap.get(cstJsonCron);
         milkJob.hostsRestriction = (String) jsonMap.get(cstJsonHostsRestriction);
-        
+
         // search the name if all the list
         milkJob.isEnable = getBooleanValue(jsonMap.get(cstJsonEnable), false);
-        
-        
-        milkJob.trackExecution.askForStop = getBooleanValue(jsonMap.get(cstJsonAskForStop), false); 
-        
+
+        milkJob.trackExecution.askForStop = getBooleanValue(jsonMap.get(cstJsonAskForStop), false);
+
         Long lastExecutionDateLong = (Long) jsonMap.get(cstJsonLastExecution);
         if (lastExecutionDateLong != null && lastExecutionDateLong != 0)
             milkJob.trackExecution.lastExecutionDate = new Date(lastExecutionDateLong);
 
         String lastExecutionStatus = (String) jsonMap.get(cstJsonlastExecutionStatus);
         if (lastExecutionStatus != null)
-            milkJob.trackExecution.lastExecutionStatus = ExecutionStatus.valueOf( lastExecutionStatus.toUpperCase());
+            milkJob.trackExecution.lastExecutionStatus = ExecutionStatus.valueOf(lastExecutionStatus.toUpperCase());
 
         milkJob.trackExecution.isImmediateExecution = getBooleanValue(jsonMap.get(cstJsonImmediateExecution), false);
         milkJob.trackExecution.inExecution = getBooleanValue(jsonMap.get(cstJsonInExecution), false);
@@ -519,12 +519,11 @@ public class MilkJob {
         milkJob.trackExecution.percent = getLongValue(jsonMap.get(cstJsonInExecutionPercent), 0L);
         milkJob.trackExecution.endTimeEstimatedInMs = getLongValue(jsonMap.get(cstJsonInExecutionEndTimeEstimatedInMS), 0L);
         milkJob.trackExecution.endDateEstimated = null;
-        if (milkJob.trackExecution.startTime>0 && milkJob.trackExecution.endTimeEstimatedInMs>0)
-        {
-            milkJob.trackExecution.endDateEstimated= new Date(milkJob.trackExecution.startTime + milkJob.trackExecution.endTimeEstimatedInMs);
+        if (milkJob.trackExecution.startTime > 0 && milkJob.trackExecution.endTimeEstimatedInMs > 0) {
+            milkJob.trackExecution.endDateEstimated = new Date(milkJob.trackExecution.startTime + milkJob.trackExecution.endTimeEstimatedInMs);
         }
         milkJob.trackExecution.inExecutionHostName = (String) jsonMap.get(cstJsonRegisterInExecutionHost);
-                
+
         if (milkJob.isEnable && milkJob.trackExecution.nextExecutionDate == null)
             milkJob.calculateNextExecution();
 
@@ -539,28 +538,30 @@ public class MilkJob {
         return milkJob;
     }
 
-   
     /**
      * how to calcul the map
      * To send to the browser: everything
      * to serialize : depends, because different item are saved in different variable
+     * 
      * @author Firstname Lastname
-     *
      */
-    public static class MapContentParameter{
-        boolean withExplanation=false;      
-        public boolean trackExecution=true;
-        public boolean askStop=true;
-        public boolean savedExecution=true;
+    public static class MapContentParameter {
+
+        boolean withExplanation = false;
+        public boolean trackExecution = true;
+        public boolean askStop = true;
+        public boolean savedExecution = true;
+
         public static MapContentParameter getInstanceWeb() {
             MapContentParameter mapContentParameter = new MapContentParameter();
-            mapContentParameter.withExplanation=true;
-            mapContentParameter.withExplanation=true;
-            mapContentParameter.askStop=true;
-            mapContentParameter.savedExecution=true;
+            mapContentParameter.withExplanation = true;
+            mapContentParameter.withExplanation = true;
+            mapContentParameter.askStop = true;
+            mapContentParameter.savedExecution = true;
             return mapContentParameter;
         }
     }
+
     /**
      * getMap : use to save it or send to the browser.
      * browser need to have the parameters definition AND the value, save need only the parameter
@@ -584,17 +585,36 @@ public class MilkJob {
         }
         map.put(cstJsonCron, cronSt);
         map.put(cstJsonHostsRestriction, hostsRestriction);
-        
 
         // Parameters values
         Map<String, Object> mapParametersValue = new HashMap<String, Object>();
         map.put(cstJsonParameters, mapParametersValue);
 
         // parameter definition
-        List<Map<String, Object>> listParametersDef = new ArrayList<Map<String, Object>>();
-        map.put(cstJsonParametersDef, listParametersDef);
+        map.put(cstJsonParametersDef, collectParameterList(plugIn.getDefinitionDescription().inputParameters, mapParametersValue));
 
-        for (PlugInParameter plugInParameter : plugIn.getDefinitionDescription().inputParameters) {
+        // Analysis definition
+        map.put(cstJsonAnalysisDef, collectParameterList(plugIn.getDefinitionDescription().analysisParameters, mapParametersValue));
+
+        map.put(cstJsonEnable, isEnable);
+
+        if (mapContent.trackExecution) {
+            // todo map.put(cstJsonImmediateExecution, trackExecution.isImmediateExecution);
+            map.put("trackExecution", trackExecution.getMap());
+
+        }
+        if (mapContent.askStop) {
+            map.put(cstJsonAskForStop, trackExecution.askForStop);
+        }
+        if (mapContent.savedExecution) {
+            map.put(cstJsonSavedExec, getListSavedExecution());
+        }
+        return map;
+    }
+
+    private List<Map<String, Object>> collectParameterList(List<PlugInParameter> listPlugInParameters, Map<String, Object> mapParametersValue) {
+        List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
+        for (PlugInParameter plugInParameter : listPlugInParameters) {
 
             // complete with the value
             if (plugInParameter.typeParameter == TypeParameter.FILEREAD
@@ -608,31 +628,12 @@ public class MilkJob {
             }
 
             // Parameters Definition
-            listParametersDef.add(plugInParameter.getMap());
+            list.add(plugInParameter.getMap());
         }
-
-        map.put(cstJsonEnable, isEnable);
-
-        if (mapContent.trackExecution)
-        {          
-            // todo map.put(cstJsonImmediateExecution, trackExecution.isImmediateExecution);
-            map.put( "trackExecution", trackExecution.getMap());
-            
-        }
-        if (mapContent.askStop)
-        {
-            map.put( cstJsonAskForStop, trackExecution.askForStop);
-        }
-        if (mapContent.savedExecution)
-        {
-            map.put(cstJsonSavedExec, getListSavedExecution());
-        }
-        return map;
+        return list;
     }
 
-    
-    public List<Map<String,Object>> getListSavedExecution()
-    {
+    public List<Map<String, Object>> getListSavedExecution() {
         // save the last execution
         List<Map<String, Object>> listExecution = new ArrayList<Map<String, Object>>();
         for (SavedExecution savedExecution : listSavedExecution) {
@@ -640,15 +641,17 @@ public class MilkJob {
         }
         return listExecution;
     }
+
     public String getListSavedExecutionJsonSt() {
         return JSONValue.toJSONString(getListSavedExecution());
     }
+
     /**
      * serialize in JSON the content of the plugTour
      * 
      * @return
      */
-    public String getJsonSt( MapContentParameter mapContent) {
+    public String getJsonSt(MapContentParameter mapContent) {
         return JSONValue.toJSONString(getMap(mapContent));
     }
 
@@ -692,61 +695,59 @@ public class MilkJob {
         public Date lastExecutionDate;
         public ExecutionStatus lastExecutionStatus;
 
-        
         public boolean inExecution = false;
         public long startTime = 0;
         public long percent = 0;
-        public long endTimeEstimatedInMs=0;
-        public long totalTimeEstimatedInMs=0;
+        public long endTimeEstimatedInMs = 0;
+        public long totalTimeEstimatedInMs = 0;
         public Date endDateEstimated;
-        
+
         public String inExecutionHostName;
-        public TrackExecution() 
-        {};
-        
-       
-        public String getHumanTimeEstimated( boolean withMs)
-        {
-            
+
+        public TrackExecution() {
+        };
+
+        public String getHumanTimeEstimated(boolean withMs) {
+
             return TypesCast.getHumanDuration(endTimeEstimatedInMs, withMs);
         }
-        
+
         public String getJsonSt() {
             return JSONValue.toJSONString(getMap());
         }
-        public Map<String,Object> getMap()
-        {
-            Map<String, Object> map = new HashMap<String, Object>();
-            
-            
-            map.put( cstJsonImmediateExecution, trackExecution.isImmediateExecution);
-            map.put( cstJsonAskForStop, trackExecution.askForStop);
-            map.put( cstJsonNextExecution, trackExecution.nextExecutionDate == null ? 0 : trackExecution.nextExecutionDate.getTime());
-            map.put( cstJsonNextExecution+cstJsonPrefixHumanReadable, trackExecution.nextExecutionDate == null ? "" :  sdf.format(trackExecution.nextExecutionDate.getTime()));
-            map.put( cstJsonLastExecution, trackExecution.lastExecutionDate == null ? 0 : trackExecution.lastExecutionDate.getTime());
-            map.put( cstJsonLastExecution+cstJsonPrefixHumanReadable, trackExecution.lastExecutionDate == null ? "" : sdf.format(trackExecution.lastExecutionDate));
-            String executionStatus = trackExecution.lastExecutionStatus == null ? null : trackExecution.lastExecutionStatus.toString().toLowerCase();
-            map.put( cstJsonlastExecutionStatus, executionStatus);
 
-            map.put( cstJsonInExecution, trackExecution.inExecution);
-            map.put( cstJsonInExecutionStartTime, trackExecution.startTime);
-            map.put( cstJsonInExecutionPercent, trackExecution.percent);
-            map.put( cstJsonInExecutionEndTimeEstimatedInMS, trackExecution.endTimeEstimatedInMs);
-            map.put( cstJsonInExecutionEndTimeEstimatedInMS+cstJsonPrefixHumanReadable, trackExecution.getHumanTimeEstimated( false ));
-            map.put( cstJsonInExecutionEndDateEstimated + cstJsonPrefixHumanReadable, trackExecution.endDateEstimated==null ? "" : sdf.format(trackExecution.endDateEstimated));
-            map.put( cstJsonRegisterInExecutionHost, trackExecution.inExecutionHostName );
+        public Map<String, Object> getMap() {
+            Map<String, Object> map = new HashMap<String, Object>();
+
+            map.put(cstJsonImmediateExecution, trackExecution.isImmediateExecution);
+            map.put(cstJsonAskForStop, trackExecution.askForStop);
+            map.put(cstJsonNextExecution, trackExecution.nextExecutionDate == null ? 0 : trackExecution.nextExecutionDate.getTime());
+            map.put(cstJsonNextExecution + cstJsonPrefixHumanReadable, trackExecution.nextExecutionDate == null ? "" : sdf.format(trackExecution.nextExecutionDate.getTime()));
+            map.put(cstJsonLastExecution, trackExecution.lastExecutionDate == null ? 0 : trackExecution.lastExecutionDate.getTime());
+            map.put(cstJsonLastExecution + cstJsonPrefixHumanReadable, trackExecution.lastExecutionDate == null ? "" : sdf.format(trackExecution.lastExecutionDate));
+            String executionStatus = trackExecution.lastExecutionStatus == null ? null : trackExecution.lastExecutionStatus.toString().toLowerCase();
+            map.put(cstJsonlastExecutionStatus, executionStatus);
+
+            map.put(cstJsonInExecution, trackExecution.inExecution);
+            map.put(cstJsonInExecutionStartTime, trackExecution.startTime);
+            map.put(cstJsonInExecutionPercent, trackExecution.percent);
+            map.put(cstJsonInExecutionEndTimeEstimatedInMS, trackExecution.endTimeEstimatedInMs);
+            map.put(cstJsonInExecutionEndTimeEstimatedInMS + cstJsonPrefixHumanReadable, trackExecution.getHumanTimeEstimated(false));
+            map.put(cstJsonInExecutionEndDateEstimated + cstJsonPrefixHumanReadable, trackExecution.endDateEstimated == null ? "" : sdf.format(trackExecution.endDateEstimated));
+            map.put(cstJsonRegisterInExecutionHost, trackExecution.inExecutionHostName);
             return map;
         }
+
         @SuppressWarnings("unchecked")
-        public void readFromJson(String jsonSt ) {
+        public void readFromJson(String jsonSt) {
             Map<String, Object> jsonMap = (Map<String, Object>) JSONValue.parse(jsonSt);
             isImmediateExecution = getBooleanValue(jsonMap.get(cstJsonImmediateExecution), false);
             askForStop = getBooleanValue(jsonMap.get(cstJsonAskForStop), false);
-            
+
             Long nextExecutionDateLong = (Long) jsonMap.get(cstJsonNextExecution);
             if (nextExecutionDateLong != null && nextExecutionDateLong != 0)
                 trackExecution.nextExecutionDate = new Date(nextExecutionDateLong);
-            
+
             Long lastExecutionDateLong = (Long) jsonMap.get(cstJsonLastExecution);
             if (lastExecutionDateLong != null && lastExecutionDateLong != 0)
                 trackExecution.lastExecutionDate = new Date(lastExecutionDateLong);
@@ -760,24 +761,24 @@ public class MilkJob {
             percent = getLongValue(jsonMap.get(cstJsonInExecutionPercent), 0L);
             endTimeEstimatedInMs = getLongValue(jsonMap.get(cstJsonInExecutionEndTimeEstimatedInMS), 0L);
             endDateEstimated = null;
-            if (startTime>0 && endTimeEstimatedInMs>0)
-            {
-                endDateEstimated= new Date(startTime + endTimeEstimatedInMs);
+            if (startTime > 0 && endTimeEstimatedInMs > 0) {
+                endDateEstimated = new Date(startTime + endTimeEstimatedInMs);
             }
             inExecutionHostName = (String) jsonMap.get(cstJsonRegisterInExecutionHost);
         }
-        
+
     }
 
     public TrackExecution trackExecution = new TrackExecution();
 
-     /**
+    /**
      * reload information for the database: user can ask a stop
+     * 
      * @return
      */
     public boolean isAskedForStop() {
         // load on the database
-        MilkFactoryOp jobLoaded = milkJobFactory.dbLoadJob( idJob );
+        MilkFactoryOp jobLoaded = milkJobFactory.dbLoadJob(idJob);
         trackExecution.askForStop = jobLoaded.job.trackExecution.askForStop;
         return trackExecution.askForStop;
     }
@@ -786,19 +787,18 @@ public class MilkJob {
         this.trackExecution.askForStop = askForStop;
     }
 
-    public boolean inExecution()
-    {
+    public boolean inExecution() {
         return trackExecution.inExecution;
     }
-    public void registerExecutionOnHost( String hostName)
-    {
+
+    public void registerExecutionOnHost(String hostName) {
         trackExecution.inExecutionHostName = hostName;
     }
-    public String getHostRegistered()
-    {
+
+    public String getHostRegistered() {
         return trackExecution.inExecutionHostName;
     }
-    
+
     /* ******************************************************************************** */
     /*                                                                                  */
     /* Saved execution */
@@ -816,7 +816,7 @@ public class MilkJob {
         public long nbItemsProcessed = 0;
         public long executionTimeInMs;
         public String hostName;
-        
+
         public SavedExecution() {
         };
 
@@ -839,8 +839,8 @@ public class MilkJob {
             map.put(cstJsonSaveExecExplanation, explanation);
             map.put(cstJsonSaveExecItemsProcessed, nbItemsProcessed);
             map.put(cstJsonSaveExecTimeinMs, executionTimeInMs);
-            map.put(cstJsonSaveExecTimeinMs+ cstJsonPrefixHumanReadable, TypesCast.getHumanDuration(executionTimeInMs, false));
-            
+            map.put(cstJsonSaveExecTimeinMs + cstJsonPrefixHumanReadable, TypesCast.getHumanDuration(executionTimeInMs, false));
+
             map.put(cstJsonSaveExecHostName, hostName);
             return map;
         }
@@ -851,12 +851,9 @@ public class MilkJob {
             Long execDateLong = (Long) jsonMap.get(cstJsonSaveExecDate);
             if (execDateLong != null && execDateLong != 0)
                 savedExecution.executionDate = new Date(execDateLong);
-            try
-            {
+            try {
                 savedExecution.executionStatus = ExecutionStatus.valueOf((String) jsonMap.get(cstJsonSaveExecStatus));
-            }
-            catch(Exception e)
-            {
+            } catch (Exception e) {
                 // anormal
                 savedExecution.executionStatus = ExecutionStatus.ERROR;
             }
@@ -864,7 +861,7 @@ public class MilkJob {
             savedExecution.explanation = (String) jsonMap.get(cstJsonSaveExecExplanation);
             savedExecution.nbItemsProcessed = (Long) jsonMap.get(cstJsonSaveExecItemsProcessed);
             savedExecution.executionTimeInMs = (Long) jsonMap.get(cstJsonSaveExecTimeinMs);
-            savedExecution.hostName = (String) jsonMap.get( cstJsonSaveExecHostName );
+            savedExecution.hostName = (String) jsonMap.get(cstJsonSaveExecHostName);
             return savedExecution;
         }
     }
@@ -872,9 +869,8 @@ public class MilkJob {
     // save a tour execution
     List<SavedExecution> listSavedExecution = new ArrayList<SavedExecution>();
 
-    
     @SuppressWarnings("unchecked")
-    public void readSavedExecutionFromJson(String jsonSt ) {
+    public void readSavedExecutionFromJson(String jsonSt) {
         List<Map<String, Object>> jsonList = (List<Map<String, Object>>) JSONValue.parse(jsonSt);
         if (jsonList != null) {
             for (Map<String, Object> execSaveMap : jsonList) {
@@ -882,6 +878,7 @@ public class MilkJob {
             }
         }
     }
+
     /**
      * register an execution. Keep the last 10
      * 

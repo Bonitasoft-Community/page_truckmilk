@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import org.bonitasoft.command.BonitaCommandDeployment.DeployStatus;
 import org.bonitasoft.engine.api.CommandAPI;
@@ -18,9 +17,9 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkCmdControl;
 import org.bonitasoft.truckmilk.engine.MilkCmdControlAPI;
+import org.bonitasoft.truckmilk.engine.MilkJobFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
-import org.bonitasoft.truckmilk.engine.MilkJobFactory;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
@@ -113,7 +112,6 @@ public class MilkAccessAPI {
         List<BEvent> listEvents = new ArrayList<BEvent>();
         Map<String, Object> result = new HashMap<String, Object>();
 
-        
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         DeployStatus deployStatus = milkCmdControlAPI.checkAndDeployCommand(parameter.pageDirectory, parameter.commandAPI,
                 parameter.platFormAPI, parameter.getTenantId());
@@ -141,9 +139,10 @@ public class MilkAccessAPI {
         result.put(cstJsonDeploimentsuc, statusDeployment);
         return result;
     }
-    
+
     /**
      * redeploy the command
+     * 
      * @param parameter
      * @return
      */
@@ -163,7 +162,7 @@ public class MilkAccessAPI {
         }
         result.put(cstJsonDeploimentsuc, "Command redeployed deployed;");
         return result;
- 
+
     }
 
     public Map<String, Object> getRefreshInformation(Parameter parameter) {
@@ -196,7 +195,7 @@ public class MilkAccessAPI {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.REMOVEJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
     }
-    
+
     public Map<String, Object> activateJob(Parameter parameter) {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.ACTIVATEJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
@@ -206,14 +205,17 @@ public class MilkAccessAPI {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.DEACTIVATEJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
     }
+
     public Map<String, Object> abortJob(Parameter parameter) {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.ABORTJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
     }
+
     public Map<String, Object> resetJob(Parameter parameter) {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.RESETJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
     }
+
     public Map<String, Object> updateJob(Parameter parameter) {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.UPDATEJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
@@ -233,6 +235,7 @@ public class MilkAccessAPI {
 
     /**
      * produce the Header
+     * 
      * @param parameter
      * @return
      */
@@ -261,6 +264,7 @@ public class MilkAccessAPI {
         }
         return mapHeaders;
     }
+
     /**
      * read a parameter file, and send the result in the outputStream (send to the browser)
      * 
@@ -303,8 +307,7 @@ public class MilkAccessAPI {
         // response.addHeader("content-type", "application/zip");
         return mapHeaders;
     }
-    
-  
+
     public Map<String, Object> scheduler(Parameter parameter) {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.SCHEDULERSTARTSTOP, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
@@ -312,7 +315,7 @@ public class MilkAccessAPI {
 
     public Map<String, Object> schedulerMaintenance(Parameter parameter) {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
-        Map<String, Object> result= milkCmdControlAPI.schedulerMaintenance(parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.platFormAPI, parameter.getTenantId());
+        Map<String, Object> result = milkCmdControlAPI.schedulerMaintenance(parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.platFormAPI, parameter.getTenantId());
         return result;
     }
 

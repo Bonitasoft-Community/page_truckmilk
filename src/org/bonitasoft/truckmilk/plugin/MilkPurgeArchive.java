@@ -61,6 +61,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
     public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
         return new ArrayList<BEvent>();
     };
+
     /**
      * check the Job's environment
      */

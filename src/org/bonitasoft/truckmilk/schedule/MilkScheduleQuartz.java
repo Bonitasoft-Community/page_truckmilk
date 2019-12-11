@@ -1,8 +1,6 @@
 package org.bonitasoft.truckmilk.schedule;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.StringWriter;
@@ -10,13 +8,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import org.bonitasoft.engine.builder.BuilderFactory;
-import org.bonitasoft.engine.dependency.DependencyService;
-import org.bonitasoft.engine.dependency.SDependencyException;
-import org.bonitasoft.engine.dependency.SDependencyNotFoundException;
-import org.bonitasoft.engine.dependency.model.SDependency;
 import org.bonitasoft.engine.dependency.model.ScopeType;
 import org.bonitasoft.engine.scheduler.SchedulerService;
 import org.bonitasoft.engine.scheduler.builder.SJobDescriptorBuilderFactory;
@@ -25,13 +18,10 @@ import org.bonitasoft.engine.scheduler.model.SJobDescriptor;
 import org.bonitasoft.engine.scheduler.model.SJobParameter;
 import org.bonitasoft.engine.scheduler.trigger.Trigger;
 import org.bonitasoft.engine.scheduler.trigger.UnixCronTrigger;
-import org.bonitasoft.engine.service.PlatformServiceAccessor;
 import org.bonitasoft.engine.service.TenantServiceAccessor;
 import org.bonitasoft.engine.service.TenantServiceSingleton;
 import org.bonitasoft.engine.service.impl.ServiceAccessorFactory;
 import org.bonitasoft.engine.sessionaccessor.SessionAccessor;
-import org.bonitasoft.engine.transaction.TransactionService;
-import org.bonitasoft.engine.transaction.UserTransactionService;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
@@ -198,15 +188,13 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
      * @return
      */
     public String getDescription() {
-        return "The QUARTZ engine embeded in Bonita is used to schedule the monitoring. Copy bonita-truckmilkquartzjob-client.jar to the Web Application server (webapp/bonita/WEB-INF/lib for a tomcat) and restart the server.";
+        return "The QUARTZ engine embeded in Bonita is used to schedule the monitoring. Copy TruckMilk-x.y.jar (in the Truckmilk.zip, under additionallib) to the Web Application server (webapp/bonita/WEB-INF/lib for a tomcat) and restart the server.";
     };
 
     public Execution getExecution() {
         return mExecution;
     }
-    
 
-   
     /* ******************************************************************************** */
     /*                                                                                  */
     /* Initialize : create the job */
@@ -232,7 +220,7 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
 
     public List<BEvent> startup(long tenantId, boolean forceReset) {
         List<BEvent> listEvents = new ArrayList<BEvent>();
-        logger.info(logHeader + "Startup QuartzJob reset["+forceReset+"]");
+        logger.info(logHeader + "Startup QuartzJob reset[" + forceReset + "]");
         try {
             final TenantServiceAccessor tenantAccessor = TenantServiceSingleton.getInstance(tenantId);
             tenantAccessor.getUserTransactionService().executeInTransaction(() -> {
@@ -314,6 +302,7 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
         }
         return listEvents;
     }
+
     /* ******************************************************************************** */
     /*                                                                                  */
     /* Operations */
@@ -321,12 +310,11 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
     /*                                                                                  */
     /* ******************************************************************************** */
     @Override
-    public List<BEvent> operation(Map<String,Serializable> parameters) {
+    public List<BEvent> operation(Map<String, Serializable> parameters) {
         List<BEvent> listEvents = new ArrayList<BEvent>();
         return listEvents;
-           
-    };
 
+    };
 
     /* ******************************************************************************** */
     /*                                                                                  */
@@ -336,7 +324,7 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
     /* ******************************************************************************** */
 
     public List<BEvent> checkAndDeploy(boolean forceDeploy, File pageDirectory, long tenantId) {
-        File fileQuartzJar = new File(pageDirectory.getAbsolutePath() + "/lib/TruckMilk-2.1-Quartzjob.jar");
+        File fileQuartzJar = new File(pageDirectory.getAbsolutePath() + "/lib/TruckMilk-2.2-Quartzjob.jar");
         // signature=getSignature(fileQuartzJar);
         return new ArrayList<BEvent>();
     }

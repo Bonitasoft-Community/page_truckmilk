@@ -27,14 +27,11 @@ public class MilkJobFactory {
     // private static MilkPlugInTourFactory milkPlugInTourFactory = new MilkPlugInTourFactory();
     private MilkPlugInFactory milkPlugInFactory = null;
     private List<BEvent> listInitialiseEvent = new ArrayList<BEvent>();
-    
 
     /**
      * this class is in charge to load/save tour
      */
     private MilkSerializeProperties milkSerialize;
-
-   
 
     public static MilkJobFactory getInstance(MilkPlugInFactory milkPlugInFactory) {
         MilkJobFactory milkJobFactory = new MilkJobFactory(milkPlugInFactory);
@@ -68,7 +65,7 @@ public class MilkJobFactory {
     public long getTenantId() {
         return milkPlugInFactory.getTenantId();
     }
-   
+
     /**
      * return the PLUGIN factory
      * 
@@ -122,9 +119,8 @@ public class MilkJobFactory {
     public synchronized List<BEvent> registerAJob(MilkJob milkJob) {
         List<BEvent> listEvents = new ArrayList<BEvent>();
         // name must exist
-        if (milkJob.getName()==null || milkJob.getName().trim().length()==0)
-        {
-            listEvents.add( EVENT_JOB_WITHOUT_NAME);
+        if (milkJob.getName() == null || milkJob.getName().trim().length() == 0) {
+            listEvents.add(EVENT_JOB_WITHOUT_NAME);
             return listEvents;
         }
         // name must be unique
@@ -150,14 +146,16 @@ public class MilkJobFactory {
     protected boolean existJob(long idTour) {
         return listJobsId.containsKey(idTour);
     }
-    
-    public class CreateJobStatus 
-    {
+
+    public class CreateJobStatus {
+
         List<BEvent> listEvents;
         MilkJob job;
     }
+
     /**
-     * create a tour from a plug in 
+     * create a tour from a plug in
+     * 
      * @param tourName
      * @param plugIn
      * @return
@@ -165,9 +163,9 @@ public class MilkJobFactory {
     public CreateJobStatus createMilkJob(String tourName, MilkPlugIn plugIn) {
         CreateJobStatus createJobStatus = new CreateJobStatus();
 
-        createJobStatus.job= MilkJob.getInstanceFromPlugin( tourName, plugIn, this);
-        createJobStatus.listEvents= registerAJob(createJobStatus.job);
-        
+        createJobStatus.job = MilkJob.getInstanceFromPlugin(tourName, plugIn, this);
+        createJobStatus.listEvents = registerAJob(createJobStatus.job);
+
         return createJobStatus;
     }
     /* ******************************************************************************** */

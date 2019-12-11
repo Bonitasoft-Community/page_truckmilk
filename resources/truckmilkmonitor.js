@@ -48,7 +48,8 @@
 			'show' : {
 				'schedule' : false,
 				'parameters' : false,
-				'report' : false
+				'report' : false,
+				'analysis' : false
 			},
 			'parameters' : [],
 			'schedule' : {},
@@ -321,6 +322,7 @@
 												// plugtourcopy.parametersvalue
 			plugtourcopy.parameters = null;
 			plugtourcopy.lastexecutionlistevents=null;
+			plugtourcopy.savedExecution = null;
 			
 			var json = angular.toJson( plugtourcopy, false);
 			
@@ -520,6 +522,7 @@
 			plugtourcopy.parametersdef = null; // parameters are in
 												// plugtourcopy.parametersvalue
 			plugtourcopy.parameters = null;
+			plugtourcopy.savedExecution = null;
 			plugtourcopy.buttonName= parameterdef.name;
 			plugtourcopy.args = plugtour.parametersvalue[ parameterdef.name ];
 			
@@ -548,7 +551,7 @@
 			
 			// console.log("query Call HTTP")
 			return $http.get( '?page=custompage_truckmilk&action='+queryName+'&paramjson='+json+'&t='+d.getTime() )
-			.success( function ( jsonResult, statusHttp, headers, config ) {
+			.then( function ( jsonResult, statusHttp, headers, config ) {
 				
 				// connection is lost ?
 				if (statusHttp==401 || typeof jsonResult === 'string') {
@@ -556,22 +559,16 @@
 					window.location.reload();
 
 				}
-					self.inprogress=false;
-					console.log("Query.receiveData HTTP inProgress<=false result="+angular.toJson(jsonResult, false));
-				 	self.list =  jsonResult.data.listProcess;
-			
-					return self.list;
-				})
-				.error( function ( jsonResult, statusHttp, headers, config ) {
-					console.log("query.error HTTP statusHttp="+statusHttp);
-					// connection is lost ?
-					if (statusHttp==401) {
-						console.log("Redirected to the login page !");
-						window.location.reload();
-					}
+				self.inprogress=false;
+				console.log("Query.receiveData HTTP inProgress<=false result="+angular.toJson(jsonResult.data, false));
+			 	self.list =  jsonResult.data.listProcess;
+		
+				return self.list;
+			}, function ( jsonResult ) {
+				console.log("QueryUser HTTP THEN");
+				self.inprogress=false;
 
-					self.inprogress=false;
-				});
+			});
 
 		  };
 		  
@@ -584,6 +581,7 @@
 				'schedule' : false,
 				'parameters' : false,
 				'report' : false,
+				'analysis' : false,
 				'hostrestriction':false
 			};
 		}
@@ -610,7 +608,14 @@
 			this.hideall(plugtour);
 			plugtour.show.report = true;
 		}
-
+		this.showanalysis = function(plugtour) {
+			// console.log("showreport:Start");
+			this.hideall(plugtour);
+			plugtour.show.analysis = true;
+		}
+		this.hasanalysis = function( plugtour) {
+			return plugtour.analysisdef.length > 0 ;
+		}
 		this.getJobStyle= function(plugtour) {
 			// console.log("getTourStyle:Start (r/o) plugtour="+plugtour.id+"
 			// imediateExecution="+plugtour.imediateExecution+"

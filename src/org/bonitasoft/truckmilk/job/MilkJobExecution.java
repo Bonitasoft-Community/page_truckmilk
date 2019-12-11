@@ -5,7 +5,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugTourOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
@@ -35,11 +34,12 @@ public class MilkJobExecution {
      * tenant where the job is running
      */
     public long tenantId;
+
     public MilkJobExecution(MilkJob milkJob, long tenantId) {
         this.milkJob = milkJob;
         this.tourParameters = milkJob.getTourParameters();
         tourName = milkJob.getName();
-        this.tenantId= tenantId;
+        this.tenantId = tenantId;
     }
 
     public PlugTourOutput getPlugTourOutput() {
@@ -121,11 +121,13 @@ public class MilkJobExecution {
 
     /**
      * get the tenantid
+     * 
      * @return
      */
     public long getTenantId() {
         return tenantId;
     }
+
     /* ******************************************************************************** */
     /*                                                                                  */
     /* please Stop mechanism */
@@ -140,7 +142,7 @@ public class MilkJobExecution {
     private Long pleaseStopInMinutes = null;
     private Long pleaseStopInManagedItems = null;
     private long nbManagedItems = 0;
-    private long nbPrepareditems=0;
+    private long nbPrepareditems = 0;
 
     public void setPleaseStopAfterTime(long timeInMinutes, Long defaultValue) {
         this.pleaseStopInMinutes = timeInMinutes == 0 ? defaultValue : timeInMinutes;
@@ -161,7 +163,7 @@ public class MilkJobExecution {
      */
 
     public void setPleaseStopAfterManagedItems(Long nbManagedItems, Long defaultValue) {
-        pleaseStopInManagedItems = nbManagedItems == null || nbManagedItems==0 ? defaultValue : nbManagedItems;
+        pleaseStopInManagedItems = nbManagedItems == null || nbManagedItems == 0 ? defaultValue : nbManagedItems;
     }
 
     public Long getPleaseStopAfterManagerItems() {
@@ -174,25 +176,26 @@ public class MilkJobExecution {
 
     /**
      * Some items may be ready to be executed, but not yet executed : there are in preparation.
-     * they are not yet register in the nbManagedItems. This number is take into account in the pleaseStop calculation. 
-     * When the pleaseStop is based on a number of Item (example, 40), and 35 are already managed , but 5 are in preparation, the pleaseStop() will return true then.
-     * ATTENTION: it's the caller responsability to update this number, set back to 0 when the prepared item are managed. 
-    * @param itemInPreparation : Number of Item in preparation
+     * they are not yet register in the nbManagedItems. This number is take into account in the pleaseStop calculation.
+     * When the pleaseStop is based on a number of Item (example, 40), and 35 are already managed , but 5 are in preparation, the pleaseStop() will return true
+     * then.
+     * ATTENTION: it's the caller responsability to update this number, set back to 0 when the prepared item are managed.
      * 
+     * @param itemInPreparation : Number of Item in preparation
      */
-    public void setNumberItemInPreparation( long nbPrepareditems)
-    {
+    public void setNumberItemInPreparation(long nbPrepareditems) {
         this.nbPrepareditems = nbPrepareditems;
     }
+
     boolean pleaseStop = false;
 
     public void setPleaseStop(boolean pleaseStop) {
         this.pleaseStop = pleaseStop;
     }
 
-    
     /**
      * PleaseStop
+     * 
      * @return
      */
     public boolean pleaseStop() {
@@ -242,7 +245,7 @@ public class MilkJobExecution {
      */
     public void setAvancementStep(long step) {
         if (totalStep != 0)
-            setAvancement((int) (100*step / totalStep));
+            setAvancement((int) (100 * step / totalStep));
         // register in the tour the % of advancement, and then calculated an estimated end date.
     }
 
@@ -259,8 +262,8 @@ public class MilkJobExecution {
             long timeExecution = System.currentTimeMillis() - startTimeMs;
             if (timeExecution > 0 && advancementInPercent > 0) {
                 milkJob.trackExecution.totalTimeEstimatedInMs = timeExecution * 100 / advancementInPercent;
-                milkJob.trackExecution.endTimeEstimatedInMs =  milkJob.trackExecution.totalTimeEstimatedInMs - timeExecution;
-                milkJob.trackExecution.endDateEstimated = new Date( milkJob.trackExecution.endTimeEstimatedInMs + startTimeMs );
+                milkJob.trackExecution.endTimeEstimatedInMs = milkJob.trackExecution.totalTimeEstimatedInMs - timeExecution;
+                milkJob.trackExecution.endDateEstimated = new Date(milkJob.trackExecution.endTimeEstimatedInMs + startTimeMs);
                 // save the current advancement
                 SaveJobParameters saveParameters = SaveJobParameters.getInstanceTrackExecution();
                 milkJob.milkJobFactory.dbSaveJob(milkJob, saveParameters);

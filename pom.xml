@@ -2,13 +2,13 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bonitasoft.custompage</groupId>
 	<artifactId>TruckMilk</artifactId>
-	<!--  Attention, when number change here, update -->
-	<!--   * MilkCmdControlAPI.checkAndDeployCommand -->
-	<!--   * MilkScheduleQuartz (File fileQuartzJar = new File(pageDirectory.getAbsolutePath() + "/lib/TruckMilk-2.1-Quartzjob.jar")  -->
-	<version>2.1</version>
- 	<properties>
-        <bonita.version>7.8.4</bonita.version>
-  	</properties>
+	<!-- Attention, when number change here, update -->
+	<!-- * MilkCmdControlAPI.checkAndDeployCommand        ( commandDescription.mainJarFile = "TruckMilk-2.1-Page.jar") -->
+	<!-- * MilkScheduleQuartz (File fileQuartzJar = new File(pageDirectory.getAbsolutePath() + "/lib/TruckMilk-2.1-Quartzjob.jar") -->
+	<version>2.2</version>
+	<properties>
+		<bonita.version>7.8.4</bonita.version>
+	</properties>
 	<name>TruckMilk</name>
 	<dependencies>
 
@@ -26,7 +26,7 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<!--  Any change here ? Change MilkCmdControlAPI -->
+		<!-- Any change here ? Change MilkCmdControlAPI -->
 		<dependency>
 			<groupId>org.bonitasoft.log.event</groupId>
 			<artifactId>bonita-event</artifactId>
@@ -35,10 +35,10 @@
 
 		<dependency>
 			<groupId>org.bonitasoft.command</groupId>
-  			<artifactId>bonita-commanddeployment</artifactId>
-  			<version>1.5</version>
+			<artifactId>bonita-commanddeployment</artifactId>
+			<version>1.5</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.bonitasoft.properties</groupId>
 			<artifactId>bonita-properties</artifactId>
@@ -55,18 +55,18 @@
 			<artifactId>mail</artifactId>
 			<version>1.5.0-b01</version>
 		</dependency>
-		
-		
+
+
 		<!-- to execute the Deploy Plugin -->
 		<dependency>
 			<groupId>org.bonitasoft.store</groupId>
 			<artifactId>bonita-store</artifactId>
 			<version>1.1.0</version>
 		</dependency>
-		
+
 	</dependencies>
-	
-	
+
+
 	<!-- ******************** Community Maven repository **************** -->
 	<repositories>
 		<repository>
@@ -83,11 +83,11 @@
 			<layout>default</layout>
 		</repository>
 	</repositories>
-	
+
 	<build>
 		<plugins>
-		
-			<!-- ******************** Generate the Quartz Jar File **************** -->		
+
+			<!-- ******************** Generate the Quartz Jar File **************** -->
 			<plugin>
 				<artifactId>maven-jar-plugin</artifactId>
 				<executions>
@@ -104,7 +104,7 @@
 							</excludes>
 						</configuration>
 					</execution>
-					
+
 					<execution>
 						<id>everything</id>
 						<goals>
@@ -120,8 +120,8 @@
 					</execution>
 				</executions>
 			</plugin>
-			
-			
+
+
 			<!-- ******************** Copy JAR files under lib **************** -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -143,43 +143,17 @@
 						</configuration>
 					</execution>
 
-					<!-- <execution>
-						<id>copy-Jar</id>
-						<phase>package</phase>
-						<goals>
-							<goal>copy</goal>
-						</goals>
-						<configuration>
-							<outputDirectory>${basedir}/lib</outputDirectory>
-							<artifactItems>
-								<artifactItem>
-									<groupId>${project.groupId}</groupId>
-									<artifactId>${project.artifactId}</artifactId>
-									<version>${project.version}</version>
-									<overWrite>true</overWrite>
-								</artifactItem>
-							</artifactItems>
-							<resources>
-								<resource>
-									<directory>target</directory>
-									<includes>
-										<include>*-Page.jar</include>
-										<include>*-Quartzjob.jar</include>
-									</includes>
-								</resource>
-							</resources>
-
-						</configuration>
-					</execution>
-					-->
-					</executions>
-				</plugin>
-				<plugin>
-        			<artifactId>maven-resources-plugin</artifactId>
-        			<version>3.1.0</version>
-        			<executions>
+					<!-- <execution> <id>copy-Jar</id> <phase>package</phase> <goals> <goal>copy</goal> </goals> <configuration> <outputDirectory>${basedir}/lib</outputDirectory> <artifactItems> <artifactItem> <groupId>${project.groupId}</groupId> 
+						<artifactId>${project.artifactId}</artifactId> <version>${project.version}</version> <overWrite>true</overWrite> </artifactItem> </artifactItems> <resources> <resource> <directory>target</directory> <includes> 
+						<include>*-Page.jar</include> <include>*-Quartzjob.jar</include> </includes> </resource> </resources> </configuration> </execution> -->
+				</executions>
+			</plugin>
+			<plugin>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
 					<execution>
-						<id>copy-Specific-Jar</id>
+						<id>copy-Specific-Jar-Page</id>
 						<phase>package</phase>
 						<goals>
 							<goal>copy-resources</goal>
@@ -191,7 +165,6 @@
 									<directory>target</directory>
 									<includes>
 										<include>*-Page.jar</include>
-										<include>*-Quartzjob.jar</include>
 									</includes>
 								</resource>
 							</resources>
@@ -201,6 +174,31 @@
 				</executions>
 			</plugin>
 
+			<plugin>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<id>copy-Specific-Jar-Quartz</id>
+						<phase>package</phase>
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${basedir}/additionallib</outputDirectory>
+							<resources>
+								<resource>
+									<directory>target</directory>
+									<includes>
+										<include>*-Quartzjob.jar</include>
+									</includes>
+								</resource>
+							</resources>
+
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 			<!-- ******************** Generate the Resource (ZIP FILE) -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -257,9 +255,9 @@
 					</execution>
 				</executions>
 			</plugin>
-			
-			
-			
+
+
+
 		</plugins>
 	</build>
 

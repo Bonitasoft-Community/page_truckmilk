@@ -3,7 +3,6 @@ package org.bonitasoft.truckmilk.plugin;
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,15 +11,7 @@ import org.bonitasoft.command.BonitaCommandDeployment;
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.CommandAPI;
 import org.bonitasoft.log.event.BEvent;
-import org.bonitasoft.log.event.BEvent.Level;
-import org.bonitasoft.truckmilk.engine.MilkCmdControl;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.ExecutionStatus;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugTourOutput;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.TYPE_PLUGIN;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 
 /* ******************************************************************************** */
@@ -35,7 +26,6 @@ public class MilkCommand extends MilkPlugIn {
 
     private static PlugInParameter cstParamCommandName = PlugInParameter.createInstance("commandName", "Command name", TypeParameter.STRING, true, "Command name to call");
     private static PlugInParameter cstParamCommandParameters = PlugInParameter.createInstance("parameters", "Parameters", TypeParameter.JSON, true, "Parameters to send to the command");
-
 
     SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
@@ -53,7 +43,7 @@ public class MilkCommand extends MilkPlugIn {
     public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
         return new ArrayList<BEvent>();
     }
-    
+
     /**
      * check the environment of the job: is the command exist?
      */
@@ -62,6 +52,7 @@ public class MilkCommand extends MilkPlugIn {
         // is the command Exist ? 
         return new ArrayList<BEvent>();
     }
+
     /**
      * return the description of job
      */
@@ -85,12 +76,11 @@ public class MilkCommand extends MilkPlugIn {
         PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
 
         // if the date has to be added in the result ?
-        String commandName = jobExecution.getInputStringParameter( cstParamCommandName);
+        String commandName = jobExecution.getInputStringParameter(cstParamCommandName);
         String commandParameters = jobExecution.getInputStringParameter(cstParamCommandParameters);
-      
-        
+
         // call the command
-        
+
         plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
         if (jobExecution.pleaseStop())
             plugTourOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
@@ -100,18 +90,18 @@ public class MilkCommand extends MilkPlugIn {
 
     /**
      * call the command
+     * 
      * @param commandName
      * @param commandParameters
      * @param tenantId
      * @param apiAccessor
      * @return
      */
-    public Map<String, Object>  callCommand( String commandName, HashMap<String,Serializable> commandParameters, long tenantId, APIAccessor apiAccessor)
-    {
+    public Map<String, Object> callCommand(String commandName, HashMap<String, Serializable> commandParameters, long tenantId, APIAccessor apiAccessor) {
         CommandAPI commandAPI = apiAccessor.getCommandAPI();
         BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(commandName);
-        
-        return bonitaCommand.callDirectCommand( commandParameters, tenantId, commandAPI);
+
+        return bonitaCommand.callDirectCommand(commandParameters, tenantId, commandAPI);
 
     }
 }

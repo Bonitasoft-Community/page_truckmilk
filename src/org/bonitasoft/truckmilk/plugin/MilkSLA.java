@@ -1,7 +1,10 @@
 package org.bonitasoft.truckmilk.plugin;
 
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.io.StringWriter;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -11,21 +14,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
-import java.util.logging.Logger;
 
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.IdentityAPI;
 import org.bonitasoft.engine.api.ProcessAPI;
 import org.bonitasoft.engine.bpm.actor.ActorInstance;
 import org.bonitasoft.engine.bpm.actor.ActorNotFoundException;
+import org.bonitasoft.engine.bpm.contract.ContractViolationException;
 import org.bonitasoft.engine.bpm.data.DataInstance;
 import org.bonitasoft.engine.bpm.data.DataNotFoundException;
 import org.bonitasoft.engine.bpm.flownode.HumanTaskInstance;
 import org.bonitasoft.engine.bpm.flownode.HumanTaskInstanceSearchDescriptor;
+import org.bonitasoft.engine.bpm.process.ProcessActivationException;
+import org.bonitasoft.engine.bpm.process.ProcessDefinition;
+import org.bonitasoft.engine.bpm.process.ProcessDefinitionNotFoundException;
 import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfo;
 import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfoSearchDescriptor;
+import org.bonitasoft.engine.bpm.process.ProcessExecutionException;
 import org.bonitasoft.engine.exception.SearchException;
 import org.bonitasoft.engine.exception.UpdateException;
+import org.bonitasoft.engine.expression.Expression;
+import org.bonitasoft.engine.expression.ExpressionBuilder;
+import org.bonitasoft.engine.expression.ExpressionType;
+import org.bonitasoft.engine.expression.InvalidExpressionException;
 import org.bonitasoft.engine.identity.ContactData;
 import org.bonitasoft.engine.identity.User;
 import org.bonitasoft.engine.identity.UserNotFoundException;
@@ -42,90 +53,123 @@ import org.bonitasoft.truckmilk.toolbox.SendMail;
 import org.bonitasoft.truckmilk.toolbox.SendMailEnvironment;
 import org.bonitasoft.truckmilk.toolbox.SendMailParameters;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
+import org.json.simple.JSONValue;
 
 public class MilkSLA extends MilkPlugIn {
 
     static MilkLog logger = MilkLog.getLogger(MilkSLA.class.getName());
 
-    private static BEvent EVENT_NO_PROCESS_MATCH_FILTER = new BEvent(MilkPurgeArchive.class.getName(), 1,
+    private static BEvent EVENT_NO_PROCESS_FILTER = new BEvent(MilkPurgeArchive.class.getName(), 1,
             Level.APPLICATIONERROR,
-            "No process match filter", "No process is found with the given filter", "This filter does not apply.",
-            "Check the process name");
+            "No process filter", "The process filter is empty", "SLA can't run.",
+            "Give a process name");
 
-    private static BEvent EVENT_VARIABLE_REGISTRATION_NOT_FOUND = new BEvent(MilkSLA.class.getName(), 2,
+    private static BEvent EVENT_NO_PROCESS_MATCH_FILTER = new BEvent(MilkPurgeArchive.class.getName(), 2,
+            Level.APPLICATIONERROR,
+            "No process found", "No process is found with the given filter", "This filter does not apply.",
+            "Check the process name (you must give as minimum one process)");
+
+    private static BEvent EVENT_VARIABLE_REGISTRATION_NOT_FOUND = new BEvent(MilkSLA.class.getName(), 3,
             Level.APPLICATIONERROR,
             "Variable not found", "The variable registration referenced in the rule does not exist in this process", "Impossible to declare the rule was executed or not. SLA considere this is already executed then.",
             "Add the process variable as a MAP, else use the delaiRegistration");
 
-    private static BEvent EVENT_NO_MECHANISM_REGISTER = new BEvent(MilkSLA.class.getName(), 3,
+    private static BEvent EVENT_NO_MECHANISM_REGISTER = new BEvent(MilkSLA.class.getName(), 4,
             Level.APPLICATIONERROR,
-            "No mechanism registerd", "To detect if a rule is already executed or not, two mechanism is possible, by a variable or a Duration slot. No mechanism is selected.", "Impossible to declare the rule was executed or not. SLA considere this is already executed then.",
+            "No Rebound mechanism registered", "To detect if a rule is already executed or not, two mechanism is possible, by a variable or a Duration slot. No mechanism is selected.", "Impossible to declare the rule was executed or not. SLA considere this is already executed then.",
             "Choose a mechanism");
 
-    private static BEvent EVENT_VARIABLE_REGISTRATON_CLASS_ERROR = new BEvent(MilkSLA.class.getName(), 4,
+    private static BEvent EVENT_VARIABLE_REGISTRATON_CLASS_ERROR = new BEvent(MilkSLA.class.getName(), 5,
             Level.APPLICATIONERROR,
             "Variable Class Error", "The variable registration referenced in the rule must be a Map", "Impossible to declare the rule was executed or not. SLA considere this is already executed then.",
             "Reference this variable as a HASHMAP");
 
-    private static BEvent EVENT_VARIABLE_UPDATE_FAILED = new BEvent(MilkSLA.class.getName(), 5,
+    private static BEvent EVENT_VARIABLE_UPDATE_FAILED = new BEvent(MilkSLA.class.getName(), 6,
             Level.APPLICATIONERROR,
             "Update Variable failed", "After the execution, the variable must be updated to not reexecute the same SLA. Update failed", "The task will be reexecuted.",
             "Check the error");
 
-    private static BEvent EVENT_UNKNOW_ACTION = new BEvent(MilkSLA.class.getName(), 6,
+    private static BEvent EVENT_UNKNOW_ACTION = new BEvent(MilkSLA.class.getName(), 7,
             Level.APPLICATIONERROR,
             "Unknow Action",
             "Action unknown",
             "Give an existing action.",
             "Check the action of the rule");
 
-    private static BEvent EVENT_ASSIGN_TASK_FAILED = new BEvent(MilkSLA.class.getName(), 7,
+    private static BEvent EVENT_ASSIGN_TASK_FAILED = new BEvent(MilkSLA.class.getName(), 8,
             Level.APPLICATIONERROR,
             "Assignement failed",
             "It is not possible to assign a task to a user",
             "Task is not assigned",
             "Check the error of assignement");
 
-    private static BEvent EVENT_USER_NOT_FOUND = new BEvent(MilkSLA.class.getName(), 7,
+    private static BEvent EVENT_USER_NOT_FOUND = new BEvent(MilkSLA.class.getName(), 9,
             Level.APPLICATIONERROR,
             "User not found",
             "The requested user is not found",
             "No action done",
             "Check the user name in your organization");
 
-    private static BEvent EVENT_NO_USER = new BEvent(MilkSLA.class.getName(), 8,
+    private static BEvent EVENT_NO_USER = new BEvent(MilkSLA.class.getName(), 10,
             Level.APPLICATIONERROR,
             "No user found for this task",
             "This task is not pending or assign to any user",
             "Operation faiked",
             "Check the tasks");
 
-    private static BEvent EVENT_ACTOR_NOT_FOUND = new BEvent(MilkSLA.class.getName(), 9,
+    private static BEvent EVENT_ACTOR_NOT_FOUND = new BEvent(MilkSLA.class.getName(), 11,
             Level.APPLICATIONERROR,
             "No actor in the tasks",
             "This task does not have an actor",
-            "Operation faiked",
-            "Check the tasks");
+            "Operation failed",
+            "Check the task");
 
-    private static BEvent EVENT_SLA_EXECUTION_DONE = new BEvent(MilkSLA.class.getName(), 10,
+    private static BEvent EVENT_SLA_EXECUTION_DONE = new BEvent(MilkSLA.class.getName(), 12,
             Level.SUCCESS,
             "SLA rules executed",
             "A set of execution rule was performed");
 
-    private static BEvent EVENT_CASEID_NOT_SET = new BEvent(MilkSLA.class.getName(), 10,
+    private static BEvent EVENT_CASEID_NOT_SET = new BEvent(MilkSLA.class.getName(), 13,
             Level.APPLICATIONERROR,
             "CaseId not set",
             "Give a correct CASEID for the analysis", "No analysis is performed", "Case Id is a number");
 
-    private static BEvent EVENT_SLA_ANALYSIS = new BEvent(MilkSLA.class.getName(), 11,
+    private static BEvent EVENT_SLA_ANALYSIS = new BEvent(MilkSLA.class.getName(), 14,
             Level.SUCCESS,
             "Analysis is done",
             "Please find the analysis");
 
-    private static BEvent EVENT_SLA_ERROR = new BEvent(MilkSLA.class.getName(), 12,
+    private static BEvent EVENT_SLA_ERROR = new BEvent(MilkSLA.class.getName(), 15,
             Level.ERROR,
             "Error during execution",
             "An error arrived during the execution", "Execution stopped", "Contact the adminstrator");
+
+    private static BEvent EVENT_PROCESSID_NOT_FOUND = new BEvent(MilkSLA.class.getName(), 16,
+            Level.ERROR,
+            "processID not found",
+            "This task reference an unknow process Definition ID",
+            "Operation failed",
+            "Check the Process ID");
+    private static BEvent EVENT_JSONERROR = new BEvent(MilkSLA.class.getName(), 17,
+            Level.APPLICATIONERROR,
+            "Json error",
+            "Json does not respect the Json format",
+            "Operation failed",
+            "Check the source JSON");
+
+    private static BEvent EVENT_PROCESSCONTRACTVIOLATION = new BEvent(MilkSLA.class.getName(), 18,
+            Level.APPLICATIONERROR,
+            "Contract violation error",
+            "Contract to start the process is not correct",
+            "Operation failed",
+            "Check the contract and the given input");
+
+    private static BEvent EVENT_MESSAGE_ERROR = new BEvent(MilkSLA.class.getName(), 18,
+            Level.APPLICATIONERROR,
+            "Message error",
+            "A message can't be send",
+            "Operation failed",
+            "Check error and give the correct message definition");
 
     private static PlugInParameter cstParamProcessName = PlugInParameter.createInstance("ProcessName", "Process Name", TypeParameter.PROCESSNAME, "", "Process name is mandatory. You can specify the process AND the version, or only the process name: all versions of this process is then checked");
 
@@ -137,17 +181,27 @@ public class MilkSLA extends MilkPlugIn {
                             + ACTION.EMAILCANDIDATES.toString() + ", "
                             + ACTION.EMAILACTOR.toString() + ":<actor>,"
                             + ACTION.ASSIGNUSER.toString() + ":<userName>, "
-                            + ACTION.ASSIGNSUPERVISOR.toString() + ":[1] ", TypeParameter.STRING, 50)),
+                            + ACTION.ASSIGNSUPERVISOR.toString() + ":[1], "
+                            + ACTION.STARTPROCESS.toString() + ":<processName (<processVersion)>;<JSONinput>,"
+                            + ACTION.SENDMESSAGE.toString() + ":<messageName>;<targetProcess (<processversion>);<targetFlowNode>;<JSONMessageContent>;<JSONMessageCorrelation>",
+                            TypeParameter.TEXT, 50)),
             null, "Give a list of rules. Each rule describe the threshold in percent 0-task start, 100% due date, and action");
+
+    private static PlugInParameter cstParamSeparatorEmail = PlugInParameter.createInstance("Mail", "Parameters mail", TypeParameter.SEPARATOR, "", "SLA Job may have a EMAIL action. This is then the email configuration.");
     private static PlugInParameter cstParamEmailFrom = PlugInParameter.createInstance("emailfrom", "Email from", TypeParameter.STRING, "bonitasoftreminder@myserver.com", "The 'mail from' attribute");
     private static PlugInParameter cstParamEmailSubject = PlugInParameter.createInstance("EmailSubject", "Email subject", TypeParameter.STRING, "The task {{taskName}} in case {{caseId}} need your attention", "Subject of the mail. See the content to the list of Place holder allowed");
     private static PlugInParameter cstParamEmailContent = PlugInParameter.createInstance("EmailContent", "Email content", TypeParameter.TEXT, "A task is close to its due date. Access the {{taskUrl}}",
             "Content of the mail. Place holder are <i>taskName</i>, <i>caseId</i>, <i>percentThreashold</i>% threasold active, <i>userFirstName</i>User first name, receiver of the mail, <i>userLastName</i>User last name, receiver of the mail, <i>userTitle</i>User title, receiver of the mail");
     private static PlugInParameter cstParamEmailBonitaServer = PlugInParameter.createInstance("EmailBonitaServer", "Bonita server", TypeParameter.STRING, "http://localhost:8080", "HTTP address to join the caseId, if you place the <i>taskURL</i> in the content on the mail, to access the Bonita server");
+
+    private static PlugInParameter cstParamSeparatorRebound = PlugInParameter.createInstance("Rebound", "Rebound mechanism", TypeParameter.SEPARATOR, "", "To avoid to execute twice an action on a task, different mechanism are available.");
+
     private static PlugInParameter cstParamProcessVariableRegistration = PlugInParameter.createInstance("ProcessVariableRegistration", "Process Variable registration", TypeParameter.STRING, null, "To avoid to execute the same rule, give access to a Process Variable HASHMAP, then all executions are registered on this data");
     private static PlugInParameter cstParamDelaiRegistrationInMn = PlugInParameter.createInstance("DelaiRegistrationInMinute", "Delay registration in minutes", TypeParameter.LONG, null,
             "To avoid to execute the same rule, and you can't give a Process variable, allow a registration in minute. Action is executed if the time slot is 'Fire < Current time < File + Duration'");
-    private static PlugInParameter cstParamMaximumTask = PlugInParameter.createInstance("MaximumTask", "Maximum tasks", TypeParameter.LONG, 10000L, "In order to protect the server, this is the maxim task the rule will check in the process");
+    private static PlugInParameter cstParamMaximumTask = PlugInParameter.createInstance("MaximumTask", "Maximum tasks", TypeParameter.LONG, 10000L, "In order to protect the server, this is the maximum task the rule will check in the process");
+
+    
 
     public static PlugInParameter cstParamAnalyseCaseId = PlugInParameter.createInstanceButton("AnalyseCaseId", "Analyse a specific case", Arrays.asList("CaseId"), Arrays.asList(""), "Give a caseId and an explanation will be return to describe what was done for this caseId", "Click on the button to start the analysis");
 
@@ -156,7 +210,7 @@ public class MilkSLA extends MilkPlugIn {
      * 
      */
     public static enum ACTION {
-        EMAILUSER, EMAILCANDIDATES, EMAILACTOR, ASSIGNUSER, ASSIGNSUPERVISOR
+        EMAILUSER, EMAILCANDIDATES, EMAILACTOR, ASSIGNUSER, ASSIGNSUPERVISOR, STARTPROCESS, SENDMESSAGE
     }
 
     public MilkSLA() {
@@ -198,6 +252,10 @@ public class MilkSLA extends MilkPlugIn {
                 return ACTION.ASSIGNUSER;
             if (action.startsWith(ACTION.ASSIGNSUPERVISOR.toString()))
                 return ACTION.ASSIGNSUPERVISOR;
+            if (action.startsWith(ACTION.STARTPROCESS.toString()))
+                return ACTION.STARTPROCESS;
+            if (action.startsWith(ACTION.SENDMESSAGE.toString()))
+                return ACTION.SENDMESSAGE;
             return null;
         }
 
@@ -258,6 +316,7 @@ public class MilkSLA extends MilkPlugIn {
     public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
         return SendMailEnvironment.checkEnvironment(tenantId, this);
     };
+
     /**
      * check the Job's environment
      */
@@ -298,27 +357,47 @@ public class MilkSLA extends MilkPlugIn {
         plugInDescription.explanation += " <li> " + ACTION.EMAILCANDIDATES.name() + "</li>";
         plugInDescription.explanation += " <li> " + ACTION.ASSIGNUSER.name() + ":<userName> directly assign the task to a user. </li>";
         plugInDescription.explanation += " <li> " + ACTION.ASSIGNSUPERVISOR.name() + ":[1] assign to supervisor (1) or supervisor of supervisor(2) - stop if no supervisor.";
+        plugInDescription.explanation += " <li> " + ACTION.STARTPROCESS.name() + ":<processName>;<processVersion>;<JSONinput>. JSONInput to match the input contract to start the process .<br>";
+        plugInDescription.explanation += " <li> " + ACTION.SENDMESSAGE.name() + ":<messageName>;<targetProcess>;targetFlowNode;<JSONMessageContent>;<JSONMessageCorrelation>";
         plugInDescription.explanation += " </ul><br>";
+        plugInDescription.explanation += "<i>Place Holder Variable</i><br>";
+        plugInDescription.explanation += "When a JSON is required, theses place holder are available:<br>";
+        plugInDescription.explanation += "<ul> <li>{{processName}} <NAME> name of the process</li>";
+        plugInDescription.explanation += " <li>{{processVersion}} <STRING> version</li> ";
+        plugInDescription.explanation += "<li>{{processId}}: <LONG> Process's ID</li> ";
+        plugInDescription.explanation += "<li>{{caseId}}: <LONG> Case's ID</li> ";
+        plugInDescription.explanation += "<li>{{taskId}}: <LONG> Task's ID</li> ";
+        plugInDescription.explanation += "<li>{{taskName}}: <STRING> TaskName</li>";
+        plugInDescription.explanation += "<li>{{percentThreashold}}: <LONG> percent of SLA</li> ";
+        plugInDescription.explanation += "<li>{{dueDate}} : <LOCALDATETIME> Due date</li></ul>";
+        plugInDescription.explanation += "(example {'proc': '{{processname}}', 'taskId':{{taskId}}, 'SLA':'Level2' })";
         plugInDescription.explanation += "<i>Registration</i><br>";
         plugInDescription.explanation += "To avoid to send twice a SLA email, you can setup a variable in the process. Job will register that it already sent the '60% milestone' email. Else, give a delay in minutes: if the milstone was between [CurrentTime - Delay, CurrentTime], then it is not resend";
 
         plugInDescription.addParameter(cstParamProcessName);
         plugInDescription.addParameter(cstParamRuleSLA);
+        plugInDescription.addParameter(cstParamMaximumTask);
+        plugInDescription.addParameter(cstParamSeparatorEmail);
         plugInDescription.addParameter(cstParamEmailFrom);
         plugInDescription.addParameter(cstParamEmailSubject);
         plugInDescription.addParameter(cstParamEmailContent);
         plugInDescription.addParameter(cstParamEmailBonitaServer);
+
+        plugInDescription.addParameter(cstParamSeparatorRebound);
         plugInDescription.addParameter(cstParamProcessVariableRegistration);
         plugInDescription.addParameter(cstParamDelaiRegistrationInMn);
-        plugInDescription.addParameter(cstParamMaximumTask);
-        plugInDescription.addParameter(cstParamAnalyseCaseId);
+
+
 
         try {
             SendMailParameters.addPlugInParameter(SendMailParameters.MAIL_DIRECTION.SENDONLY, plugInDescription);
+            SendMailParameters.addPlugInAnalysis(SendMailParameters.MAIL_DIRECTION.SENDONLY, plugInDescription);
+
         } catch (Error er) {
             // do nothing here, the error will show up again in the check Environment
             // Cause : the Email Jar file is not installed, then java.lang.NoClassDefFoundError: javax/mail/Address
         }
+        plugInDescription.addAnalysisParameter(cstParamAnalyseCaseId);
 
         /*
          * plugInDescription.addParameterFromMapJson(
@@ -365,7 +444,7 @@ public class MilkSLA extends MilkPlugIn {
 
         public boolean isActive = false;
         public Long caseId;
-        public String explanation;
+        public String explanation = "";
         public boolean recordIsOn = false;
 
         public void addExplanation(boolean forceRecord, String comment) {
@@ -390,9 +469,15 @@ public class MilkSLA extends MilkPlugIn {
         int numberOfAnalysis = 0;
         String detailsExecution = "";
         try {
+            if (processName == null || processName.trim().length() == 0) {
+                plugTourOutput.addEvent(EVENT_NO_PROCESS_FILTER);
+                return plugTourOutput;
+            }
             SearchResult<ProcessDeploymentInfo> searchProcessInfo = getListProcessDefinitionId(processName, processAPI);
-            if (searchProcessInfo.getCount() == 0)
+            if (searchProcessInfo.getCount() == 0) {
                 plugTourOutput.addEvent(new BEvent(EVENT_NO_PROCESS_MATCH_FILTER, "ProcessName[" + processName + "]"));
+                return plugTourOutput;
+            }
 
             for (ProcessDeploymentInfo processInfo : searchProcessInfo.getResult()) {
 
@@ -492,9 +577,9 @@ public class MilkSLA extends MilkPlugIn {
             if (!collectAnalysisExecution.isActive) {
                 if (numberOfExecution == 0) {
                     plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
-                    plugTourOutput.addEvent(new BEvent(EVENT_SLA_EXECUTION_DONE, "Analysis:" + numberOfAnalysis));
+                    plugTourOutput.addEvent(new BEvent(EVENT_SLA_EXECUTION_DONE, "Analysis:" + numberOfAnalysis+" tasks"));
                 } else
-                    plugTourOutput.addEvent(new BEvent(EVENT_SLA_EXECUTION_DONE, "On cases:" + detailsExecution + " Analysis:" + numberOfAnalysis));
+                    plugTourOutput.addEvent(new BEvent(EVENT_SLA_EXECUTION_DONE, "On cases:" + detailsExecution + " Analysis:" + numberOfAnalysis+" tasks"));
 
                 if (plugTourOutput.getListEvents() != null && BEventFactory.isError(plugTourOutput.getListEvents()))
                     plugTourOutput.executionStatus = ExecutionStatus.ERROR;
@@ -512,6 +597,7 @@ public class MilkSLA extends MilkPlugIn {
         if (analysisCaseId != null) {
             plugTourOutput.addEvent(new BEvent(EVENT_SLA_ANALYSIS, collectAnalysisExecution.explanation));
         }
+        
         return plugTourOutput;
     }
 
@@ -524,22 +610,22 @@ public class MilkSLA extends MilkPlugIn {
      * @return
      * @throws SearchException
      */
-    private SearchResult<ProcessDeploymentInfo> getListProcessDefinitionId(String processName, ProcessAPI processAPI) throws SearchException {
+    private SearchResult<ProcessDeploymentInfo> getListProcessDefinitionId(String processNameVersion, ProcessAPI processAPI) throws SearchException {
 
-        processName = processName.trim();
-        String processNameOnly = processName;
+        processNameVersion = processNameVersion.trim();
+        String processNameOnly = processNameVersion;
         String processVersionOnly = null;
-        if (processName.endsWith(")")) {
-            int firstParenthesis = processName.lastIndexOf("(");
+        if (processNameVersion.endsWith(")")) {
+            int firstParenthesis = processNameVersion.lastIndexOf("(");
             if (firstParenthesis != -1) {
-                processNameOnly = processName.substring(0, firstParenthesis - 1);
-                processVersionOnly = processName.substring(firstParenthesis + 1, processName.length() - 1);
+                processNameOnly = processNameVersion.substring(0, firstParenthesis);
+                processVersionOnly = processNameVersion.substring(firstParenthesis + 1, processNameVersion.length() - 1);
             }
         }
         SearchOptionsBuilder searchOption = new SearchOptionsBuilder(0, 1000);
-        searchOption.filter(ProcessDeploymentInfoSearchDescriptor.NAME, processNameOnly);
+        searchOption.filter(ProcessDeploymentInfoSearchDescriptor.NAME, processNameOnly.trim());
         if (processVersionOnly != null) {
-            searchOption.filter(ProcessDeploymentInfoSearchDescriptor.VERSION, processVersionOnly);
+            searchOption.filter(ProcessDeploymentInfoSearchDescriptor.VERSION, processVersionOnly.trim());
         }
         return processAPI.searchProcessDeploymentInfos(searchOption.done());
 
@@ -777,6 +863,78 @@ public class MilkSLA extends MilkPlugIn {
                     String content = resolvePlaceHolder(humanTask, user, rule, input, input.getInputStringParameter(cstParamEmailContent));
                     listEvents.addAll(sendMail.sendMail(contactData.getEmail(), "bonitasoft@SLA.com", subject, content));
                 }
+            } else if (rule.getAction() == ACTION.STARTPROCESS) {
+                StringTokenizer st = new StringTokenizer(rule.getActionParameters(), ";");
+                String processNameVersion = st.hasMoreTokens() ? st.nextToken() : null;
+                String jsonInput = st.hasMoreTokens() ? st.nextToken() : null;
+
+                ProcessDeploymentInfo processDeploymentInfo = null;
+                ResolvedPlaceHolder resolvedPlaceHolder =null;
+                try {
+                    SearchResult<ProcessDeploymentInfo> listProcessDeploymenInfo = getListProcessDefinitionId(processNameVersion, processAPI);
+                    if (listProcessDeploymenInfo.getCount() == 0)
+                        listEvents.add(new BEvent(EVENT_NO_PROCESS_MATCH_FILTER, "ProcessName[" + processNameVersion + "]"));
+                    else {
+                        processDeploymentInfo = listProcessDeploymenInfo.getResult().get(0);
+                        resolvedPlaceHolder = resolvePlaceHolderProcess(humanTask, rule, input, jsonInput, processAPI);
+                        listEvents.addAll( resolvedPlaceHolder.listEvents );
+                        if (! BEventFactory.isError(resolvedPlaceHolder.listEvents))
+                            processAPI.startProcessWithInputs(processDeploymentInfo.getProcessId(), resolvedPlaceHolder.jsonMap);
+                    }
+                } catch (ContractViolationException | ProcessActivationException | ProcessExecutionException ce) {
+                    listEvents.add(new BEvent(EVENT_PROCESSCONTRACTVIOLATION, ce,
+                            "JSon[" + jsonInput + "] jsonInputResolved["+(resolvedPlaceHolder==null ? null : resolvedPlaceHolder.jsonResolved)
+                            +"] ProcessId[" + (processDeploymentInfo == null ? null : processDeploymentInfo.getProcessId())
+                                    + "] ProcessName[" + (processDeploymentInfo == null ? null : processDeploymentInfo.getName())
+                                    + "] ProcessVersion[" + (processDeploymentInfo == null ? null : processDeploymentInfo.getVersion())
+                                    + "] ProcessActivation[" + (processDeploymentInfo == null ? null : processDeploymentInfo.getActivationState().toString()) + "]"));
+
+                } catch (SearchException e1) {
+                    listEvents.add(new BEvent(EVENT_NO_PROCESS_MATCH_FILTER, "ProcessName[" + processNameVersion + "]"));
+
+                }
+
+                // ------------------------------------------------------------- send message
+            } else if (rule.getAction() == ACTION.SENDMESSAGE) {
+                StringTokenizer st = new StringTokenizer(rule.getActionParameters(), ";");
+                String messageName = st.hasMoreTokens() ? st.nextToken() : null;
+                String targetProcess = st.hasMoreTokens() ? st.nextToken() : null;
+                String targetFlowNodeName = st.hasMoreTokens() ? st.nextToken() : null;
+                String jsonMessageContent = st.hasMoreTokens() ? st.nextToken() : null;
+                String jsonMessageCorrelation = st.hasMoreTokens() ? st.nextToken() : null;
+                ProcessDeploymentInfo processDeploymentInfo = null;
+                try {
+                    SearchResult<ProcessDeploymentInfo> listProcessDeploymenInfo = getListProcessDefinitionId(targetProcess, processAPI);
+                    if (listProcessDeploymenInfo.getCount() == 0)
+                        listEvents.add(new BEvent(EVENT_NO_PROCESS_MATCH_FILTER, "ProcessName[" + targetProcess + "]"));
+                    else {
+                        processDeploymentInfo = listProcessDeploymenInfo.getResult().get(0);
+
+                        //Expression targetProcess= new ExpressionBuilder().createNewInstance("targetProcess").setContent(String.valueOf(processDefinition.getName())).setExpressionType( ExpressionType.TYPE_CONSTANT).setReturnType(String.class.getName()).done();
+                        // Expression targetFlowNode= new ExpressionBuilder().createNewInstance("targetFlowNode").setContent(String.valueOf(flowNodeInstance.getName())).setExpressionType( ExpressionType.TYPE_CONSTANT).setReturnType(String.class.getName()).done();
+
+                        Expression targetProcessExpression = new ExpressionBuilder().createConstantStringExpression(processDeploymentInfo.getName());
+                        Expression targetFlowNodeExpression = new ExpressionBuilder().createConstantStringExpression(targetFlowNodeName);
+
+                        ResolvedPlaceHolder msgContentMap = resolvePlaceHolderProcess(humanTask, rule, input, jsonMessageContent, processAPI);
+                        ResolvedPlaceHolder msgCorrelationMap = jsonMessageCorrelation == null ? null : resolvePlaceHolderProcess(humanTask, rule, input, jsonMessageCorrelation, processAPI);
+
+                        listEvents.addAll( msgContentMap.listEvents );
+                        if (msgCorrelationMap!=null)
+                            listEvents.addAll( msgCorrelationMap.listEvents );
+                        
+                        // transform the map in Expression
+                        if (msgCorrelationMap == null) {
+                            processAPI.sendMessage(messageName, targetProcessExpression, targetFlowNodeExpression, mapToExpression(msgContentMap.jsonMap));
+                        } else {
+                            processAPI.sendMessage(messageName, targetProcessExpression, targetFlowNodeExpression, mapToExpression(msgContentMap.jsonMap), mapToExpression(msgCorrelationMap.jsonMap));
+                        }
+                    }
+                } catch (Exception e1) {
+                    listEvents.add(new BEvent(EVENT_MESSAGE_ERROR, "ProcessName[" + targetProcess + "]"));
+
+                }
+
             } else
                 listEvents.add(new BEvent(EVENT_UNKNOW_ACTION, "Rule[" + rule.getUniqueId() + "] Action[" + rule.action + "]"));
         } catch (UpdateException e) {
@@ -786,7 +944,11 @@ public class MilkSLA extends MilkPlugIn {
 
         } catch (ActorNotFoundException e) {
             listEvents.add(new BEvent(EVENT_ACTOR_NOT_FOUND, "Rule [" + rule.getUniqueId() + " task[" + humanTask.getId() + "]"));
+        } catch (ProcessDefinitionNotFoundException ed) {
+            listEvents.add(new BEvent(EVENT_PROCESSID_NOT_FOUND, "Rule [" + rule.getUniqueId() + " task[" + humanTask.getId() + "] processID referenced in task[" + humanTask.getProcessDefinitionId() + "]"));
+
         }
+
         return listEvents;
     }
 
@@ -809,4 +971,75 @@ public class MilkSLA extends MilkPlugIn {
 
     }
 
+    public static String cstMarqueurDueDateReplaced = "##DueDateReplacedToBeReplacedByALocalTime##";
+
+    public static class  ResolvedPlaceHolder {
+        Map<String, Serializable> jsonMap;
+        String jsonResolved;
+        List<BEvent> listEvents = new ArrayList<BEvent>();
+    }
+    
+    @SuppressWarnings("unchecked")
+    private ResolvedPlaceHolder resolvePlaceHolderProcess(HumanTaskInstance humanTask, Rule rule, MilkJobExecution input, String jsonInput, ProcessAPI processAPI) throws ProcessDefinitionNotFoundException {
+        ResolvedPlaceHolder resolvedPlaceHolder = new ResolvedPlaceHolder();
+        try {
+
+            Map<String, Object> placeHolder = new HashMap<String, Object>();
+            placeHolder.put("percentThreashold", String.valueOf(rule.percentThreashold));
+
+            // format :"2019-12-10T11:42",
+
+            ProcessDefinition processDefinition = processAPI.getProcessDefinition(humanTask.getProcessDefinitionId());
+            placeHolder.put("processName", processDefinition.getName());
+            placeHolder.put("processVersion", processDefinition.getVersion());
+            placeHolder.put("processId", humanTask.getProcessDefinitionId());
+            placeHolder.put("caseId", humanTask.getRootContainerId());
+            placeHolder.put("taskId", humanTask.getId());
+            placeHolder.put("taskName", humanTask.getName());
+            placeHolder.put("percentThreashold", rule.percentThreashold);
+            placeHolder.put("dueDate", "\""+cstMarqueurDueDateReplaced+"\"");
+
+            resolvedPlaceHolder.jsonResolved = PlaceHolder.replacePlaceHolder(placeHolder, jsonInput);
+
+            
+            resolvedPlaceHolder.jsonMap = (Map<String, Serializable>) JSONValue.parse(resolvedPlaceHolder.jsonResolved);
+
+            // now, resolve the due date
+            LocalDateTime localDateTime = humanTask.getExpectedEndDate() == null ? null : LocalDateTime.ofInstant(humanTask.getExpectedEndDate().toInstant(), ZoneId.systemDefault());
+
+            for (String key : resolvedPlaceHolder.jsonMap.keySet()) {
+                if (resolvedPlaceHolder.jsonMap.get(key).equals(cstMarqueurDueDateReplaced))
+                    resolvedPlaceHolder.jsonMap.put(key, localDateTime);
+            }
+        } catch (Exception e) {
+            resolvedPlaceHolder.listEvents.add( new BEvent(EVENT_JSONERROR, e, "JSonInput[" + jsonInput + "] JsonResoled["+resolvedPlaceHolder.jsonResolved+"]"));
+        }
+        return resolvedPlaceHolder;
+    }
+
+    /**
+     * @param source
+     * @return
+     */
+    public Map<Expression, Expression> mapToExpression(Map<String, Serializable> source) {
+        Map<Expression, Expression> destination = new HashMap<Expression, Expression>();
+        for (String name : source.keySet()) {
+            Expression exprName;
+            try {
+                exprName = new ExpressionBuilder().createConstantStringExpression(name);
+
+                Expression exprValue = null;
+                if (source.get(name) == null || source.get(name).toString().length() == 0)
+                    exprValue = new ExpressionBuilder().createNewInstance("value-" + name).setContent("").setExpressionType(ExpressionType.TYPE_CONSTANT).setReturnType(String.class.getName()).done();
+                else
+                    exprValue = new ExpressionBuilder().createConstantStringExpression(source.get(name).toString());
+                destination.put(exprName, exprValue);
+            } catch (InvalidExpressionException e) {
+                // should never arrive
+            }
+        }
+
+        return destination;
+
+    }
 }

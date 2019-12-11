@@ -9,7 +9,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.ProcessAPI;
@@ -29,7 +28,6 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
-import org.hibernate.internal.util.collections.JoinedIterable;
 
 /**
  * this job calculate the list of case to purge, and save the list in a the FileParameters
@@ -58,7 +56,6 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
     private static BEvent EVENT_SYNTHESISREPORT = new BEvent(MilkPurgeArchivedListGetList.class.getName(), 7, Level.INFO,
             "Report Synthesis", "Result of search", "", "");
 
- 
     private static PlugInParameter cstParamDelayInDay = PlugInParameter.createInstance("delayinday", "Delai in days", TypeParameter.LONG, 10L, "Only cases archived before this delay are in the perimeter");
     private static PlugInParameter cstParamMaximumInReport = PlugInParameter.createInstance("maximuminreport", "Maximum in report", TypeParameter.LONG, 10000L, "Job stops when then number of case to delete reach this limit, in order to not create a very huge file");
     private static PlugInParameter cstParamMaximumInMinutes = PlugInParameter.createInstance("maximuminminutes", "Maximum in minutes", TypeParameter.LONG, 3L, "Job stops when the execution reach this limit, in order to not overload the server.");
@@ -79,6 +76,7 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
     public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
         return new ArrayList<BEvent>();
     };
+
     /**
      * check the Job's environment
      */
@@ -96,11 +94,11 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
         // get Input 
         List<String> listProcessName = (List<String>) jobExecution.getInputListParameter(cstParamProcessfilter);
         String separatorCSV = jobExecution.getInputStringParameter(cstParamSeparatorCSV);
-        
+
         long delayInDay = jobExecution.getInputLongParameter(cstParamDelayInDay);
         jobExecution.setPleaseStopAfterManagedItems(jobExecution.getInputLongParameter(cstParamMaximumInReport), 1000000L);
         jobExecution.setPleaseStopAfterTime(jobExecution.getInputLongParameter(cstParamMaximumInMinutes), 24 * 60L);
-        
+
         // 20 for the preparation, 100 to collect cases
         // Time to run the query take time, and we don't want to show 0% for a long time
         jobExecution.setAvancementTotalStep(120);
@@ -115,16 +113,15 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
 
                 for (String fullProcessName : listProcessName) {
                     SearchOptionsBuilder searchOptionBuilder = new SearchOptionsBuilder(0, 1000);
-                    String processName= fullProcessName;
-                    String version=null;
-                    if (fullProcessName.lastIndexOf(";")!=-1)
-                    {
-                        int pos=fullProcessName.lastIndexOf(";");
-                        processName= fullProcessName.substring(0,pos);
-                        version= fullProcessName.substring(pos+1);
+                    String processName = fullProcessName;
+                    String version = null;
+                    if (fullProcessName.lastIndexOf(";") != -1) {
+                        int pos = fullProcessName.lastIndexOf(";");
+                        processName = fullProcessName.substring(0, pos);
+                        version = fullProcessName.substring(pos + 1);
                     }
                     searchOptionBuilder.filter(ProcessDeploymentInfoSearchDescriptor.NAME, processName);
-                    if (version!=null)
+                    if (version != null)
                         searchOptionBuilder.filter(ProcessDeploymentInfoSearchDescriptor.VERSION, version);
                     searchOptionBuilder.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE,
                             ActivationState.ENABLED.name());
@@ -170,18 +167,18 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
 
             /** ok, we did 15 step */
             jobExecution.setAvancementStep(20);
-            
+
             Map<Long, String> cacheProcessDefinition = new HashMap<Long, String>();
 
             ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
             Writer w = new OutputStreamWriter(arrayOutputStream);
 
-            w.write(cstColCaseId + separatorCSV+"processname"+separatorCSV+"processversion"+separatorCSV+"archiveddate" + separatorCSV+ cstColStatus + "\n");
+            w.write(cstColCaseId + separatorCSV + "processname" + separatorCSV + "processversion" + separatorCSV + "archiveddate" + separatorCSV + cstColStatus + "\n");
 
             // loop on archive
-            int countInArchive=0;
+            int countInArchive = 0;
             for (ArchivedProcessInstance archivedProcessInstance : searchArchivedProcessInstance.getResult()) {
-            
+
                 if (jobExecution.pleaseStop())
                     break;
                 countInArchive++;
@@ -192,31 +189,31 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
                         ProcessDefinition processDefinition = processAPI.getProcessDefinition(processId);
                         cacheProcessDefinition.put(processId, processDefinition.getName() + separatorCSV + processDefinition.getVersion() + separatorCSV);
                     } catch (Exception e) {
-                        cacheProcessDefinition.put(processId, separatorCSV+" "+separatorCSV);
+                        cacheProcessDefinition.put(processId, separatorCSV + " " + separatorCSV);
                     }
                 }
                 line += cacheProcessDefinition.get(processId);
                 line += TypesCast.sdfCompleteDate.format(archivedProcessInstance.getArchiveDate());
                 line += ";";
                 w.write(line + "\n");
-                jobExecution.addManagedItem( 1 );
-                
-                jobExecution.setAvancementStep(20 + (int) (100*countInArchive/searchArchivedProcessInstance.getResult().size()) );
-                
+                jobExecution.addManagedItem(1);
+
+                jobExecution.setAvancementStep(20 + (int) (100 * countInArchive / searchArchivedProcessInstance.getResult().size()));
+
             }
             w.flush();
             plugTourOutput.nbItemsProcessed = searchArchivedProcessInstance.getCount();
             plugTourOutput.setParameterStream(cstParamReport, new ByteArrayInputStream(arrayOutputStream.toByteArray()));
 
-            plugTourOutput.addEvent(new BEvent(EVENT_SYNTHESISREPORT, "Total cases:"+searchArchivedProcessInstance.getCount()+", In list:"+countInArchive));
-            
+            plugTourOutput.addEvent(new BEvent(EVENT_SYNTHESISREPORT, "Total cases:" + searchArchivedProcessInstance.getCount() + ", In list:" + countInArchive));
+
             if (searchArchivedProcessInstance.getCount() == 0) {
                 plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
                 plugTourOutput.nbItemsProcessed = 0;
                 return plugTourOutput;
             }
 
-            plugTourOutput.executionStatus = jobExecution.pleaseStop()? ExecutionStatus.SUCCESSPARTIAL : ExecutionStatus.SUCCESS;
+            plugTourOutput.executionStatus = jobExecution.pleaseStop() ? ExecutionStatus.SUCCESSPARTIAL : ExecutionStatus.SUCCESS;
         }
 
         catch (SearchException e1) {
@@ -241,7 +238,7 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
         plugInDescription.addParameter(cstParamMaximumInMinutes);
         plugInDescription.addParameter(cstParamProcessfilter);
         plugInDescription.addParameter(cstParamSeparatorCSV);
-        
+
         plugInDescription.addParameter(cstParamReport);
         return plugInDescription;
     }

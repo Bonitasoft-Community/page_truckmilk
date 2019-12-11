@@ -1,7 +1,6 @@
 package org.bonitasoft.truckmilk.toolbox;
 
 import java.text.SimpleDateFormat;
-import java.util.concurrent.TimeUnit;
 
 public class TypesCast {
 
@@ -49,27 +48,27 @@ public class TypesCast {
         }
     }
 
-    public static String getHumanDuration( long durationInMsn, boolean withMs) {
-        String result="";
-        long timeRes= durationInMsn;
-        long nbDays= timeRes / (1000*60*60*24);
-        if ( nbDays > 1)
-            result+= nbDays+" days ";
-        
-        timeRes = timeRes - nbDays*(1000*60*60*24);
-          
-        long nbHours= timeRes / (1000*60*60);
-        result += String.format("%02d", nbHours)+":";
-        timeRes = timeRes - nbHours*(1000*60*60);
+    public static String getHumanDuration(long durationInMsn, boolean withMs) {
+        String result = "";
+        long timeRes = durationInMsn;
+        long nbDays = timeRes / (1000 * 60 * 60 * 24);
+        if (nbDays > 1)
+            result += nbDays + " days ";
 
-        long nbMinutes= timeRes / (1000*60);
-        result += String.format("%02d", nbMinutes)+":";
-        timeRes = timeRes - nbMinutes*(1000*60);
+        timeRes = timeRes - nbDays * (1000 * 60 * 60 * 24);
 
-        long nbSecond= timeRes / (1000);
-        result += String.format("%02d", nbSecond)+" ";
-        timeRes = timeRes - nbSecond*(1000);
-        
+        long nbHours = timeRes / (1000 * 60 * 60);
+        result += String.format("%02d", nbHours) + ":";
+        timeRes = timeRes - nbHours * (1000 * 60 * 60);
+
+        long nbMinutes = timeRes / (1000 * 60);
+        result += String.format("%02d", nbMinutes) + ":";
+        timeRes = timeRes - nbMinutes * (1000 * 60);
+
+        long nbSecond = timeRes / (1000);
+        result += String.format("%02d", nbSecond) + " ";
+        timeRes = timeRes - nbSecond * (1000);
+
         if (withMs)
             result += String.format("%03d", timeRes);
         return result;

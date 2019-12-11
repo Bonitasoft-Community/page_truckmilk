@@ -34,7 +34,7 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
 
     private static BEvent eventDeletionFailed = new BEvent(MilkPurgeArchivedListPurge.class.getName(), 2, Level.ERROR,
             "Error during deletion", "An error arrived during the deletion of archived cases", "Cases are not deleted", "Check the exception");
-    
+
     private static BEvent EVENT_REPORT_ERROR = new BEvent(MilkPurgeArchivedListPurge.class.getName(), 3, Level.APPLICATIONERROR,
             "Error in source file", "The source file is not correct", "Check the source file, caseid is expected inside", "Check the error");
 
@@ -54,7 +54,7 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
     public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
         return new ArrayList<BEvent>();
     };
-      
+
     /**
      * check the Job's environment
      */
@@ -64,14 +64,16 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
     };
 
     private class Statistic {
-        long pleaseStopAfterManagedItems=0;
-        long countIgnored=0;
-        long countAlreadyDone=0;        
-        long countBadDefinition=0;
-        long countStillToAnalyse=0;
-        long countNbItems=0;
+
+        long pleaseStopAfterManagedItems = 0;
+        long countIgnored = 0;
+        long countAlreadyDone = 0;
+        long countBadDefinition = 0;
+        long countStillToAnalyse = 0;
+        long countNbItems = 0;
         long totalLineCsv = 0;
     }
+
     @Override
     public PlugTourOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
 
@@ -89,22 +91,22 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
         Statistic statistic = new Statistic();
 
         jobExecution.setPleaseStopAfterTime(jobExecution.getInputLongParameter(cstParamMaximumDeletionInMinutes), 24 * 60L);
-        jobExecution.setPleaseStopAfterManagedItems( jobExecution.getInputLongParameter(cstParamMaximumDeletionInCase), 5000L);
+        jobExecution.setPleaseStopAfterManagedItems(jobExecution.getInputLongParameter(cstParamMaximumDeletionInCase), 5000L);
         statistic.pleaseStopAfterManagedItems = jobExecution.getPleaseStopAfterManagerItems();
-        
+
         String separatorCSV = jobExecution.getInputStringParameter(cstParamSeparatorCSV);
-        
+
         statistic.totalLineCsv = nbLinesInCsv(outputByte);
         List<Long> sourceProcessInstanceIds = new ArrayList<Long>();
-        long nbAnalyseAlreadyReported=0;
+        long nbAnalyseAlreadyReported = 0;
         try {
             jobExecution.setAvancementTotalStep(statistic.totalLineCsv);
-            
+
             BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(outputByte.toByteArray())));
             String line = reader.readLine();
             // read the header
             String[] header = line == null ? new String[0] : line.split(separatorCSV);
-            
+
             long lineNumber = 1;
             StringBuffer analysis = new StringBuffer();
             while ((line = reader.readLine()) != null) {
@@ -113,7 +115,7 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
                     analysis.append("Stop asked;");
                     break;
                 }
-             
+
                 jobExecution.setAvancementStep(lineNumber);
                 lineNumber++;
 
@@ -124,55 +126,51 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
                 String status = TypesCast.getString(record.get(MilkPurgeArchivedListGetList.cstColStatus), null);
 
                 if (caseId == null) {
-                    if (analysis.length()<300)
+                    if (analysis.length() < 300)
                         analysis.append("Line[" + lineNumber + "] " + MilkPurgeArchivedListGetList.cstColCaseId + " undefined;");
-                    else 
+                    else
                         nbAnalyseAlreadyReported++;
                     statistic.countBadDefinition++;
-                }
-                else if (status == null) {
+                } else if (status == null) {
                     statistic.countIgnored++;
                     // analysis.append("Line[" + lineNumber + "] " + MilkPurgeArchivedListGetList.cstColStatus + " undefined;");
-                }
-                else if ("DELETE".equalsIgnoreCase(status)) {     
-                    
+                } else if ("DELETE".equalsIgnoreCase(status)) {
+
                     // delete it
                     sourceProcessInstanceIds.add(caseId);
                     if (sourceProcessInstanceIds.size() > 50) {
                         // purge now
-                        long nbCaseDeleted = purgeList( sourceProcessInstanceIds, statistic, processAPI);    
+                        long nbCaseDeleted = purgeList(sourceProcessInstanceIds, statistic, processAPI);
                         plugTourOutput.nbItemsProcessed = statistic.countNbItems;
-                        jobExecution.addManagedItem( nbCaseDeleted );
+                        jobExecution.addManagedItem(nbCaseDeleted);
                         sourceProcessInstanceIds.clear();
                     }
-                }
-                else
+                } else
                     statistic.countIgnored++;
             }
             // the end, purge a last time 
             if (sourceProcessInstanceIds.size() > 0) {
-                long nbCaseDeleted = purgeList( sourceProcessInstanceIds, statistic, processAPI);    
-                jobExecution.addManagedItem( nbCaseDeleted );
+                long nbCaseDeleted = purgeList(sourceProcessInstanceIds, statistic, processAPI);
+                jobExecution.addManagedItem(nbCaseDeleted);
                 plugTourOutput.nbItemsProcessed = statistic.countNbItems;
                 sourceProcessInstanceIds.clear();
             }
             // calculated the last ignore  
             statistic.countStillToAnalyse += statistic.totalLineCsv - lineNumber;
-            String reportEvent = "AlreadyDone: "+statistic.countAlreadyDone+"; Purged:" + plugTourOutput.nbItemsProcessed+" Ignored(no status DELETED):"+statistic.countIgnored+" StillToAnalyse:"+statistic.countStillToAnalyse+" Bad Definition(noCaseid):"+statistic.countBadDefinition;
-            if (statistic.countBadDefinition>0)
-                reportEvent+=" Bad Definition(noCaseid):"+statistic.countBadDefinition+" : "+analysis.toString();
-            if (nbAnalyseAlreadyReported>0)
-                reportEvent+=" ("+nbAnalyseAlreadyReported+") more errors";
-            
-            BEvent eventFinal = (statistic.countBadDefinition==0) ? new BEvent(eventDeletionSuccess, reportEvent) : new BEvent(EVENT_REPORT_ERROR,  reportEvent);
-            
-            plugTourOutput.addEvent( eventFinal );
-            plugTourOutput.executionStatus = (jobExecution.pleaseStop() || statistic.countStillToAnalyse>0) ? ExecutionStatus.SUCCESSPARTIAL : ExecutionStatus.SUCCESS;
-            if (statistic.countBadDefinition>0)
-            {
-                plugTourOutput.executionStatus= ExecutionStatus.ERROR;    
+            String reportEvent = "AlreadyDone: " + statistic.countAlreadyDone + "; Purged:" + plugTourOutput.nbItemsProcessed + " Ignored(no status DELETED):" + statistic.countIgnored + " StillToAnalyse:" + statistic.countStillToAnalyse + " Bad Definition(noCaseid):" + statistic.countBadDefinition;
+            if (statistic.countBadDefinition > 0)
+                reportEvent += " Bad Definition(noCaseid):" + statistic.countBadDefinition + " : " + analysis.toString();
+            if (nbAnalyseAlreadyReported > 0)
+                reportEvent += " (" + nbAnalyseAlreadyReported + ") more errors";
+
+            BEvent eventFinal = (statistic.countBadDefinition == 0) ? new BEvent(eventDeletionSuccess, reportEvent) : new BEvent(EVENT_REPORT_ERROR, reportEvent);
+
+            plugTourOutput.addEvent(eventFinal);
+            plugTourOutput.executionStatus = (jobExecution.pleaseStop() || statistic.countStillToAnalyse > 0) ? ExecutionStatus.SUCCESSPARTIAL : ExecutionStatus.SUCCESS;
+            if (statistic.countBadDefinition > 0) {
+                plugTourOutput.executionStatus = ExecutionStatus.ERROR;
             }
-            
+
         } catch (IOException e) {
             logger.severe("Error Delete Archived ProcessInstance=[" + sourceProcessInstanceIds + "] Error[" + e.getMessage() + "]");
             plugTourOutput.executionStatus = ExecutionStatus.ERROR;
@@ -208,7 +206,6 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
     }
 
     /**
-     * 
      * @param header
      * @param line
      * @return
@@ -225,7 +222,6 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
     }
 
     /**
-     * 
      * @param line
      * @param charSeparator
      * @return
@@ -258,84 +254,76 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
         return list;
     }
 
-    /** methid  processAPI.deleteArchivedProcessInstancesInAllStates(sourceProcessInstanceIds) is very long, even if there are nothing to purge
+    /**
+     * methid processAPI.deleteArchivedProcessInstancesInAllStates(sourceProcessInstanceIds) is very long, even if there are nothing to purge
      * so, let's first search the real number to purge, and do the purge only on real case.
+     * 
      * @return
      */
 
-    public int purgeList(  List<Long> sourceProcessInstanceIds, Statistic statistic, ProcessAPI processAPI) throws DeletionException, SearchException    
-    {
+    public int purgeList(List<Long> sourceProcessInstanceIds, Statistic statistic, ProcessAPI processAPI) throws DeletionException, SearchException {
         long startTimeSearch = System.currentTimeMillis();
         SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, sourceProcessInstanceIds.size());
-        for (int i=0;i<sourceProcessInstanceIds.size();i++)
-        {
-            if (i>0)
+        for (int i = 0; i < sourceProcessInstanceIds.size(); i++) {
+            if (i > 0)
                 searchActBuilder.or();
-            searchActBuilder.filter( ArchivedProcessInstancesSearchDescriptor.SOURCE_OBJECT_ID, sourceProcessInstanceIds.get( i ));
+            searchActBuilder.filter(ArchivedProcessInstancesSearchDescriptor.SOURCE_OBJECT_ID, sourceProcessInstanceIds.get(i));
         }
         SearchResult<ArchivedProcessInstance> searchArchivedProcessInstance = processAPI.searchArchivedProcessInstances(searchActBuilder.done());
         long endTimeSearch = System.currentTimeMillis();
         List<Long> realId = new ArrayList<Long>();
-        for (ArchivedProcessInstance archived : searchArchivedProcessInstance.getResult())
-        {
-            realId.add( archived.getSourceObjectId());
+        for (ArchivedProcessInstance archived : searchArchivedProcessInstance.getResult()) {
+            realId.add(archived.getSourceObjectId());
         }
-        
+
         // we know how many item we don't need to process in this batch
         // BATCH TO STUDY                   : sourceProcessInstanceIds
         // Case To delete in this batch     : realId.size()
         // Already Managed in this job      : statistic.countNbItems
         // Already Done in a previous job   : sourceProcessInstanceIds.size() - realId.size() to add to countAlreadyDone
         // if (Already Managed in this job) + (Case To Delete in the bath) > pleaseStopAfterManagedItem then we have to limit our number of deletion 
-        
+
         statistic.countAlreadyDone += sourceProcessInstanceIds.size() - realId.size();
         // ok, the point is now maybe we don't want to process ALL this process to delete, due to the limitation
-        if (statistic.countNbItems + realId.size() > statistic.pleaseStopAfterManagedItems )
-        {
+        if (statistic.countNbItems + realId.size() > statistic.pleaseStopAfterManagedItems) {
             // too much, we need to reduce the number
             long maximumToManage = statistic.pleaseStopAfterManagedItems - statistic.countNbItems;
             // to be study after is then the realId.size - maximumToManage
             statistic.countStillToAnalyse += realId.size() - maximumToManage;
             realId = realId.subList(0, (int) maximumToManage);
         }
-        
+
         long startTimeDelete = System.currentTimeMillis();
-        long nbCaseDeleted=0;
-        if (realId.size()>0)
-        {
+        long nbCaseDeleted = 0;
+        if (realId.size() > 0) {
             nbCaseDeleted = processAPI.deleteArchivedProcessInstancesInAllStates(realId);
         }
         long endTimeDelete = System.currentTimeMillis();
-        
-        logger.info("MilkPurgeArchivedListPurge.delete: search in "+(endTimeSearch-startTimeSearch)+" ms , delete in "+(endTimeDelete-startTimeDelete)+" ms for "+realId.size() + " Deletion mark="+nbCaseDeleted);
-        statistic.countNbItems +=realId.size(); 
+
+        logger.info("MilkPurgeArchivedListPurge.delete: search in " + (endTimeSearch - startTimeSearch) + " ms , delete in " + (endTimeDelete - startTimeDelete) + " ms for " + realId.size() + " Deletion mark=" + nbCaseDeleted);
+        statistic.countNbItems += realId.size();
         return realId.size();
 
     }
 
     /**
-     * count the number of line in the 
+     * count the number of line in the
+     * 
      * @param outputByte
      * @return
      */
-    public long nbLinesInCsv(ByteArrayOutputStream outputByte)
-    {
-        try
-        {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(outputByte.toByteArray())));
-        long nbLine=0;
-        while (reader.readLine() != null) {
-            nbLine++;
-        }
-        return nbLine;
-        }
-        catch(Exception e)
-        {
+    public long nbLinesInCsv(ByteArrayOutputStream outputByte) {
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(outputByte.toByteArray())));
+            long nbLine = 0;
+            while (reader.readLine() != null) {
+                nbLine++;
+            }
+            return nbLine;
+        } catch (Exception e) {
             return 0;
         }
-        
+
     }
 
-  
-    
 }

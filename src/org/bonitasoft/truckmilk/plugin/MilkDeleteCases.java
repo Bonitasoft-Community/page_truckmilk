@@ -2,7 +2,6 @@ package org.bonitasoft.truckmilk.plugin;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.ProcessAPI;
@@ -63,6 +62,7 @@ public class MilkDeleteCases extends MilkPlugIn {
     public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
         return new ArrayList<BEvent>();
     };
+
     @Override
     public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
         // is the command Exist ? 

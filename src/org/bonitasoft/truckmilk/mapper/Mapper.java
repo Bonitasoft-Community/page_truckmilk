@@ -20,7 +20,6 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
-import org.bonitasoft.truckmilk.plugin.MilkDirectory;
 import org.bonitasoft.truckmilk.toolbox.PlaceHolder;
 import org.json.simple.JSONValue;
 
@@ -82,47 +81,46 @@ public class Mapper {
     private static PlugInParameter cstParamTaskId = PlugInParameter.createInstance("TaskId", "Task ID", TypeParameter.STRING, "", "");
     private static PlugInParameter cstParamTaskName = PlugInParameter.createInstance("TaskName", "Task Name", TypeParameter.STRING, "", "");
     private static PlugInParameter cstParamStringIndex1 = PlugInParameter.createInstance("StringIndex1", "Search by the String Index 1", TypeParameter.STRING, "", "Give a key to search the task by a string index. {{value}} can be used, example {{fileName}}");
-    private static PlugInParameter cstParamStringIndex2 = PlugInParameter.createInstance("StringIndex2", "Search by the String Index 2", TypeParameter.STRING, "",  "Give a key to search the task by a string index. {{value}} can be used, example {{fileName}}");
-    private static PlugInParameter cstParamStringIndex3 = PlugInParameter.createInstance("StringIndex3", "Search by the String Index 3", TypeParameter.STRING, "",  "Give a key to search the task by a string index. {{value}} can be used, example {{fileName}}");
-    private static PlugInParameter cstParamStringIndex4 = PlugInParameter.createInstance("StringIndex4", "Search by the String Index 4", TypeParameter.STRING, "",  "Give a key to search the task by a string index. {{value}} can be used, example {{fileName}}");
-    private static PlugInParameter cstParamStringIndex5 = PlugInParameter.createInstance("StringIndex5", "Search by the String Index 5", TypeParameter.STRING, "",  "Give a key to search the task by a string index. {{value}} can be used, example {{fileName}}");
+    private static PlugInParameter cstParamStringIndex2 = PlugInParameter.createInstance("StringIndex2", "Search by the String Index 2", TypeParameter.STRING, "", "Give a key to search the task by a string index. {{value}} can be used, example {{fileName}}");
+    private static PlugInParameter cstParamStringIndex3 = PlugInParameter.createInstance("StringIndex3", "Search by the String Index 3", TypeParameter.STRING, "", "Give a key to search the task by a string index. {{value}} can be used, example {{fileName}}");
+    private static PlugInParameter cstParamStringIndex4 = PlugInParameter.createInstance("StringIndex4", "Search by the String Index 4", TypeParameter.STRING, "", "Give a key to search the task by a string index. {{value}} can be used, example {{fileName}}");
+    private static PlugInParameter cstParamStringIndex5 = PlugInParameter.createInstance("StringIndex5", "Search by the String Index 5", TypeParameter.STRING, "", "Give a key to search the task by a string index. {{value}} can be used, example {{fileName}}");
     private static PlugInParameter cstParamContract = PlugInParameter.createInstance("Contract", "Bonita Contract value (JSON)", TypeParameter.STRING, "", "Give the contract, as JSON. {{}} may be used. Example, 'fileDetected' : { 'filename' : '{{fileName}}' }");
 
-    
     private static BEvent EVENT_PROCESS_NOT_FOUND = new BEvent(Mapper.class.getName(), 1, Level.APPLICATIONERROR,
             "Process Not Found", "The process given (name and version) is not found. Case/task can't be created / executed", "Jobs can't run", "Check parameters");
 
     private static BEvent EVENT_BAD_JSON = new BEvent(Mapper.class.getName(), 2, Level.APPLICATIONERROR,
-            "Bad JSON", "The JSON calculated can't be parse", "Jobs can't run", "Check parameters")    ;
-    
-    
+            "Bad JSON", "The JSON calculated can't be parse", "Jobs can't run", "Check parameters");
+
     private static BEvent EVENT_MAP_EXPECTED = new BEvent(Mapper.class.getName(), 3, Level.APPLICATIONERROR,
             "Map Expected", "The result of the JSON must be a MAp (i.e. {}), and the result is different", "Jobs can't run", "Check parameters");
-    
-    private static BEvent EVENT_PROCESS_NOT_ACTIVATED= new BEvent(Mapper.class.getName(), 4, Level.APPLICATIONERROR,
+
+    private static BEvent EVENT_PROCESS_NOT_ACTIVATED = new BEvent(Mapper.class.getName(), 4, Level.APPLICATIONERROR,
             "Process not activated", "Process is not activated, impossible to create a case inside", "Jobs can't run", "Activate the process");
-    
-    private static BEvent EVENT_PROCESS_EXCEPTION= new BEvent(Mapper.class.getName(), 5, Level.APPLICATIONERROR,
+
+    private static BEvent EVENT_PROCESS_EXCEPTION = new BEvent(Mapper.class.getName(), 5, Level.APPLICATIONERROR,
             "Proces Exception", "An exception arrived during the operation", "Jobs can't run", "Check exception");
-    
-    private static BEvent EVENT_PROCESS_CONTRACT_EXCEPTION= new BEvent(Mapper.class.getName(), 6, Level.APPLICATIONERROR,
+
+    private static BEvent EVENT_PROCESS_CONTRACT_EXCEPTION = new BEvent(Mapper.class.getName(), 6, Level.APPLICATIONERROR,
             "Contract exception", "The contract is not respected", "Jobs can't run", "Check mapper configuration");
-    
-    
-    public enum MAPPER_POLICY { CASECREATION, TASKEXECUTION };
-    private MAPPER_POLICY policy; 
-    public Mapper( MAPPER_POLICY policy) {
+
+    public enum MAPPER_POLICY {
+        CASECREATION, TASKEXECUTION
+    };
+
+    private MAPPER_POLICY policy;
+
+    public Mapper(MAPPER_POLICY policy) {
         this.policy = policy;
     }
-    
+
     public void addPlugInParameter(PlugInDescription plugInDescription) {
         // identify the object to create / apply
-        if (policy == MAPPER_POLICY.CASECREATION) 
-        {
+        if (policy == MAPPER_POLICY.CASECREATION) {
             plugInDescription.addParameter(cstParamProcessName);
             plugInDescription.addParameter(cstParamProcessVersion);
-        }
-        else {
+        } else {
             plugInDescription.addParameter(cstParamCaseId);
             plugInDescription.addParameter(cstParamTaskId);
             plugInDescription.addParameter(cstParamTaskName);
@@ -141,24 +139,24 @@ public class Mapper {
 
     String processName = null;
     String processVersion = null;
-  
+
     Long processDefinitionId;
-    
-    public List<BEvent> initialisation( MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+
+    public List<BEvent> initialisation(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
         // Search the process
         List<BEvent> listEvents = new ArrayList<BEvent>();
         ProcessAPI processAPI = apiAccessor.getProcessAPI();
-        processName = jobExecution.getInputStringParameter( cstParamProcessName);
-        processVersion = jobExecution.getInputStringParameter( cstParamProcessVersion);
+        processName = jobExecution.getInputStringParameter(cstParamProcessName);
+        processVersion = jobExecution.getInputStringParameter(cstParamProcessVersion);
         try {
-            processDefinitionId = processAPI.getProcessDefinitionId( processName, processVersion);
+            processDefinitionId = processAPI.getProcessDefinitionId(processName, processVersion);
         } catch (ProcessDefinitionNotFoundException e) {
-          listEvents.add( new BEvent(EVENT_PROCESS_NOT_FOUND, "ProcessName["+processName+"] version["+processVersion+"]"));
+            listEvents.add(new BEvent(EVENT_PROCESS_NOT_FOUND, "ProcessName[" + processName + "] version[" + processVersion + "]"));
         }
-        
+
         return listEvents;
     }
-        
+
     public void searchProcess() {
 
     }
@@ -167,99 +165,98 @@ public class Mapper {
 
     }
 
- 
     public class MapperResult {
+
         List<BEvent> listEvents = new ArrayList<BEvent>();
         ProcessInstance processInstance;
     }
-    public MapperResult createCase( MilkJobExecution jobExecution, Map<String,Object> parameters, List<File> attachements, APIAccessor apiAccessor) {
+
+    public MapperResult createCase(MilkJobExecution jobExecution, Map<String, Object> parameters, List<File> attachements, APIAccessor apiAccessor) {
         MapperResult mapperResult = new MapperResult();
-       String contractDefinition = jobExecution.getInputStringParameter( cstParamContract);
-       
-       /**
-        * Contract Definition is something like { "inputData" : { "firstName" : "{{myFirstname}}", "lastName": "{{myLastName}}", "age" : {{age}}, "cv": "{{FILESOURCE}}" }
-        */
-       String contract = PlaceHolder.replacePlaceHolder(parameters,contractDefinition);
-       
-       /**
-        * Contract is something like { "inputData" : { "firstName" : "Walter", "lastName": "Bates", "age" : 25, "cv": "{{FILESOURCE}}"}
-        * this replacement does not replace the file
-        */
+        String contractDefinition = jobExecution.getInputStringParameter(cstParamContract);
 
-       /**
-        * Time to create the object
-        */
-       
-       Object contractJson = JSONValue.parse(contract);
-       /**
-        * ContractJson is something like 
-        *    Map("inputDate") : 
-        *       Map ("firstName","Walter"
-        *            "lastName": "Bates",
-        *            "age" : 25, 
-        *            "cv": "{{FILESOURCE}}"
-        *            )
-        * this replacement does not replace the file
-        */
-       
-       // we expect a MAP as the contract
-       if (! (contractJson instanceof Map)) {
-           mapperResult.listEvents.add( EVENT_MAP_EXPECTED );
-           return mapperResult;
-       }
-       
-       Map<String,Object> contractJsonMap = (Map) contractJson;
-       
-       /**
-        * we have to create a map of SERIALISABLE, and then create the fileinputvalue when needed
-        */
-       Map<String,Serializable> instantiationInputs = transformMapFile( contractJsonMap, parameters);
-       
-       /**
-        * ContractJson is something like 
-        *    Map("inputDate") : 
-        *       Map ("firstName","Walter"
-        *            "lastName": "Bates",
-        *            "age" : 25, 
-        *            "cv": FileInputValue()
-        *            )
-        * this replacement does not replace the file
-        */
-       
-       /**
-        * we get now something 
-        */
-       
-       
-     
-       ProcessAPI processAPI = apiAccessor.getProcessAPI();
-       try {
-        mapperResult.processInstance = processAPI.startProcessWithInputs(processDefinitionId, instantiationInputs);
-      } catch (ProcessDefinitionNotFoundException e) {
-          mapperResult.listEvents.add( new BEvent(EVENT_PROCESS_NOT_FOUND, "ProcessName["+processName+"] version["+processVersion+"]"));
-         } catch (ProcessActivationException e) {
-             mapperResult.listEvents.add( new BEvent(EVENT_PROCESS_NOT_ACTIVATED, "ProcessName["+processName+"] version["+processVersion+"]"));
-    } catch (ProcessExecutionException e) {
-        mapperResult.listEvents.add( new BEvent(EVENT_PROCESS_EXCEPTION, "ProcessName["+processName+"] version["+processVersion+"]"));
-    } catch (ContractViolationException e) {
-        mapperResult.listEvents.add( new BEvent(EVENT_PROCESS_CONTRACT_EXCEPTION, "ProcessName["+processName+"] version["+processVersion+"]"));
-    }
+        /**
+         * Contract Definition is something like { "inputData" : { "firstName" : "{{myFirstname}}", "lastName": "{{myLastName}}", "age" : {{age}}, "cv":
+         * "{{FILESOURCE}}" }
+         */
+        String contract = PlaceHolder.replacePlaceHolder(parameters, contractDefinition);
 
-       return mapperResult;
+        /**
+         * Contract is something like { "inputData" : { "firstName" : "Walter", "lastName": "Bates", "age" : 25, "cv": "{{FILESOURCE}}"}
+         * this replacement does not replace the file
+         */
+
+        /**
+         * Time to create the object
+         */
+
+        Object contractJson = JSONValue.parse(contract);
+        /**
+         * ContractJson is something like
+         * Map("inputDate") :
+         * Map ("firstName","Walter"
+         * "lastName": "Bates",
+         * "age" : 25,
+         * "cv": "{{FILESOURCE}}"
+         * )
+         * this replacement does not replace the file
+         */
+
+        // we expect a MAP as the contract
+        if (!(contractJson instanceof Map)) {
+            mapperResult.listEvents.add(EVENT_MAP_EXPECTED);
+            return mapperResult;
+        }
+
+        Map<String, Object> contractJsonMap = (Map) contractJson;
+
+        /**
+         * we have to create a map of SERIALISABLE, and then create the fileinputvalue when needed
+         */
+        Map<String, Serializable> instantiationInputs = transformMapFile(contractJsonMap, parameters);
+
+        /**
+         * ContractJson is something like
+         * Map("inputDate") :
+         * Map ("firstName","Walter"
+         * "lastName": "Bates",
+         * "age" : 25,
+         * "cv": FileInputValue()
+         * )
+         * this replacement does not replace the file
+         */
+
+        /**
+         * we get now something
+         */
+
+        ProcessAPI processAPI = apiAccessor.getProcessAPI();
+        try {
+            mapperResult.processInstance = processAPI.startProcessWithInputs(processDefinitionId, instantiationInputs);
+        } catch (ProcessDefinitionNotFoundException e) {
+            mapperResult.listEvents.add(new BEvent(EVENT_PROCESS_NOT_FOUND, "ProcessName[" + processName + "] version[" + processVersion + "]"));
+        } catch (ProcessActivationException e) {
+            mapperResult.listEvents.add(new BEvent(EVENT_PROCESS_NOT_ACTIVATED, "ProcessName[" + processName + "] version[" + processVersion + "]"));
+        } catch (ProcessExecutionException e) {
+            mapperResult.listEvents.add(new BEvent(EVENT_PROCESS_EXCEPTION, "ProcessName[" + processName + "] version[" + processVersion + "]"));
+        } catch (ContractViolationException e) {
+            mapperResult.listEvents.add(new BEvent(EVENT_PROCESS_CONTRACT_EXCEPTION, "ProcessName[" + processName + "] version[" + processVersion + "]"));
+        }
+
+        return mapperResult;
     }
 
     /**
-     * recursive call to transform all the map AND to place the fileInput
+     * recursive call to transform all the map AND to place the FileInputValue 
+     * 
      * @param contractJsonMap
      * @param parameters
      * @return
      */
-    private Map<String,Serializable> transformMapFile(Map<String,Object> contractJsonMap, Map<String,Object> parameters)
-    {
-        Map<String,Serializable> instantiationInputs = new HashMap<String,Serializable>();
-        for (String key : contractJsonMap.keySet())
-        {
-            instantiationInputs.put(key, (Serializable) contractJsonMap.get( key ));
+    private Map<String, Serializable> transformMapFile(Map<String, Object> contractJsonMap, Map<String, Object> parameters) {
+        Map<String, Serializable> instantiationInputs = new HashMap<String, Serializable>();
+        for (String key : contractJsonMap.keySet()) {
+            instantiationInputs.put(key, (Serializable) contractJsonMap.get(key));
         }
         return instantiationInputs;
     }

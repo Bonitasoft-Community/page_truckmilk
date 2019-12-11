@@ -27,7 +27,8 @@ public class SendMail {
             "Check the error");
 
     SendMailParameters sendMailParameters;
-  /**
+
+    /**
      * parameters in a string : host:port:username:password
      * Default Constructor.
      * 
@@ -46,7 +47,7 @@ public class SendMail {
         List<BEvent> listEvents = new ArrayList<BEvent>();
 
         Properties props = new Properties();
-        sendMailParameters.fullFillParameters( props);
+        sendMailParameters.fullFillParameters(props);
         Session session = Session.getDefaultInstance(props);
         session.setDebug(true);
         MimeMessage message = new MimeMessage(session);
@@ -74,7 +75,7 @@ public class SendMail {
 
         try {
             Properties props = new Properties();
-            sendMailParameters.fullFillParameters( props);
+            sendMailParameters.fullFillParameters(props);
             // net set a null in a properties...
 
             Session session = Session.getDefaultInstance(props);
