@@ -14,14 +14,17 @@
     <meta name="viewport" content="width=device-width">
     <!-- 
     <link rel="stylesheet" href="pageResource?page=custompage_truckmilk&location=css/animate.css" />
-    <link rel="stylesheet" href="pageResource?page=custompage_truckmilk&location=css/bootstrap.min.css">
+    
 	<link rel="stylesheet" href="pageResource?page=custompage_truckmilk&location=css/main.css">
 	<link rel="stylesheet" href="pageResource?page=custompage_truckmilk&location=css/style.css">
 	<link rel="stylesheet" href="pageResource?page=custompage_truckmilk&location=css/customPage.css">
  
   -->
+  
+  <link rel="stylesheet" href="pageResource?page=custompage_truckmilk&location=css/bootstrap.min.css">
+  
   <link rel="stylesheet" href="css/animate.css" />
-  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <!-- <link rel="stylesheet" href="css/bootstrap.min.css"> -->
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/style.css">
 
@@ -57,6 +60,11 @@
 .AutocompleteDropDown {
 	background-color: #fcf8e3;
 	}
+	
+	
+	
+	
+	
 </style>
 	 
 </head>
@@ -1046,6 +1054,8 @@
 						<!--  status of last operation -->
 						<div ng-bind-html="ctrl.getHtml(ctrl.scheduler.listevents, 'schedulerlistEvents' )"></div>
 	
+	
+				
 						<h3>
 							<div ng-if="ctrl.scheduler.status=='STARTED'">
 								<div class="label label-success " >

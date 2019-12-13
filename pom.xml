@@ -7,7 +7,9 @@
 	<!-- * MilkScheduleQuartz (File fileQuartzJar = new File(pageDirectory.getAbsolutePath() + "/lib/TruckMilk-2.1-Quartzjob.jar") -->
 	<version>2.2</version>
 	<properties>
-		<bonita.version>7.8.4</bonita.version>
+		<bonita.version>7.9.4</bonita.version>
+   		<maven.compiler.source>1.8</maven.compiler.source>
+   		<maven.compiler.target>1.8</maven.compiler.target>
 	</properties>
 	<name>TruckMilk</name>
 	<dependencies>
@@ -26,7 +28,7 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<!-- Any change here ? Change MilkCmdControlAPI -->
+		<!--  Change here ? report the modification in MilCommandControlAPI.getMilkCommandDescription() -->
 		<dependency>
 			<groupId>org.bonitasoft.log.event</groupId>
 			<artifactId>bonita-event</artifactId>
@@ -38,11 +40,11 @@
 			<artifactId>bonita-commanddeployment</artifactId>
 			<version>1.5</version>
 		</dependency>
-
+		<!--  Change here ? report the modification in MilCommandControlAPI.getMilkCommandDescription() -->
 		<dependency>
 			<groupId>org.bonitasoft.properties</groupId>
 			<artifactId>bonita-properties</artifactId>
-			<version>2.0.0</version>
+			<version>2.1.1</version>
 		</dependency>
 		<dependency>
 			<groupId>com.googlecode.json-simple</groupId>

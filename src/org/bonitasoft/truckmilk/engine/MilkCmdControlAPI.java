@@ -104,7 +104,7 @@ public class MilkCmdControlAPI {
         // commandDescription.dependencyJars = new String[] { "bonita-event-1.5.0.jar", "bonita-properties-2.0.0.jar" }; // "mail-1.5.0-b01.jar", "activation-1.1.jar"};
 
         commandDescription.addJarDependencyLastVersion("bonita-event", "1.7.0", "bonita-event-1.7.0.jar");
-        commandDescription.addJarDependencyLastVersion("bonita-properties", "2.0.0", "bonita-properties-2.0.0.jar");
+        commandDescription.addJarDependencyLastVersion("bonita-properties", "2.1.1", "bonita-properties-2.1.1.jar");
         return commandDescription;
     }
 
