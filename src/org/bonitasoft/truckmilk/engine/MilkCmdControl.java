@@ -563,6 +563,9 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
 
             } else if (VERBE.SCHEDULERRESET.equals(verbEnum)) {
 
+                // check the environment
+                executeAnswer.listEvents.addAll( checkAndUpdateEnvironment(executeParameters.tenantId) );
+                
                 executeAnswer.listEvents.addAll(milkSchedulerFactory.getScheduler().reset(executeParameters.tenantId));
 
                 // setup the isInProgress to false, to accept a new heartBeat
@@ -746,12 +749,12 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
         synchronized (synchronizeHeart) {
             // protection : does not start a new Thread if the current one is not finish (no two Hearthread in the same time)
             if (synchronizeHeart.heartBeatInProgress) {
-                logger.info("heartBeat in progress, does not start a new one");
+                logger.fine("heartBeat in progress, does not start a new one");
                 return;
             }
             // second protection : Quartz can call the methode TOO MUCH !
             if (System.currentTimeMillis() < heartBeatLastExecution + 60 * 1000) {
-                logger.info("heartBeat: last execution was too close (last was " + (System.currentTimeMillis() - heartBeatLastExecution) + " ms ago)");
+                logger.fine("heartBeat: last execution was too close (last was " + (System.currentTimeMillis() - heartBeatLastExecution) + " ms ago)");
                 return;
             }
             synchronizeHeart.heartBeatInProgress = true;
@@ -832,7 +835,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
             logger.severeException(e1, "can't get the ipAddress");
 
         }
-        logger.info("MickCmdControl.beathearth #" + thisThreadId + " : Start at " + sdf.format(currentDate) + " on [" + (ip == null ? "" : ip.getHostAddress()) + "]");
+        logger.fine("MickCmdControl.beathearth #" + thisThreadId + " : Start at " + sdf.format(currentDate) + " on [" + (ip == null ? "" : ip.getHostAddress()) + "]");
         String executionDescription = "";
         try {
             // check all the Job now
@@ -856,7 +859,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
             logger.severe(".executeTimer: Error " + er.getMessage());
         }
         long timeEndHearth = System.currentTimeMillis();
-        logger.info("MickCmdControl.beathearth #" + thisThreadId + " : Start at " + sdf.format(currentDate) + ", End in " + (timeEndHearth - timeBeginHearth) + " ms on [" + (ip == null ? "" : ip.getHostAddress()) + "] " + executionDescription);
+        logger.fine("MickCmdControl.beathearth #" + thisThreadId + " : Start at " + sdf.format(currentDate) + ", End in " + (timeEndHearth - timeBeginHearth) + " ms on [" + (ip == null ? "" : ip.getHostAddress()) + "] " + executionDescription);
 
     }
 

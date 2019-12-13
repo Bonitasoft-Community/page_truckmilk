@@ -61,6 +61,8 @@ public class MilkSerializeProperties {
     public List<BEvent> checkAndUpdateEnvironment() {
         List<BEvent> listEvents = new ArrayList<BEvent>();
         bonitaProperties.setCheckDatabase(true);
+        bonitaProperties.setLogCheckDatabaseAtFirstAccess(true);
+        
         listEvents.addAll(bonitaProperties.loaddomainName(BonitaPropertiesDomain));
         return listEvents;
     }
