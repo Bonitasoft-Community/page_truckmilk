@@ -3,13 +3,16 @@
 	<groupId>com.bonitasoft.custompage</groupId>
 	<artifactId>TruckMilk</artifactId>
 	<!-- Attention, when number change here, update -->
-	<!-- * MilkCmdControlAPI.checkAndDeployCommand        ( commandDescription.mainJarFile = "TruckMilk-2.1-Page.jar") -->
+	<!-- * MilkCmdControlAPI.checkAndDeployCommand ( commandDescription.mainJarFile = "TruckMilk-2.1-Page.jar") -->
 	<!-- * MilkScheduleQuartz (File fileQuartzJar = new File(pageDirectory.getAbsolutePath() + "/lib/TruckMilk-2.1-Quartzjob.jar") -->
-	<version>2.2</version>
+	<version>2.3</version>
 	<properties>
 		<bonita.version>7.9.4</bonita.version>
-   		<maven.compiler.source>1.8</maven.compiler.source>
-   		<maven.compiler.target>1.8</maven.compiler.target>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
+		<sonar.sources>pom.xml,src</sonar.sources>
+		<sonar.java.binaries>target/classes</sonar.java.binaries>
+
 	</properties>
 	<name>TruckMilk</name>
 	<dependencies>
@@ -28,19 +31,31 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<!--  Change here ? report the modification in MilCommandControlAPI.getMilkCommandDescription() -->
+		<!-- Change here ? report the modification in MilkCmdControlAPI.getMilkCommandDescription() -->
+		<dependency>
+			<groupId>com.bonitasoft.custompage</groupId>
+			<artifactId>CustomPageMeteor</artifactId>
+			<version>3.0.0</version>
+		</dependency>
+		
+		
 		<dependency>
 			<groupId>org.bonitasoft.log.event</groupId>
 			<artifactId>bonita-event</artifactId>
 			<version>1.7.0</version>
 		</dependency>
+		<dependency>
+			<groupId>org.bonitasoft.custompage</groupId>
+			<artifactId>CustomPageWorker</artifactId>
+			<version>1.4.0</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.bonitasoft.command</groupId>
 			<artifactId>bonita-commanddeployment</artifactId>
-			<version>1.5</version>
+			<version>1.6</version>
 		</dependency>
-		<!--  Change here ? report the modification in MilCommandControlAPI.getMilkCommandDescription() -->
+		<!-- Change here ? report the modification in MilCommandControlAPI.getMilkCommandDescription() -->
 		<dependency>
 			<groupId>org.bonitasoft.properties</groupId>
 			<artifactId>bonita-properties</artifactId>
@@ -87,6 +102,28 @@
 	</repositories>
 
 	<build>
+		<!-- ******************** Sonar **************** -->
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.8.1</version>
+				</plugin>
+				<plugin>
+					<groupId>org.sonarsource.scanner.maven</groupId>
+					<artifactId>sonar-maven-plugin</artifactId>
+					<version>3.6.0.1398</version>
+				</plugin>
+				<plugin>
+					<groupId>org.jacoco</groupId>
+					<artifactId>jacoco-maven-plugin</artifactId>
+					<version>0.8.4</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+
+
 		<plugins>
 
 			<!-- ******************** Generate the Quartz Jar File **************** -->

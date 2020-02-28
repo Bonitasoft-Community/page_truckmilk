@@ -32,7 +32,7 @@
 		{
 			if (this.navbaractiv === tabtodisplay)
 				return 'border: 1px solid #c2c2c2;border-bottom-color: transparent;';
-			return '';
+			return 'background-color:#cbcbcb';
 		}
 		
 		
