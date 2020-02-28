@@ -110,7 +110,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
     public static String cstCommandName = "truckmilk";
     public static String cstCommandDescription = "Execute TruckMilk plugin at frequency";
 
-    private final static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss SSS");
+    private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss SSS");
 
     /**
      * this enum is defined too in MilkQuartzJob to have an independent JAR
@@ -122,34 +122,34 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
         GETSTATUS, REFRESH, CHECKUPDATEENVIRONMENT, DEPLOYPLUGIN, DELETEPLUGIN, ADDJOB, REMOVEJOB, ACTIVATEJOB, DEACTIVATEJOB, UPDATEJOB, IMMEDIATEJOB, ABORTJOB, RESETJOB, SCHEDULERSTARTSTOP, SCHEDULERDEPLOY, SCHEDULERRESET, SCHEDULERCHANGE, SCHEDULEROPERATION, TESTBUTTONARGS, HEARTBEAT
     };
 
-    public static String cstPageDirectory = "pagedirectory";
-    // private static String cstResultTimeInMs = "TIMEINMS";
+    public final static String CST_PAGE_DIRECTORY = "pagedirectory";
 
-    private static String cstResultListJobs = "listplugtour";
-    public static String cstResultListEvents = "listevents";
+    public final static String cstResultListJobs = "listplugtour";
+    public final static String cstResultListEvents = "listevents";
+    public final static String CST_RESULT_TIMEINMS = "timeinms";
 
-    public static String cstJsonDashboardEvents = "dashboardlistevents";
-    public static String cstJsonDashboardSyntheticEvents = "dashboardsyntheticlistevents";
-    public static String cstJsonScheduler = "scheduler";
-    public static String cstJsonSchedulerType = "type";
-    public static String cstJsonSchedulerInfo = "info";
+    public final static String cstJsonDashboardEvents = "dashboardlistevents";
+    public final static String cstJsonDashboardSyntheticEvents = "dashboardsyntheticlistevents";
+    public final static String cstJsonScheduler = "scheduler";
+    public final static String cstJsonSchedulerType = "type";
+    public final static String cstJsonSchedulerInfo = "info";
 
-    public static String cstJsonSchedulerStatus = "status";
-    public static String cstJsonSchedulerStatus_V_RUNNING = "RUNNING";
-    public static String cstJsonSchedulerStatus_V_SHUTDOWN = "SHUTDOWN";
-    public static String cstJsonSchedulerStatus_V_STOPPED = "STOPPED";
+    public final static String cstJsonSchedulerStatus = "status";
+    public final static String cstJsonSchedulerStatus_V_RUNNING = "RUNNING";
+    public final static String cstJsonSchedulerStatus_V_SHUTDOWN = "SHUTDOWN";
+    public final static String cstJsonSchedulerStatus_V_STOPPED = "STOPPED";
 
-    public static String cstSchedulerChangeType = "schedulerchangetype";
-    public static String cstJsonListTypesSchedulers = "listtypeschedulers";
-    public static String cstJsonLastHeartBeat = "lastheartbeat";
+    public final static String cstSchedulerChangeType = "schedulerchangetype";
+    public final static String cstJsonListTypesSchedulers = "listtypeschedulers";
+    public final static String cstJsonLastHeartBeat = "lastheartbeat";
 
-    public static String cstSchedulerOperation = "scheduleroperation";
+    public final static String cstSchedulerOperation = "scheduleroperation";
 
-    public static String cstEnvironmentStatus = "ENVIRONMENTSTATUS";
-    public static String cstEnvironmentStatus_V_CORRECT = "OK";
-    public static String cstEnvironmentStatus_V_ERROR = "ERROR";
+    public final static String cstEnvironmentStatus = "ENVIRONMENTSTATUS";
+    public final static String cstEnvironmentStatus_V_CORRECT = "OK";
+    public final static String cstEnvironmentStatus_V_ERROR = "ERROR";
 
-    public static String cstButtonName = "buttonName";
+    public final static String cstButtonName = "buttonName";
 
     // keep a list of 10 last executions
     private List<String> lastHeartBeat = new ArrayList<String>();
@@ -158,9 +158,9 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
      * keep the scheduler Factory
      */
 
-    private static MilkSchedulerFactory milkSchedulerFactory = MilkSchedulerFactory.getInstance();
+    private final static MilkSchedulerFactory milkSchedulerFactory = MilkSchedulerFactory.getInstance();
 
-    public static MilkCmdControl milkCmdControl = new MilkCmdControl();
+    public final static MilkCmdControl milkCmdControl = new MilkCmdControl();
 
     // let's return a singleton
     public BonitaCommandApiAccessor getInstance() {
@@ -213,9 +213,9 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     logger.info(" Server Restart reset jobId[" + milkJob.getId() + "]");
                     // cancel the job: server restart
                     milkJob.trackExecution.lastExecutionDate = new Date();
-                    milkJob.trackExecution.lastExecutionStatus = ExecutionStatus.KILL;
-                    milkJob.trackExecution.inExecution = false;
-                    milkJob.trackExecution.isImmediateExecution = false;
+                    milkJob.trackExecution.setLastExecutionStatus( ExecutionStatus.KILL );
+                    milkJob.trackExecution.setInExecution( false );
+                    milkJob.trackExecution.setImmediateExecution( false );
                     executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceAllInformations()));
                 }
             }
@@ -257,7 +257,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
         long startTime = System.currentTimeMillis();
 
         VERBE verbEnum = null;
-        String detailsLogInfo = "";
+        StringBuilder detailsLogInfo = new StringBuilder();
         try {
             // ------------------- ping ?
             verbEnum = VERBE.valueOf(executeParameters.verb);
@@ -343,7 +343,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 } else if (milkJob == null) {
                     executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 } else {
-                    detailsLogInfo += "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")";
+                    detailsLogInfo.append( "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
 
                     executeAnswer.listEvents.addAll(removeJob(idJob, executeParameters.tenantId, milkJobFactory));
 
@@ -363,7 +363,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 } else if (milkJob == null) {
                     executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 } else {
-                    detailsLogInfo += "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")";
+                    detailsLogInfo.append( "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
 
                     // save parameters
                     Map<String, Object> parametersObject = executeParameters.getParametersMap("parametersvalue");
@@ -395,13 +395,13 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 } else if (milkJob == null) {
                     executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 } else {
-                    detailsLogInfo += "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")";
+                    detailsLogInfo.append( "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
 
                     SaveJobParameters saveJobParameters = SaveJobParameters.getBaseInformations();
 
                     // this is maybe a call only to update a file parameters
                     if (executeParameters.parametersCommand.containsKey("file")) {
-                        String pageDirectory = executeParameters.getParametersString(cstPageDirectory);
+                        String pageDirectory = executeParameters.getParametersString(CST_PAGE_DIRECTORY);
                         File pageDirectoryFile = new File(pageDirectory);
                         // Yes
                         String fileName = executeParameters.getParametersString("file");
@@ -433,7 +433,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 } else if (milkJob == null) {
                     executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 } else {
-                    detailsLogInfo += "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")";
+                    detailsLogInfo.append( "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
                     milkJob.setImmediateExecution(true);
                     milkJob.setAskForStop(false);
                     executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceTrackExecution()));
@@ -450,7 +450,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 } else if (milkJob == null) {
                     executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 } else {
-                    detailsLogInfo += "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")";
+                    detailsLogInfo.append( "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
 
                     milkJob.setAskForStop(true);
                     executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getAskStop()));
@@ -467,12 +467,12 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 } else if (milkJob == null) {
                     executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 } else {
-                    detailsLogInfo += "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")";
+                    detailsLogInfo.append( "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
 
                     milkJob.trackExecution.lastExecutionDate = new Date();
-                    milkJob.trackExecution.lastExecutionStatus = ExecutionStatus.KILL;
-                    milkJob.trackExecution.inExecution = false;
-                    milkJob.trackExecution.isImmediateExecution = false;
+                    milkJob.trackExecution.setLastExecutionStatus( ExecutionStatus.KILL );
+                    milkJob.trackExecution.setImmediateExecution( false );
+                    milkJob.trackExecution.setInExecution( false );  
                     executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceAllInformations()));
                     executeAnswer.listEvents.add(new BEvent(EVENT_JOB_UPDATED, "Job updated[" + milkJob.getName() + "]"));
                 }
@@ -486,7 +486,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 } else if (milkJob == null) {
                     executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 } else {
-                    detailsLogInfo += "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")";
+                    detailsLogInfo.append( "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
                     String buttonName = executeParameters.getParametersString(cstButtonName);
                     Map<String, Object> parametersObject = executeParameters.getParametersMap("parametersvalue");
                     milkJob.setJobParameters(parametersObject);
@@ -517,11 +517,11 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 addSchedulerStatus = true; // still add it, why not?
                 Boolean startScheduler = executeParameters.getParametersBoolean("start");
                 logger.info("SchedulerStartStop requested[" + startScheduler + "] - ");
-                ArrayList<BEvent> listEventsAction = new ArrayList<BEvent>();
+                ArrayList<BEvent> listEventsAction = new ArrayList<>();
                 if (startScheduler == null && "true".equals(executeParameters.parametersCommand.get("start")))
                     startScheduler = true;
                 if (milkSchedulerFactory.getScheduler() != null && startScheduler != null) {
-                    if (startScheduler) {
+                    if (startScheduler.booleanValue()) {
                         Boolean reset = executeParameters.getParametersBoolean("reset");
                         synchronizeHeart.heartBeatInProgress = false; // prevention, reset it to false
                         listEventsAction.addAll(milkSchedulerFactory.getScheduler().startup(executeParameters.tenantId, reset == null ? false : reset));
@@ -545,7 +545,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 // no need to add the event: it will be done by the getEvent after
 
             } else if (VERBE.SCHEDULERDEPLOY.equals(verbEnum)) {
-                String pageDirectory = executeParameters.getParametersString(cstPageDirectory);
+                String pageDirectory = executeParameters.getParametersString(CST_PAGE_DIRECTORY);
                 File pageDirectoryFile = new File(pageDirectory);
                 // now ask the deployment
                 MilkSchedulerInt scheduler = milkSchedulerFactory.getScheduler();
@@ -668,7 +668,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
 
             executeAnswer.listEvents.add(new BEvent(EVENT_INTERNAL_ERROR, er.getMessage()));
         } finally {
-            executeAnswer.result.put(cstResultTimeInMs, System.currentTimeMillis() - currentTime);
+            executeAnswer.result.put(CST_RESULT_TIMEINMS, System.currentTimeMillis() - currentTime);
             executeAnswer.result.put(cstResultListEvents, BEventFactory.getHtml(executeAnswer.listEvents));
             if (VERBE.HEARTBEAT.equals(verbEnum))
                 logger.fine("MilkJobCommand Verb[" + (verbEnum == null ? "null" : verbEnum.toString()) + "] Tenant["
@@ -676,12 +676,12 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                         + (System.currentTimeMillis() - startTime) + " ms");
             else {
                 if (BEventFactory.isError(executeAnswer.listEvents)) {
-                    detailsLogInfo += "Errors:";
+                    detailsLogInfo.append( "Errors:");
                     for (BEvent event : executeAnswer.listEvents) {
-                        detailsLogInfo += event.toString() + " <~> ";
+                        detailsLogInfo.append( event.toString() + " <~> ");
                     }
                 } else
-                    detailsLogInfo += "no errors";
+                    detailsLogInfo.append( "no errors");
                 logger.info("MilkJobCommand Verb[" + (verbEnum == null ? "null" : verbEnum.toString()) + "] Tenant["
                         + executeParameters.tenantId + "] " + detailsLogInfo + " in "
                         + (System.currentTimeMillis() - startTime) + " ms");
@@ -706,7 +706,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
      * @return
      */
     public synchronized List<BEvent> initialization(boolean forceReload, boolean forceSchedule, long tenantId, MilkJobFactory milkJobFactory) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+        List<BEvent> listEvents = new ArrayList<>();
 
         if (!isInitialized || forceReload) {
             //  load all PlugIn
@@ -772,7 +772,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
 
     }
 
-    public static SynchronizeThreadId synchronizeThreadId = new SynchronizeThreadId();
+    public final static SynchronizeThreadId synchronizeThreadId = new SynchronizeThreadId();
 
     /**
      * thread to execute in a different thread to have a new connection
@@ -789,6 +789,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
             this.tenantId = tenantId;
         }
 
+        @Override
         public void run() {
             // New thread : create the new object
             MilkPlugInFactory milkPlugInFactory = MilkPlugInFactory.getInstance(tenantId);
@@ -802,7 +803,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
         }
     }
 
-    public int thisThreadId = 0;
+    private int thisThreadId = 0;
 
     /**
      * execute the command
@@ -863,6 +864,10 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
 
     }
 
+    public int getThreadId()
+    { 
+        return thisThreadId;
+    }
     /* ******************************************************************************** */
     /*                                                                                  */
     /* Local method() */
@@ -894,7 +899,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
      * @return
      */
     public List<MilkJob> getListJobsOrdered(MilkJobFactory milkJobFactory) {
-        List<MilkJob> listJobs = new ArrayList<MilkJob>();
+        List<MilkJob> listJobs = new ArrayList<>();
         listJobs.addAll(getListJobs(milkJobFactory));
         // order now
         Collections.sort(listJobs, new Comparator<MilkJob>() {
@@ -914,7 +919,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
      * @return
      */
     public List<Map<String, Object>> getListMilkJobsMap(MilkJobFactory milkJobFactory) {
-        List<Map<String, Object>> listJobMap = new ArrayList<Map<String, Object>>();
+        List<Map<String, Object>> listJobMap = new ArrayList<>();
 
         for (MilkJob milkJob : getListJobsOrdered(milkJobFactory)) {
 
@@ -947,8 +952,6 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
 
     public class MySimpleTestThread extends Thread {
 
-        // private MilkCmdControl cmdControl;
-
         public boolean isFinish = false;
         public String buttonName;
         public MilkJobExecution input;
@@ -963,6 +966,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
             this.milkJob = milkJob;
         }
 
+        @Override
         public void run() {
             try {
                 ConnectorAPIAccessorImpl connectorAccessorAPI = new ConnectorAPIAccessorImpl(input.getTenantId());

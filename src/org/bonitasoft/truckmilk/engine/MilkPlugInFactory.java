@@ -9,12 +9,15 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.plugin.MilkDeleteCases;
 import org.bonitasoft.truckmilk.plugin.MilkEmailUsersTasks;
+import org.bonitasoft.truckmilk.plugin.MilkMeteor;
 import org.bonitasoft.truckmilk.plugin.MilkPing;
 import org.bonitasoft.truckmilk.plugin.MilkPurgeArchive;
 import org.bonitasoft.truckmilk.plugin.MilkPurgeArchivedListGetList;
 import org.bonitasoft.truckmilk.plugin.MilkPurgeArchivedListPurge;
 import org.bonitasoft.truckmilk.plugin.MilkReplayFailedTask;
+import org.bonitasoft.truckmilk.plugin.MilkRestartFlowNodes;
 import org.bonitasoft.truckmilk.plugin.MilkSLA;
+import org.bonitasoft.truckmilk.plugin.MilkUnassignTasks;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 /**
@@ -79,6 +82,9 @@ public class MilkPlugInFactory {
         listPlugIns.add(new MilkPurgeArchivedListGetList());
         listPlugIns.add(new MilkReplayFailedTask());
         listPlugIns.add(new MilkSLA());
+        listPlugIns.add(new MilkUnassignTasks() );
+        listPlugIns.add(new MilkMeteor() );
+        listPlugIns.add(new MilkRestartFlowNodes() );
     }
 
     public MilkPlugIn getPluginFromName(String name) {

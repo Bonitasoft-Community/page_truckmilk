@@ -59,7 +59,7 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
      * check the Job's environment
      */
     public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+        List<BEvent> listEvents = new ArrayList<>();
         return listEvents;
     };
 
@@ -108,7 +108,7 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
             String[] header = line == null ? new String[0] : line.split(separatorCSV);
 
             long lineNumber = 1;
-            StringBuffer analysis = new StringBuffer();
+            StringBuilder  analysis = new StringBuilder();
             while ((line = reader.readLine()) != null) {
 
                 if (jobExecution.pleaseStop()) {

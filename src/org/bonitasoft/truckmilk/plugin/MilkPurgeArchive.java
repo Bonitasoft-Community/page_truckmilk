@@ -59,16 +59,15 @@ public class MilkPurgeArchive extends MilkPlugIn {
      * check the environment : for the milkEmailUsersTasks, we require to be able to send an email
      */
     public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
-        return new ArrayList<BEvent>();
-    };
+        return new ArrayList<>();
+    }
 
     /**
      * check the Job's environment
      */
     public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
-        return listEvents;
-    };
+        return new ArrayList<>();
+    }
 
     @SuppressWarnings("unchecked")
     @Override
@@ -83,20 +82,19 @@ public class MilkPurgeArchive extends MilkPlugIn {
         milkPlugInExecution.setPleaseStopAfterTime(milkPlugInExecution.getInputLongParameter(cstParamMaximumDeletionInMinutes), 24 * 60L);
         milkPlugInExecution.setPleaseStopAfterManagedItems(milkPlugInExecution.getInputLongParameter(cstParamMaximumDeletionInCases), 5000L);
 
-        try {
+        List<Long> listProcessDefinitionId = new ArrayList<>();
 
-            List<Long> listProcessDefinitionId = new ArrayList<Long>();
+        // Filter on process?
+        SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, milkPlugInExecution.getPleaseStopAfterManagerItems().intValue());
 
-            // Filter on process?
-            SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, milkPlugInExecution.getPleaseStopAfterManagerItems().intValue());
+        if (listProcessName != null && !listProcessName.isEmpty()) {
 
-            if (listProcessName != null && listProcessName.size() > 0) {
-
-                for (String processName : listProcessName) {
-                    SearchOptionsBuilder searchOptionBuilder = new SearchOptionsBuilder(0, 1000);
-                    searchOptionBuilder.filter(ProcessDeploymentInfoSearchDescriptor.NAME, processName);
-                    searchOptionBuilder.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE,
-                            ActivationState.ENABLED.name());
+            for (String processName : listProcessName) {
+                SearchOptionsBuilder searchOptionBuilder = new SearchOptionsBuilder(0, 1000);
+                searchOptionBuilder.filter(ProcessDeploymentInfoSearchDescriptor.NAME, processName);
+                searchOptionBuilder.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE,
+                        ActivationState.ENABLED.name());
+                try {
                     SearchResult<ProcessDeploymentInfo> searchProcessDeployment = processAPI
                             .searchProcessDeploymentInfos(searchOptionBuilder.done());
                     if (searchProcessDeployment.getCount() == 0) {
@@ -106,62 +104,67 @@ public class MilkPurgeArchive extends MilkPlugIn {
                     for (ProcessDeploymentInfo processInfo : searchProcessDeployment.getResult()) {
                         listProcessDefinitionId.add(processInfo.getProcessId());
                     }
-                }
-                if (listProcessDefinitionId.size() == 0) {
-                    // filter given, no process found : stop now
-                    plugTourOutput.addEvent(eventNoProcessForFilter);
-                    plugTourOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
+                } catch (SearchException e1) {
+                    plugTourOutput.addEvent(new BEvent(eventSearchFailed, e1, ""));
+                    plugTourOutput.executionStatus = ExecutionStatus.ERROR;
                     return plugTourOutput;
                 }
-                searchActBuilder.leftParenthesis();
-                for (int i = 0; i < listProcessDefinitionId.size(); i++) {
-                    if (i > 0)
-                        searchActBuilder.or();
+            }
+            if (!listProcessDefinitionId.isEmpty()) {
+                // filter given, no process found : stop now
+                plugTourOutput.addEvent(eventNoProcessForFilter);
+                plugTourOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
+                return plugTourOutput;
+            }
+            searchActBuilder.leftParenthesis();
+            for (int i = 0; i < listProcessDefinitionId.size(); i++) {
+                if (i > 0)
+                    searchActBuilder.or();
 
-                    searchActBuilder.filter(ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID,
-                            listProcessDefinitionId.get(i));
-                }
-                searchActBuilder.rightParenthesis();
-                searchActBuilder.and();
+                searchActBuilder.filter(ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID,
+                        listProcessDefinitionId.get(i));
+            }
+            searchActBuilder.rightParenthesis();
+            searchActBuilder.and();
 
-            } // end list process name
+        } // end list process name
 
-            // Now, search items to delete
-            Date currentDate = new Date();
-            long timeSearch = currentDate.getTime() - delayInDay * 1000 * 60 * 60 * 24;
+        // Now, search items to delete
+        Date currentDate = new Date();
+        long timeSearch = currentDate.getTime() - delayInDay * 1000 * 60 * 60 * 24;
 
-            searchActBuilder.lessOrEquals(ArchivedProcessInstancesSearchDescriptor.ARCHIVE_DATE, timeSearch);
-            searchActBuilder.sort(ArchivedProcessInstancesSearchDescriptor.ARCHIVE_DATE, Order.ASC);
-            SearchResult<ArchivedProcessInstance> searchArchivedProcessInstance;
+        searchActBuilder.lessOrEquals(ArchivedProcessInstancesSearchDescriptor.ARCHIVE_DATE, timeSearch);
+        searchActBuilder.sort(ArchivedProcessInstancesSearchDescriptor.ARCHIVE_DATE, Order.ASC);
+        SearchResult<ArchivedProcessInstance> searchArchivedProcessInstance;
+        try {
             searchArchivedProcessInstance = processAPI.searchArchivedProcessInstances(searchActBuilder.done());
             if (searchArchivedProcessInstance.getCount() == 0) {
                 plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
                 plugTourOutput.nbItemsProcessed = 0;
                 return plugTourOutput;
             }
-
-            List<Long> sourceProcessInstanceIds = new ArrayList<Long>();
-
-            for (ArchivedProcessInstance archivedProcessInstance : searchArchivedProcessInstance.getResult()) {
-                // logger.info("instance"+archivedProcessInstance.getSourceObjectId()+" archiveDate"+archivedProcessInstance.getArchiveDate().getTime()+" <>"+timeSearch);
-                sourceProcessInstanceIds.add(archivedProcessInstance.getSourceObjectId());
-            }
-            try {
-                processAPI.deleteArchivedProcessInstancesInAllStates(sourceProcessInstanceIds);
-                plugTourOutput.nbItemsProcessed += sourceProcessInstanceIds.size();
-                plugTourOutput.addEvent(new BEvent(eventDeletionSuccess, "Purge:" + sourceProcessInstanceIds.size()));
-
-            } catch (DeletionException e) {
-                logger.severe("Error Delete Archived ProcessInstance=[" + sourceProcessInstanceIds + "] Error[" + e.getMessage() + "]");
-                plugTourOutput.executionStatus = ExecutionStatus.ERROR;
-                plugTourOutput.addEvent(new BEvent(eventDeletionFailed, e, "Purge:" + sourceProcessInstanceIds));
-            }
-            plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
-
         } catch (SearchException e1) {
             plugTourOutput.addEvent(new BEvent(eventSearchFailed, e1, ""));
             plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+            return plugTourOutput;
         }
+        List<Long> sourceProcessInstanceIds = new ArrayList<>();
+
+        for (ArchivedProcessInstance archivedProcessInstance : searchArchivedProcessInstance.getResult()) {
+
+            sourceProcessInstanceIds.add(archivedProcessInstance.getSourceObjectId());
+        }
+        try {
+            processAPI.deleteArchivedProcessInstancesInAllStates(sourceProcessInstanceIds);
+            plugTourOutput.nbItemsProcessed += sourceProcessInstanceIds.size();
+            plugTourOutput.addEvent(new BEvent(eventDeletionSuccess, "Purge:" + sourceProcessInstanceIds.size()));
+
+        } catch (DeletionException e) {
+            logger.severe("Error Delete Archived ProcessInstance=[" + sourceProcessInstanceIds + "] Error[" + e.getMessage() + "]");
+            plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+            plugTourOutput.addEvent(new BEvent(eventDeletionFailed, e, "Purge:" + sourceProcessInstanceIds));
+        }
+        plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
 
         return plugTourOutput;
     }
@@ -176,11 +179,6 @@ public class MilkPurgeArchive extends MilkPlugIn {
         plugInDescription.addParameter(cstParamMaximumDeletionInCases);
         plugInDescription.addParameter(cstParamMaximumDeletionInMinutes);
         plugInDescription.addParameter(cstParamProcessfilter);
-
-        /*
-         * plugInDescription.addParameterFromMapJson(
-         * "{\"delayinmn\":10,\"maxtentative\":12,\"processfilter\":[]}");
-         */
         return plugInDescription;
     }
 }

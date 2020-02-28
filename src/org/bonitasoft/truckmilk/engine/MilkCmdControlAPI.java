@@ -80,7 +80,7 @@ public class MilkCmdControlAPI {
 
         if (redeployDependency) {
             for (CommandJarDependency jarDependency : commandDescription.getListDependencies())
-                jarDependency.forceDeploy = true;
+                jarDependency.setForceDeploy( true );
         }
         DeployStatus deployStatus = bonitaCommand.deployCommand(commandDescription, true, tenantId, commandAPI, platFormAPI);
         return deployStatus;
@@ -98,13 +98,18 @@ public class MilkCmdControlAPI {
         BonitaCommandDescription commandDescription = new BonitaCommandDescription(MilkCmdControl.cstCommandName, pageDirectory);
         commandDescription.forceDeploy = false;
         commandDescription.mainCommandClassName = MilkCmdControl.class.getName();
-        commandDescription.mainJarFile = "TruckMilk-2.2-Page.jar";
+        commandDescription.mainJarFile = "TruckMilk-2.3-Page.jar";
         commandDescription.commandDescription = MilkCmdControl.cstCommandDescription;
         // "bonita-commanddeployment-1.2.jar" is deployed automaticaly with BonitaCommandDeployment
         // commandDescription.dependencyJars = new String[] { "bonita-event-1.5.0.jar", "bonita-properties-2.0.0.jar" }; // "mail-1.5.0-b01.jar", "activation-1.1.jar"};
 
         commandDescription.addJarDependencyLastVersion("bonita-event", "1.7.0", "bonita-event-1.7.0.jar");
         commandDescription.addJarDependencyLastVersion("bonita-properties", "2.1.1", "bonita-properties-2.1.1.jar");
+        CommandJarDependency cmdDependency= commandDescription.addJarDependencyLastVersion("custompage-worker", "1.4.0", "CustomPageWorker-1.4.0.jar");
+        cmdDependency.setForceDeploy( true );
+        
+        // don't add the Meteor Dependency : with Bonita, all dependencies are GLOBAL. If we reference the MeteorAPI, we will have the same API for all pages
+        // and that's impact the meteor page.
         return commandDescription;
     }
 
@@ -126,7 +131,7 @@ public class MilkCmdControlAPI {
         BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(MilkCmdControl.cstCommandName);
 
         if ("deploy".equals(operation)) {
-            parameters.put(MilkCmdControl.cstPageDirectory, pageDirectory.getAbsolutePath());
+            parameters.put(MilkCmdControl.CST_PAGE_DIRECTORY, pageDirectory.getAbsolutePath());
             result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULERDEPLOY.toString(), parameters, tenantId, commandAPI);
         }
 
@@ -180,13 +185,13 @@ public class MilkCmdControlAPI {
      */
     public Map<String, Object> callJobOperation(MilkCmdControl.VERBE verbe, Map<String, Object> information, File pageDirectory,
             CommandAPI commandAPI, long tenantId) {
-        HashMap<String, Serializable> parameters = new HashMap<String, Serializable>();
+        HashMap<String, Serializable> parameters = new HashMap<>();
         if (information != null)
-            for (String key : information.keySet())
-                if (information.get(key) != null)
-                    parameters.put(key, (Serializable) information.get(key));
+            for (Map.Entry<String,Object> entry : information.entrySet())
+                if (entry.getValue() != null)
+                    parameters.put(entry.getKey(), (Serializable) entry.getValue());
 
-        parameters.put(MilkCmdControl.cstPageDirectory, pageDirectory.getAbsolutePath());
+        parameters.put(MilkCmdControl.CST_PAGE_DIRECTORY, pageDirectory.getAbsolutePath());
 
         BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(MilkCmdControl.cstCommandName);
         return bonitaCommand.callCommand(verbe.toString(), parameters, tenantId, commandAPI);

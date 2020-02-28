@@ -109,8 +109,8 @@ public class MilkAccessAPI {
 
     public Map<String, Object> startup(Parameter parameter) {
         // first, deploy the command if needed
-        List<BEvent> listEvents = new ArrayList<BEvent>();
-        Map<String, Object> result = new HashMap<String, Object>();
+        List<BEvent> listEvents = new ArrayList<>();
+        Map<String, Object> result = new HashMap<>();
 
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         DeployStatus deployStatus = milkCmdControlAPI.checkAndDeployCommand(parameter.pageDirectory, parameter.commandAPI,

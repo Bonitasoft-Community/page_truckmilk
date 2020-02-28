@@ -26,7 +26,7 @@ public class MilkJobExecution {
 
     public String tourName;
     // this parameters is initialised with the value in the PlugTour, and may change after
-    public Map<String, Object> tourParameters;
+    private Map<String, Object> tourParameters;
 
     private MilkJob milkJob;
 
@@ -281,8 +281,8 @@ public class MilkJobExecution {
         startTimeMs = System.currentTimeMillis();
         pleaseStop = false;
 
-        milkJob.trackExecution.isImmediateExecution = false;
-        milkJob.trackExecution.inExecution = true;
+        milkJob.trackExecution.setImmediateExecution( false );
+        milkJob.trackExecution.setInExecution( true );
         milkJob.trackExecution.startTime = startTimeMs;
         milkJob.trackExecution.percent = 0;
         milkJob.trackExecution.endTimeEstimatedInMs = -1;
@@ -291,7 +291,7 @@ public class MilkJobExecution {
     }
 
     public void end() {
-        milkJob.trackExecution.inExecution = false;
+        milkJob.trackExecution.setInExecution( false );
         milkJob.trackExecution.percent = 100;
         milkJob.trackExecution.endTimeEstimatedInMs = 0;
         milkJob.trackExecution.endDateEstimated = new Date();

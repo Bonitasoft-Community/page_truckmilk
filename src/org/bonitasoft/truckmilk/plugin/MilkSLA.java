@@ -29,7 +29,6 @@ import org.bonitasoft.engine.bpm.process.ProcessActivationException;
 import org.bonitasoft.engine.bpm.process.ProcessDefinition;
 import org.bonitasoft.engine.bpm.process.ProcessDefinitionNotFoundException;
 import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfo;
-import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfoSearchDescriptor;
 import org.bonitasoft.engine.bpm.process.ProcessExecutionException;
 import org.bonitasoft.engine.exception.SearchException;
 import org.bonitasoft.engine.exception.UpdateException;
@@ -473,7 +472,7 @@ public class MilkSLA extends MilkPlugIn {
                 plugTourOutput.addEvent(EVENT_NO_PROCESS_FILTER);
                 return plugTourOutput;
             }
-            SearchResult<ProcessDeploymentInfo> searchProcessInfo = getListProcessDefinitionId(processName, processAPI);
+            SearchResult<ProcessDeploymentInfo> searchProcessInfo = getListProcessDefinitionId(input, cstParamProcessName, processAPI);
             if (searchProcessInfo.getCount() == 0) {
                 plugTourOutput.addEvent(new BEvent(EVENT_NO_PROCESS_MATCH_FILTER, "ProcessName[" + processName + "]"));
                 return plugTourOutput;
@@ -601,36 +600,7 @@ public class MilkSLA extends MilkPlugIn {
         return plugTourOutput;
     }
 
-    /**
-     * retrieve the list of ProcessName from the filter
-     * search all process with the name (we may have multiple version)
-     * format is "PROCESSNAME (VERSION)" or "PROCESSNAME"
-     * 
-     * @param processName
-     * @return
-     * @throws SearchException
-     */
-    private SearchResult<ProcessDeploymentInfo> getListProcessDefinitionId(String processNameVersion, ProcessAPI processAPI) throws SearchException {
-
-        processNameVersion = processNameVersion.trim();
-        String processNameOnly = processNameVersion;
-        String processVersionOnly = null;
-        if (processNameVersion.endsWith(")")) {
-            int firstParenthesis = processNameVersion.lastIndexOf("(");
-            if (firstParenthesis != -1) {
-                processNameOnly = processNameVersion.substring(0, firstParenthesis);
-                processVersionOnly = processNameVersion.substring(firstParenthesis + 1, processNameVersion.length() - 1);
-            }
-        }
-        SearchOptionsBuilder searchOption = new SearchOptionsBuilder(0, 1000);
-        searchOption.filter(ProcessDeploymentInfoSearchDescriptor.NAME, processNameOnly.trim());
-        if (processVersionOnly != null) {
-            searchOption.filter(ProcessDeploymentInfoSearchDescriptor.VERSION, processVersionOnly.trim());
-        }
-        return processAPI.searchProcessDeploymentInfos(searchOption.done());
-
-    }
-
+    
     /**
      * is the rule is active for this task ?
      * 

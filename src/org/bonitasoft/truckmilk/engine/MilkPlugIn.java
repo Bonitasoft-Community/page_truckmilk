@@ -8,8 +8,15 @@ import java.util.List;
 import java.util.Map;
 
 import org.bonitasoft.engine.api.APIAccessor;
+import org.bonitasoft.engine.api.ProcessAPI;
+import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfo;
+import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfoSearchDescriptor;
+import org.bonitasoft.engine.exception.SearchException;
+import org.bonitasoft.engine.search.SearchOptionsBuilder;
+import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
@@ -23,8 +30,12 @@ import org.json.simple.JSONValue;
  * All plugin must extends this class.
  * Then, a new plugin will be deployed as a command in the BonitaEngine, in order
  * to be called on demand by the MilkCmdControl.
+ * 
+ *  -------------------------- IMPORTANT
  * Register the embeded plug in in MilkPlugInFactory.collectListPlugIn()
  * Remark: MilkCmdControl is the command who control all plugin execution.
+ * --------------------------------
+ * 
  * Multiple PlugTour can be define for each PlugIn
  * * Example: plugIn 'monitorEmail'
  * - plugTour "HumanRessourceEmail" / Every day / Monitor 'hr@bonitasoft.com'
@@ -580,6 +591,39 @@ public abstract class MilkPlugIn {
     public List<BEvent> executeTasks() {
         List<BEvent> listEvents = new ArrayList<BEvent>();
         return listEvents;
+    }
+    public SearchResult<ProcessDeploymentInfo> getListProcessDefinitionId(MilkJobExecution jobExecution, PlugInParameter parameterName, ProcessAPI processAPI) throws SearchException {
+        String processNameVersion = jobExecution.getInputStringParameter(parameterName);
+        return getListProcessDefinitionId(processNameVersion, processAPI);
+    }
+    /**
+     * when the parameter is a TypeParameter.PROCESSNAME
+     * @param processNameVersion
+     * @param processAPI
+     * @return
+     * @throws SearchException
+     */
+    public SearchResult<ProcessDeploymentInfo> getListProcessDefinitionId(String processNameVersion, ProcessAPI processAPI) throws SearchException {
+        
+        processNameVersion = processNameVersion.trim();
+        String processNameOnly = processNameVersion;
+        String processVersionOnly = null;
+        if (processNameVersion.endsWith(")")) {
+            int firstParenthesis = processNameVersion.lastIndexOf("(");
+            if (firstParenthesis != -1) {
+                processNameOnly = processNameVersion.substring(0, firstParenthesis);
+                processVersionOnly = processNameVersion.substring(firstParenthesis + 1, processNameVersion.length() - 1);
+            }
+        }
+        SearchOptionsBuilder searchOption = new SearchOptionsBuilder(0, 1000);
+        searchOption.filter(ProcessDeploymentInfoSearchDescriptor.NAME, processNameOnly.trim());
+        if (processVersionOnly != null) {
+            searchOption.filter(ProcessDeploymentInfoSearchDescriptor.VERSION, processVersionOnly.trim());
+        }
+        searchOption.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE, "ENABLED");
+
+        return processAPI.searchProcessDeploymentInfos(searchOption.done());
+
     }
 
 }

@@ -27,7 +27,7 @@ public class MilkCommand extends MilkPlugIn {
     private static PlugInParameter cstParamCommandName = PlugInParameter.createInstance("commandName", "Command name", TypeParameter.STRING, true, "Command name to call");
     private static PlugInParameter cstParamCommandParameters = PlugInParameter.createInstance("parameters", "Parameters", TypeParameter.JSON, true, "Parameters to send to the command");
 
-    SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+    private SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
     public MilkCommand() {
         super(TYPE_PLUGIN.EMBEDED);
@@ -41,7 +41,7 @@ public class MilkCommand extends MilkPlugIn {
      */
     @Override
     public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
-        return new ArrayList<BEvent>();
+        return new ArrayList<>();
     }
 
     /**
@@ -50,7 +50,7 @@ public class MilkCommand extends MilkPlugIn {
     @Override
     public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
         // is the command Exist ? 
-        return new ArrayList<BEvent>();
+        return new ArrayList<>();
     }
 
     /**

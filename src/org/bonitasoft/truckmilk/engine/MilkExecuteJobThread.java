@@ -84,7 +84,7 @@ public class MilkExecuteJobThread extends Thread {
                 }
                 // now, it's locked on this node 
 
-                if (milkJob.trackExecution.isImmediateExecution)
+                if (milkJob.trackExecution.isImmediateExecution())
                     executionDescription += "(i)";
                 executionDescription += "STARTED;";
 
@@ -149,9 +149,9 @@ public class MilkExecuteJobThread extends Thread {
 
             // ----------------- Execution
             long timeBegin = System.currentTimeMillis();
+            milkJobExecution.start();
             try {
                 logger.info("Start Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
-                milkJobExecution.start();
 
                 // save the status in the database
                 // save the start Status (so general) and the track Status, plus askStop to false
@@ -159,7 +159,6 @@ public class MilkExecuteJobThread extends Thread {
 
                 output = plugIn.execute(milkJobExecution, connectorAccessorAPI);
                 output.hostName = hostName;
-                milkJobExecution.end();
                 String listEventsSt = "";
                 for (final BEvent event : listEvents) {
                     listEventsSt += event.toString() + " <~> ";
@@ -183,7 +182,19 @@ public class MilkExecuteJobThread extends Thread {
                     output.addEvent(new BEvent(EVENT_PLUGIN_VIOLATION, "Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + e.getMessage() + " at " + exceptionDetails));
                     output.executionStatus = ExecutionStatus.CONTRACTVIOLATION;
                 }
+            } catch (Error er) {
+                StringWriter sw = new StringWriter();
+                er.printStackTrace(new PrintWriter(sw));
+                String exceptionDetails = sw.toString();
+                logger.severe(" Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + er.getMessage() + " at " + exceptionDetails);
+                if (output == null) {
+                    output = new PlugTourOutput(milkJob);
+                    output.addEvent(new BEvent(EVENT_PLUGIN_VIOLATION, "Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + er.getMessage() + " at " + exceptionDetails));
+                    output.executionStatus = ExecutionStatus.CONTRACTVIOLATION;
+                }
             }
+            milkJobExecution.end();
+
             long timeEnd = System.currentTimeMillis();
 
             output.executionTimeInMs = (timeEnd - timeBegin);
@@ -208,6 +219,8 @@ public class MilkExecuteJobThread extends Thread {
         listEvents.addAll(milkJob.calculateNextExecution());
         milkJob.setImmediateExecution(false);
         milkJob.setAskForStop(false);
+        milkJob.setInExecution(false); // double check the end
+
         listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceEndExecutionJob()));
 
         // hum, nothing where to save the listEvent of the execution.
