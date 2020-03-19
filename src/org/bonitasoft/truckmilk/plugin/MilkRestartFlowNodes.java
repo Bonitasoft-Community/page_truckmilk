@@ -48,7 +48,7 @@ public class MilkRestartFlowNodes  extends MilkPlugIn {
     public PlugInDescription getDefinitionDescription() {
         PlugInDescription plugInDescription = new PlugInDescription();
         plugInDescription.name = "ReplayFlowNodes";
-        plugInDescription.label = "Replay Flow Nodes";
+        plugInDescription.label = "Replay (Stuck) Flow Nodes";
         plugInDescription.description = "Check all flow nodes in the database, and if this number is over the number of Pending flownodes, restart them";
         plugInDescription.addParameter(cstParamNumberOfFlowNodesToRestart);
         return plugInDescription;
@@ -73,6 +73,12 @@ public class MilkRestartFlowNodes  extends MilkPlugIn {
             
         }
         // +1 then we can detect if we re-execute ALL flow nodes, or less that we have in database
+        /*
+         * SELECT f.*
+FROM flownode_instance AS f 
+WHERE (f.state_Executing = 1 OR f.stable = 0 OR f.terminal = 1 OR f.stateCategory = 'ABORTING' OR f.stateCategory = 'CANCELLING') 
+ORDER BY id;
+         */
         List<Map<String,Object>> listFlowNodes = radarWorkers.getOldestFlowNodesWaitingForExecution(jobExecution.tenantId, 1+ jobExecution.getInputLongParameter(cstParamNumberOfFlowNodesToRestart));
         if (listFlowNodes.isEmpty())
         {

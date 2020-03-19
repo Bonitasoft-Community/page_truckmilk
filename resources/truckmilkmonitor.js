@@ -60,10 +60,18 @@
 		this.refreshDate=null;
 		this.scheduler={ 'enable': false, listtypeschedulers:[]};
 		
+		
+		this.delayListScope= [ {"value": "YEAR", "label":"Year"},
+			{"value": "MONTH", "label":"Month"},
+			{"value": "WEEK", "label":"Week"},
+			{"value": "DAY", "label":"Day"},
+			{"value": "HOUR", "label":"Hour"},
+			{"value": "MN", "label":"Minutes"} ];
+		
 		// a new listPlugTour is receive : refresh all what we need in the
 		// interface
 		this.afterRefreshListPlugTour = function() {
-			// console.log("afterRefreshListPlugTour:Start");
+			console.log("afterRefreshListPlugTour:Start");
 			for ( var i in this.listplugtour) {
 				var plugtourindex = this.listplugtour[i];
 				this.preparePlugTourParameter(plugtourindex);
@@ -152,7 +160,8 @@
 		this.refresh = function( completeStatus ) {
 			var self = this;
 			self.deploimentsuc=''; // no need to keep it for ever
-			console.log("refresh.start listplugtour="+angular.toJson( self.listplugtour )); 
+			// console.log("refresh.start listplugtour="+angular.toJson( self.listplugtour )); 
+			console.log("refresh.start");
 			if (self.inprogress)
 			{
 				console.log("Refresh in progress, skip this one");
@@ -168,7 +177,7 @@
 			self.inprogress = true;
 			self.showUploadSuccess=false;
 
-			console.log("refresh: inprogress<=true. Call now 2.2");
+			console.log("action["+verb+"] inprogress<=true. Call now 2.2");
 			// console.log("refresh call HTTP");
 			$http.get('?page=custompage_truckmilk&action='+verb+'&t='+Date.now())
 			.success(function(jsonResult, statusHttp, headers, config) {
@@ -183,57 +192,10 @@
 
 					
 				self.deploiment = jsonResult.deploiment;
-				if (self.completeStatus)
-				{
-					self.listplugtour 	= jsonResult.listplugtour;
-					self.afterRefreshListPlugTour();
-					self.scheduler 		= jsonResult.scheduler;
+				console.log("Result completeStatus ? "+self.completeStatus);
+				self.refreshPlugTourFromServer(self.completeStatus, self, jsonResult );
 
-				}
-				else
-				{
-					for (var i in jsonResult.listplugtour)
-					{
-						var serverPlugTour = jsonResult.listplugtour[ i ];
-						var foundIt = false;
-						for ( var j in self.listplugtour) {
-							var localPlugTour = self.listplugtour[ j ];
-							// console.log("Compare
-							// server["+serverPlugTour.name+"]("+serverPlugTour.id+")
-							// with
-							// ["+localPlugTour.name+"]("+localPlugTour.id+")");
-							if (serverPlugTour.id == localPlugTour.id)
-							{
-								// console.log("Found it !");
-								foundIt= true;
-								// localPlugTour.name = serverPlugTour.name;
-								// cron
-								localPlugTour.trackExecution					= serverPlugTour.trackExecution;
 
-								
-								
-								localPlugTour.lastexecutionlistevents			= serverPlugTour.lastexecutionlistevents;
-								
-								
-								localPlugTour.enable							= serverPlugTour.enable;
-								localPlugTour.hostsrestriction					= serverPlugTour.hostsrestriction;
-
-								
-								localPlugTour.savedExecution					= serverPlugTour.savedExecution;
-								localPlugTour.askForStop						= serverPlugTour.askForStop;
-								localPlugTour.listevents						= serverPlugTour.listevents;
-								
-							}
-
-						}
-						if (! foundIt)
-						{
-							// add it in the list
-							// console.log("Found it !");
-							// self.listplugtour.push(serverPlugTour );
-						}
-					}						
-				}
 				self.listplugin 	= jsonResult.listplugin;
 				self.listevents 	= jsonResult.listevents;				
 
@@ -251,6 +213,63 @@
 			});
 
 		}
+		// bob
+		this.refreshPlugTourFromServer = function( completeStatus, self, jsonResult ) {
+			console.log("refreshPlugTour - complete="+completeStatus);
+		
+			if (completeStatus)
+			{
+				console.log("refreshPlugTour True, update all"); 
+	
+				self.listplugtour 	= jsonResult.listplugtour;
+				self.afterRefreshListPlugTour();
+				
+				self.scheduler 		= jsonResult.scheduler;
+				// console.log("Scheduler="+angular.toJson( self.scheduler));
+	
+			}
+			else
+			{
+				console.log("refreshPlugTour completeStatus False"); 
+				for (var i in jsonResult.listplugtour)
+				{
+					var serverPlugTour = jsonResult.listplugtour[ i ];
+					var foundIt = false;
+					for ( var j in self.listplugtour) {
+						var localPlugTour = self.listplugtour[ j ];
+						// console.log("Compare
+						// server["+serverPlugTour.name+"]("+serverPlugTour.id+")
+						// with
+						// ["+localPlugTour.name+"]("+localPlugTour.id+")");
+						if (serverPlugTour.id == localPlugTour.id)
+						{
+							console.log("refreshPlugTour: Found it ["+localPlugTour.id+"]-["+localPlugTour.name+"]");
+							foundIt= true;
+							// localPlugTour.name = serverPlugTour.name;
+							// cron
+							localPlugTour.trackExecution					= serverPlugTour.trackExecution;
+							localPlugTour.lastexecutionlistevents			= serverPlugTour.lastexecutionlistevents;
+							localPlugTour.enable							= serverPlugTour.enable;
+							localPlugTour.hostsrestriction					= serverPlugTour.hostsrestriction;
+							localPlugTour.savedExecution					= serverPlugTour.savedExecution;
+							localPlugTour.askForStop						= serverPlugTour.askForStop;
+							localPlugTour.listevents						= serverPlugTour.listevents;
+							
+							console.log("Values does not change:"+angular.toJson(localPlugTour.parametersvalue));
+						}
+	
+					}
+					if (! foundIt)
+					{
+						// add it in the list
+						// console.log("Found it !");
+						// self.listplugtour.push(serverPlugTour );
+					}
+				}						
+			}
+		}
+		
+		
 		this.addJob = function(plugin, nameJob) {
 			console.log("addJob: add["+nameJob+"]");
 			if (! nameJob || nameJob === '')
@@ -437,25 +456,22 @@
 		// parametersvalue [ANGULAR MAPPED]
 		this.preparePlugTourParameter = function(plugtour) {
 			
-			// console.log("preparePlugTourParameter.start: " + plugtour.name);
+			console.log("preparePlugTourParameter.start: " + plugtour.name);
 			plugtour.newname=plugtour.name;
 			plugtour.parametersvalue = {};
 			
 			for ( var key in plugtour.parameters) {
 				plugtour.parametersvalue[key] = JSON.parse( JSON.stringify( plugtour.parameters[key]) );
-				// console.log("Parameter[" + key + "] value[" + angular.toJson(
-				// plugtour.parameters[key]) + "] ="+angular.toJson(
-				// plugtour.parametersvalue,true ));
-				
-				
-			
+				console.log("Parameter[" + key + "] value[" + angular.toJson(plugtour.parameters[key]) + "] ="+angular.toJson(plugtour.parametersvalue,true ));
 			}
 			// prepare all test button
 			for (var key in plugtour.parametersdef)
 			{
+				var parameterName=plugtour.parametersdef[ key ].name;
+
 				if (plugtour.parametersdef[ key ].type==="BUTTONARGS")
 				{
-					var buttonName=plugtour.parametersdef[ key ].name;
+
 					// console.log("buttonARGS detected key=["+key+"]
 					// name=["+buttonName+"]
 					// args="+angular.toJson(plugtour.parametersdef[ key
@@ -463,13 +479,14 @@
 					// set the default value
 					var listArgs=plugtour.parametersdef[ key ].args;
 					var mapArgsValue={};
-					plugtour.parametersvalue[ buttonName ]=mapArgsValue;
+					plugtour.parametersvalue[ parameterName ]=mapArgsValue;
 					for (var i in listArgs)
 					{
 						var argname=listArgs[ i ].name;
 						mapArgsValue[ argname ] = listArgs[ i ].value;
 					}
 				}
+				
 			}
 			console.log("PlugTourPreration END " + plugtour.name+" plugtour.parametersvalue="+angular.toJson( plugtour.parametersvalue,true ));
 
@@ -492,7 +509,7 @@
 		}
 		this.removeInArray = function( valueArray, value)
 		{
-			console.log("removeInArray:Start");
+			console.log("removeInArray:Start ["+value+"]");
 			// console.log("removeInArray value "+value);
 			var index = valueArray.indexOf(value);
 			if (index > -1) {
@@ -908,6 +925,9 @@
 		// -----------------------------------------------------------------------------------------
 		// Scheduler
 		// -----------------------------------------------------------------------------------------
+		this.scheduler = { 'schedulerlistevents' : '', 'lastheartbeat':[] };
+		
+		
 		this.schedulerOperation = function(action) {
 			var self = this;
 			self.inprogress = true;
@@ -948,9 +968,16 @@
 			self.listevents='';
 
 			console.log("SchedulerMaintenance v2, Inprogress<=true operation=["+operation+"]");
-			var param= { 'operation': operation, 'newscheduler': this.scheduler.selectscheduler, 'reset':true };
+			var param= {
+					'operation' : operation,
+					'newscheduler':this.scheduler.type,
+					'reset' : true,
+					'logheartbeat' : this.scheduler.logheartbeat,
+					'nbsavedheartbeat':this.scheduler.nbsavedheartbeat} ;
+			
+					
 			var json = encodeURIComponent(angular.toJson(param, true));
-			self.scheduler = { 'schedulerlistevents' : '' };
+			self.scheduler.schedulerlistevents= '';
 			
 			// console.log("schedulerMaintenance call HTTP");
 			$http.get('?page=custompage_truckmilk&action=schedulermaintenance&paramjson=' + json+'&t='+Date.now())
@@ -961,9 +988,12 @@
 					window.location.reload();
 				}
 				self.inprogress = false;
+				
 				console.log("schedulerMaintenance.receiveData HTTP Finish inprogress<=false"+ angular.toJson(jsonResult,false));
 
-				self.scheduler	= jsonResult;
+				self.scheduler	= jsonResult.scheduler;
+				self.scheduler.schedulerlistevents = jsonResult.listevents;
+				
 			}).error(function(jsonResult, statusHttp, headers, config) {
 				console.log("SchedulerMaintenance.error HTTP statusHttp="+statusHttp);
 				// connection is lost ?
@@ -993,6 +1023,21 @@
 			return $sce.trustAsHtml(listevents);
 		}
 
+		// -----------------------------------------------------------------------------------------
+		// Delay Widget
+		// -----------------------------------------------------------------------------------------
+		this.getDelayScope = function( valueCompact )  {
+			var res = valueCompact.split(":");
+			return res[0];
+		}
+		this.getDelayValue = function( valueCompact )  {
+			var res = valueCompact.split(":");
+			return res[1];
+		}
+		this.compactDelay = function( variable, scope, value ) {
+			variabl = scope+":"+value;
+		}
+		
 		
 		// -----------------------------------------------------------------------------------------
 		// Thanks to Bonita to not implement the POST : we have to split the URL
@@ -1075,6 +1120,9 @@
 					{
 						self.listeventsexecution    		= jsonResult.listevents;
 						self.listeventsconfig 				= jsonResult.listeventsconfig;
+
+						self.refreshPlugTourFromServer(false, self, jsonResult ); // bob
+
 					}
 					if (self.postParams.action=="testButton")
 					{

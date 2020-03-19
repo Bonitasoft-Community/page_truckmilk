@@ -18,8 +18,8 @@ import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkCmdControl;
 import org.bonitasoft.truckmilk.engine.MilkCmdControlAPI;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
@@ -148,8 +148,8 @@ public class MilkAccessAPI {
      */
     public Map<String, Object> commandReploy(Parameter parameter) {
         // first, deploy the command if needed
-        List<BEvent> listEvents = new ArrayList<BEvent>();
-        Map<String, Object> result = new HashMap<String, Object>();
+        List<BEvent> listEvents = new ArrayList<>();
+        Map<String, Object> result = new HashMap<>();
 
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         DeployStatus deployStatus = milkCmdControlAPI.forceDeployCommand(parameter.information, parameter.pageDirectory, parameter.commandAPI,
@@ -160,7 +160,7 @@ public class MilkAccessAPI {
             result.put(cstJsonDeploimenterr, "Error during deploiment");
             return result;
         }
-        result.put(cstJsonDeploimentsuc, "Command redeployed deployed;");
+        result.put(cstJsonDeploimentsuc, "Command redeployed;");
         return result;
 
     }
@@ -249,7 +249,7 @@ public class MilkAccessAPI {
         MilkPlugInFactory milkPlugInFactory = MilkPlugInFactory.getInstance(tenantId);
         MilkJobFactory milkPlugInTourFactory = MilkJobFactory.getInstance(milkPlugInFactory);
 
-        MilkJob milkPlugInTour = milkPlugInTourFactory.getById(plugInTourId);
+        MilkJob milkPlugInTour = milkPlugInTourFactory.getJobById(plugInTourId);
         if (milkPlugInTour == null)
             logger.severe("Can't access plugInParameter[" + paramname + "]");
         else {
@@ -273,7 +273,7 @@ public class MilkAccessAPI {
      * @return
      */
     public Map<String, String> readParameterContent(Parameter parameter, OutputStream output) {
-        Map<String, String> mapHeaders = new HashMap<String, String>();
+        Map<String, String> mapHeaders = new HashMap<>();
 
         Long plugInTourId = TypesCast.getLong(parameter.information.get("plugintour"), 0L);
         long tenantId = parameter.apiSession.getTenantId();
@@ -282,7 +282,7 @@ public class MilkAccessAPI {
         MilkPlugInFactory milkPlugInFactory = MilkPlugInFactory.getInstance(tenantId);
         MilkJobFactory milkPlugInTourFactory = MilkJobFactory.getInstance(milkPlugInFactory);
 
-        MilkJob milkPlugInTour = milkPlugInTourFactory.getById(plugInTourId);
+        MilkJob milkPlugInTour = milkPlugInTourFactory.getJobById(plugInTourId);
         /*
          * MilkFactoryOp milkFactoryOp = milkPlugInTourFactory.dbLoadPlugInTour(plugInTourId);
          * if (milkFactoryOp.plugInTour==null)

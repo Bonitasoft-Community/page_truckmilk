@@ -7,7 +7,7 @@ public class TypesCast {
     /**
      * to share this date format in all the page
      */
-    public static SimpleDateFormat sdfCompleteDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+    public final static SimpleDateFormat sdfCompleteDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
     public static String getString(Object value, String defaultValue) {
         try {

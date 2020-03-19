@@ -25,11 +25,13 @@ import org.bonitasoft.engine.sessionaccessor.SessionAccessor;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
+import org.bonitasoft.truckmilk.engine.MilkReportEngine;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 /**
  * Quartz Job
  * The CmdControl has to be call by the Quartz job at a frequency. This is the goal of this class
+ * This class Does not explicitaly call the DoHeartBreath, cmdControl does that for it.
  * The Tour describe :
  * - when it is executed (every hour, day...)
  * - what is the PlugInDetector
@@ -40,12 +42,12 @@ import org.bonitasoft.truckmilk.toolbox.MilkLog;
  * org.quartz.handlers = 5bonita.org.apache.juli.AsyncFileHandler
  * org.quartz.level=INFO
  */
-public class MilkScheduleQuartz implements MilkSchedulerInt {
+public class MilkScheduleQuartz extends MilkSchedulerInt {
 
-    private static BEvent EVENT_QUARTZ_SCHEDULE_ERROR = new BEvent(MilkScheduleQuartz.class.getName(), 1, Level.ERROR,
+    private static BEvent eventQuartzScheduleError = new BEvent(MilkScheduleQuartz.class.getName(), 1, Level.ERROR,
             "Quartz Job failed", "Check the error", "The different monitoring can't run", "RESET the Scheduler. Check installation.");
 
-    private static BEvent EVENT_DEPLOY_QUARTZ_JOB = new BEvent(MilkScheduleQuartz.class.getName(), 2, Level.ERROR,
+    private static BEvent eventDeployQuartzJob = new BEvent(MilkScheduleQuartz.class.getName(), 2, Level.ERROR,
             "Deploy Quartz Job failed", "To have an execution with the correct frequency, a job has to be deploy. Java class implementation of the job failed", "The different monitoring can't run", "See the error");
 
     private static BEvent EVENT_QUARTZ_NO_JOB = new BEvent(MilkScheduleQuartz.class.getName(), 3, Level.ERROR,
@@ -93,9 +95,10 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
      */
     public boolean isStarted = true;
 
-    public MilkScheduleQuartz() {
-        super();
-    }
+    public MilkScheduleQuartz( MilkSchedulerFactory factory ) {
+        super( factory );
+     }
+
 
     /* ******************************************************************************** */
     /*                                                                                  */
@@ -105,7 +108,7 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
     /* ******************************************************************************** */
     /** check if the class MilkQuartzJob is accessible */
     public List<BEvent> check(long tenantId) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+        List<BEvent> listEvents = new ArrayList<>();
 
         try {
             @SuppressWarnings("rawtypes")
@@ -179,7 +182,6 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
     public Date getDateNextHeartBeat(long tenantId) {
         // with Quartz, no idea at this moment
         return null;
-
     }
 
     /**
@@ -189,7 +191,7 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
      */
     public String getDescription() {
         return "The QUARTZ engine embeded in Bonita is used to schedule the monitoring. Copy TruckMilk-x.y.jar (in the Truckmilk.zip, under additionallib) to the Web Application server (webapp/bonita/WEB-INF/lib for a tomcat) and restart the server.";
-    };
+    }
 
     public Execution getExecution() {
         return mExecution;
@@ -202,25 +204,30 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
     /*                                                                                  */
     /* ******************************************************************************** */
 
-    private final static String QuartzMilkJobName = "MilktruckJob";
+    private final static String QUARTZMILKJOBNAME = "MilktruckJob";
 
     /**
      * this definition is duplicated in the class MilkQuartzJob and can't be in the same class, 2 Jar
      * will be deployed and not at the same level
      */
-    public final static String cstParamTenantId = "tenantId";
+    public final static String CSTPARAMTENANTID = "tenantId";
     /**
      * on which scope the Quartz Jar has to be deployed ?
      */
-    public final static ScopeType cstScopeDeployment = ScopeType.GLOBAL;
+    public final static ScopeType CSTSCOPEDEPLOYMENT = ScopeType.GLOBAL;
+
+    public boolean needRestartAtInitialization() {
+        return false;
+    }
 
     /**
      * artefactId is to keep a internal ID, like processId for a Scope.Process
      */
 
     public List<BEvent> startup(long tenantId, boolean forceReset) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
-        logger.info(logHeader + "Startup QuartzJob reset[" + forceReset + "]");
+        List<BEvent> listEvents = new ArrayList<>();
+        MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
+        milkReportEngine.reportHeartBeatInformation("Startup QuartzJob reset[" + forceReset + "]");
         try {
             final TenantServiceAccessor tenantAccessor = TenantServiceSingleton.getInstance(tenantId);
             tenantAccessor.getUserTransactionService().executeInTransaction(() -> {
@@ -252,10 +259,10 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
                 SJobDescriptorBuilderFactory jobDescriptorBuilder = BuilderFactory.get(SJobDescriptorBuilderFactory.class);
                 SJobDescriptor jobDescriptor = jobDescriptorBuilder
                         .createNewInstance("org.bonitasoft.truckmilk.schedule.quartz.MilkQuartzJob", getJobTriggerName(tenantId), false).done();
-                List<SJobParameter> syncJobParameters = new ArrayList<SJobParameter>();
+                List<SJobParameter> syncJobParameters = new ArrayList<>();
                 // tenantId in the job param
                 SJobParameterBuilderFactory jobParameterBuilderFactory = BuilderFactory.get(SJobParameterBuilderFactory.class);
-                syncJobParameters.add(jobParameterBuilderFactory.createNewInstance(cstParamTenantId, tenantId).done());
+                syncJobParameters.add(jobParameterBuilderFactory.createNewInstance(CSTPARAMTENANTID, tenantId).done());
                 bonitaScheduler.schedule(jobDescriptor, syncJobParameters, syncJobTrigger);
                 logger.info(logHeader + " QuartzJob[" + getJobTriggerName(tenantId) + "] Started with Cron[" + cronString + "]");
                 return null;
@@ -267,14 +274,16 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
             e.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();
             logger.severe(logHeader + "~~~~~~~~~~  : ERROR " + e + " at " + exceptionDetails);
-            listEvents.add(new BEvent(EVENT_QUARTZ_SCHEDULE_ERROR, e, ""));
+            listEvents.add(new BEvent(eventQuartzScheduleError, e, ""));
         }
         return listEvents;
     }
 
     public List<BEvent> shutdown(long tenantId) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+        List<BEvent> listEvents = new ArrayList<>();
         isStarted = false;
+        MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
+        milkReportEngine.reportHeartBeatInformation( "SHUTDOWN Quartz Scheduler");
         // Kill the job
         try {
             final TenantServiceAccessor tenantAccessor = TenantServiceSingleton.getInstance(tenantId);
@@ -298,7 +307,7 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
             e.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();
             logger.severe(logHeader + "~~~~~~~~~~  : ERROR " + e + " at " + exceptionDetails);
-            listEvents.add(new BEvent(EVENT_QUARTZ_SCHEDULE_ERROR, e, ""));
+            listEvents.add(new BEvent(eventQuartzScheduleError, e, ""));
         }
         return listEvents;
     }
@@ -311,9 +320,11 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
     /* ******************************************************************************** */
     @Override
     public List<BEvent> operation(Map<String, Serializable> parameters) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
-        return listEvents;
-
+        if ("heartbeat".equals( parameters.get("scheduleroperation")))
+        {
+          
+        }
+        return new ArrayList<>();
     };
 
     /* ******************************************************************************** */
@@ -324,9 +335,9 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
     /* ******************************************************************************** */
 
     public List<BEvent> checkAndDeploy(boolean forceDeploy, File pageDirectory, long tenantId) {
-        File fileQuartzJar = new File(pageDirectory.getAbsolutePath() + "/lib/TruckMilk-2.2-Quartzjob.jar");
+        // File fileQuartzJar = new File(pageDirectory.getAbsolutePath() + "/lib/TruckMilk-2.2-Quartzjob.jar");
         // signature=getSignature(fileQuartzJar);
-        return new ArrayList<BEvent>();
+        return new ArrayList<>();
     }
 
     public List<BEvent> reset(long tenantId) {
@@ -340,7 +351,7 @@ public class MilkScheduleQuartz implements MilkSchedulerInt {
      * @return
      */
     private String getJobTriggerName(long tenantId) {
-        return "trg" + QuartzMilkJobName + "_" + tenantId;
+        return "trg" + QUARTZMILKJOBNAME + "_" + tenantId;
     }
 
 }

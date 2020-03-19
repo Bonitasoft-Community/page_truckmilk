@@ -26,10 +26,13 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugTourOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
+import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
+import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
-import org.json.simple.JSONValue;
 import org.quartz.CronExpression;
+
+import lombok.Data;
 
 /* ******************************************************************************** */
 /*                                                                                  */
@@ -43,27 +46,30 @@ import org.quartz.CronExpression;
 /*                                                                                  */
 /* ******************************************************************************** */
 
-public class MilkJob {
+public @Data class MilkJob {
 
-    public static MilkLog logger = MilkLog.getLogger(MilkJob.class.getName());
+    private final static MilkLog logger = MilkLog.getLogger(MilkJob.class.getName());
+    private final static String LOGGER_HEADER="MilkJob ";
+    private final static SimpleDateFormat sdfSynthetic = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+    
     private static BEvent eventCronParseError = new BEvent(MilkJob.class.getName(), 1, Level.APPLICATIONERROR,
             "Bad cron expression ", "Cron expression is not correct", "The next date can't be calculated",
             "Give a correct date");
 
-    private static BEvent EVENT_ERROR_READING_PARAMFILE = new BEvent(MilkJob.class.getName(), 3, Level.APPLICATIONERROR,
+    private static BEvent eventErrorReadingParamFile = new BEvent(MilkJob.class.getName(), 3, Level.APPLICATIONERROR,
             "Error reading Parameter File", "An error occure during the reading of a parameters file", "Content can't be accessible",
             "Check the log");
 
-    private static BEvent EVENT_CANT_FIND_TEMPORARY_PATH = new BEvent(MilkJob.class.getName(), 4, Level.ERROR,
+    private static BEvent eventCantFindTemporaryPath = new BEvent(MilkJob.class.getName(), 4, Level.ERROR,
             "Can't find temporary path", "File are uploaded in a temporary path. This path can't be found", "Content will not be updated",
             "Check the temporary path");
 
-    private static BEvent EVENT_CANT_FIND_TEMPORARY_FILE = new BEvent(MilkJob.class.getName(), 5, Level.ERROR,
+    private static BEvent eventCantFindTemporaryFile = new BEvent(MilkJob.class.getName(), 5, Level.ERROR,
             "Can't find temporary file", "File are uploaded in a temporary path. File is not found in the temporary path", "Content will not be updated",
             "Check the temporary path; the log. Maybe file is full?");
 
-    public static String DEFAULT_NAME = "";
+    public final static String DEFAULT_NAME = "";
     /**
      * the reference to the object to execute the Tour
      */
@@ -83,7 +89,7 @@ public class MilkJob {
     public String name;
     public String description;
 
-    public boolean isEnable = false;
+    private boolean isEnable = false;
 
     public String cronSt = "";
 
@@ -98,17 +104,18 @@ public class MilkJob {
     /**
      * save the Value for all parameters, even STREAM parameters (end with "_st")
      */
-    public Map<String, Object> parameters = new HashMap<String, Object>();
+    public Map<String, Object> parameters = new HashMap<>();
 
     public MilkJob(String name, MilkPlugIn plugIn, MilkJobFactory milkJobFactory) {
         this.plugIn = plugIn;
         this.name = name == null ? MilkJob.DEFAULT_NAME : name;
         this.milkJobFactory = milkJobFactory;
+
         this.generateId();
     }
 
     public static MilkJob getInstanceFromPlugin(String name, MilkPlugIn plugIn, MilkJobFactory milkPlugInTourFactory) {
-        MilkJob milkJob = new MilkJob(name, plugIn, milkPlugInTourFactory);
+        MilkJob milkJob = new MilkJob(name, plugIn, milkPlugInTourFactory );
         PlugInDescription description = plugIn.getDescription();
         // clone the parameters !
         // new HashMap<>(description.getParametersMap()) not need at this moment because the maps is created
@@ -119,7 +126,10 @@ public class MilkJob {
     }
 
     public String toString() {
-        return name + " (enable:" + isEnable + " immediateExecution:" + trackExecution.isImmediateExecution + " InExecution:" + trackExecution.inExecution + (trackExecution.nextExecutionDate == null ? " noNextDate" : " " + sdf.format(trackExecution.nextExecutionDate)) + ")";
+        return name + " (" + (isEnable? "ENABLE ": "disable ") 
+                + (trackExecution.isImmediateExecution? "<i> ":"") 
+                + (trackExecution.inExecution ? "EXECUTION_IN_PROGRESS ":"")
+                + (trackExecution.nextExecutionDate == null ? "NoNextDate" : sdf.format(trackExecution.nextExecutionDate)) + ")";
     }
 
     public long getId() {
@@ -189,9 +199,9 @@ public class MilkJob {
      */
     /* ******************************************************************************** */
     public List<BEvent> checkByPlugIn() {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+        List<BEvent> listEvents = new ArrayList<>();
         if (parameters == null)
-            parameters = new HashMap<String, Object>();
+            parameters = new HashMap<>();
         // verify that all plugin parameters are in
         for (PlugInParameter plugInParameter : plugIn.getDescription().inputParameters) {
             if (!parameters.containsKey(plugInParameter.name)) {
@@ -210,14 +220,21 @@ public class MilkJob {
      */
     /* ******************************************************************************** */
 
-    public List<BEvent> calculateNextExecution() {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+    /**
+     * 
+     * @param origin origin of caller
+     * @return
+     */
 
+
+    public List<BEvent> calculateNextExecution(String origin) {
+        List<BEvent> listEvents = new ArrayList<>();
+        logger.info(LOGGER_HEADER+"Calculate Next Execution["+toString()+"] by ["+origin+"]");
         try {
             CronExpression cronExp = new CronExpression(cronSt);
-            trackExecution.nextExecutionDate = cronExp.getNextValidTimeAfter(new Date());
+            setNextExecutionDate( cronExp.getNextValidTimeAfter(new Date()));
         } catch (Exception e) {
-            trackExecution.nextExecutionDate = null;
+            setNextExecutionDate( null );
             listEvents.add(new BEvent(eventCronParseError, e, "Expression[" + cronSt + "]"));
         }
         return listEvents;
@@ -225,7 +242,7 @@ public class MilkJob {
 
     public List<BEvent> setCron(String cronSt) {
         this.cronSt = cronSt;
-        return calculateNextExecution();
+        return calculateNextExecution("ChangeCronString");
     }
 
     public void setHostsRestriction(String hostsRestriction) {
@@ -235,9 +252,124 @@ public class MilkJob {
     public void setDescription(String description) {
         this.description = description;
     }
+    /* ******************************************************************************** */
+    /*                                                                                  */
+    /*
+     * Tracking execution a job
+     * /*
+     */
+    /* ******************************************************************************** */
+    private TrackExecution trackExecution = new TrackExecution();
 
-    public Date getNextExecution() {
+    public Date getNextExecutionDate() {
         return trackExecution.nextExecutionDate;
+    }
+    public String getNextExecutionDateSt() {
+        return (trackExecution.nextExecutionDate == null ? "null" : sdfSynthetic.format(trackExecution.nextExecutionDate));
+    }
+    public void setNextExecutionDate(Date nextExecutionDate) {
+        logger.info(LOGGER_HEADER+ "Job["+name + "] (enable:" + isEnable +") Set Execution Date ["+(nextExecutionDate==null ? "null":sdf.format(nextExecutionDate))+"]");
+        this.trackExecution.nextExecutionDate = nextExecutionDate;
+    }
+    
+    public boolean isAskForStop() {
+        return this.trackExecution.askForStop;
+    }
+
+    public void killJob() {
+        setLastExecutionDate( new Date() );
+        setLastExecutionStatus( ExecutionStatus.KILL );
+        setImmediateExecution( false );
+        setInExecution( false );
+    }
+    
+    public Date getLastExecutionDate() {
+        return this.trackExecution.lastExecutionDate;
+    }
+    
+    public void setLastExecutionDate(Date lastExecutionDate) {
+        this.trackExecution.lastExecutionDate = lastExecutionDate;
+    }
+
+    
+    public ExecutionStatus getLastExecutionStatus() {
+        return this.trackExecution.lastExecutionStatus;
+    }
+
+    
+    public void setLastExecutionStatus(ExecutionStatus lastExecutionStatus) {
+        this.trackExecution.lastExecutionStatus = lastExecutionStatus;
+    }
+
+    
+    public boolean isInExecution() {
+        return this.trackExecution.inExecution;
+    }
+
+    
+   
+    
+    public long getStartTime() {
+        return this.trackExecution.startTime;
+    }
+
+    
+    public void setStartTime(long startTime) {
+        this.trackExecution.startTime = startTime;
+    }
+
+    
+    public long getPercent() {
+        return this.trackExecution.percent;
+    }
+
+    
+    public void setPercent(long percent) {
+        this.trackExecution.percent = percent;
+    }
+
+    
+    public long getEndTimeEstimatedInMs() {
+        return this.trackExecution.endTimeEstimatedInMs;
+    }
+
+    
+    public void setEndTimeEstimatedInMs(long endTimeEstimatedInMs) {
+        this.trackExecution.endTimeEstimatedInMs = endTimeEstimatedInMs;
+    }
+
+    
+    public long getTotalTimeEstimatedInMs() {
+        return this.trackExecution.totalTimeEstimatedInMs;
+    }
+
+    
+    public void setTotalTimeEstimatedInMs(long totalTimeEstimatedInMs) {
+        this.trackExecution.totalTimeEstimatedInMs = totalTimeEstimatedInMs;
+    }
+
+    
+    public Date getEndDateEstimated() {
+        return this.trackExecution.endDateEstimated;
+    }
+
+    
+    public void setEndDateEstimated(Date endDateEstimated) {
+        this.trackExecution.endDateEstimated = endDateEstimated;
+    }
+
+    
+    public String getInExecutionHostName() {
+        return this.trackExecution.inExecutionHostName;
+    }
+
+    
+    public void setInExecutionHostName(String inExecutionHostName) {
+        this.trackExecution.inExecutionHostName = inExecutionHostName;
+    }
+    public String getHumanTimeEstimated(boolean withMs) {
+
+        return TypesCast.getHumanDuration(this.trackExecution.endTimeEstimatedInMs, withMs);
     }
 
     /**
@@ -246,12 +378,17 @@ public class MilkJob {
      * @param enable
      */
     public List<BEvent> setEnable(boolean enable) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
-        isEnable = enable;
-        if (isEnable)
-            listEvents.addAll(calculateNextExecution());
+        List<BEvent> listEvents = new ArrayList<>();
+        if (enable) 
+        {
+            // recalculate only if it wasn't enable before
+            if ( ! isEnable) 
+                listEvents.addAll(calculateNextExecution("Switch To Enable=true"));
+        }
         else
             trackExecution.nextExecutionDate = null;
+        
+        isEnable = enable;
         return listEvents;
     }
 
@@ -266,7 +403,50 @@ public class MilkJob {
     public boolean isImmediateExecution() {
         return trackExecution.isImmediateExecution;
     }
+    /**
+     * reload information for the database: user can ask a stop
+     * 
+     * @return
+     */
+    public boolean isAskedForStop() {
+        // load on the database
+        MilkFactoryOp jobLoaded = milkJobFactory.dbLoadJob(idJob);
+        trackExecution.askForStop = jobLoaded.job.trackExecution.askForStop;
+        return trackExecution.askForStop;
+    }
 
+    public void setAskForStop(boolean askForStop) {
+        this.trackExecution.askForStop = askForStop;
+    }
+
+    
+    public boolean inExecution() {
+        return trackExecution.inExecution;
+    }
+
+    public void setInExecution( boolean inExecution ) {
+        if (trackExecution != null)
+            trackExecution.inExecution = inExecution;
+    }
+    public void registerExecutionOnHost(String hostName) {
+        trackExecution.inExecutionHostName = hostName;
+    }
+
+    public String getHostRegistered() {
+        return trackExecution.inExecutionHostName;
+    }
+    
+    /* ******************************************************************************** */
+    /*                                                                                  */
+    /*
+     * Job parameters
+     * /*
+     */
+    /* ******************************************************************************** */
+
+    
+    
+    
     /**
      * get the value of parameters for this tour (definition is accessible via
      * plugIn.getDescription().inputParameters
@@ -281,7 +461,7 @@ public class MilkJob {
      * @param parameters
      */
     public void setJobParameters(Map<String, Object> parameters) {
-        this.parameters = parameters == null ? new HashMap<String, Object>() : parameters;
+        this.parameters = parameters == null ? new HashMap<>() : parameters;
     }
 
     /**
@@ -292,14 +472,14 @@ public class MilkJob {
      * @param pageDirectory
      */
     public List<BEvent> setJobFileParameter(String parameterName, String temporaryFileName, File pageDirectory) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
-        List<String> listParentTmpFile = new ArrayList<String>();
+        List<BEvent> listEvents = new ArrayList<>();
+        List<String> listParentTmpFile = new ArrayList<>();
         try {
             listParentTmpFile.add(pageDirectory.getCanonicalPath() + "/../../../tmp/");
             listParentTmpFile.add(pageDirectory.getCanonicalPath() + "/../../");
         } catch (Exception e) {
             logger.info(".setTourFileParameter: error get CanonicalPath of pageDirectory[" + e.toString() + "]");
-            listEvents.add(EVENT_CANT_FIND_TEMPORARY_PATH);
+            listEvents.add(eventCantFindTemporaryPath);
             return listEvents;
         }
         StringBuilder detectedPaths = new StringBuilder();
@@ -322,13 +502,13 @@ public class MilkJob {
                     }
                 } catch (Exception e) {
                     logger.severeException(e, ".setTourFileParameter: File[" + pathTemp + temporaryFileName + "] ");
-                    listEvents.add(new BEvent(EVENT_CANT_FIND_TEMPORARY_FILE, e, "Path:" + pathTemp + "]File[" + temporaryFileName + "] Complete file[" + pathTemp + temporaryFileName + "]"));
+                    listEvents.add(new BEvent(eventCantFindTemporaryFile, e, "Path:" + pathTemp + "]File[" + temporaryFileName + "] Complete file[" + pathTemp + temporaryFileName + "]"));
 
                 }
             }
         } // end look on pathDirectory
         if (!findFile)
-            listEvents.add(new BEvent(EVENT_CANT_FIND_TEMPORARY_FILE, "Path:" + pageDirectory.toString() + "]File[" + temporaryFileName + "] Detected path " + detectedPaths));
+            listEvents.add(new BEvent(eventCantFindTemporaryFile, "Path:" + pageDirectory.toString() + "]File[" + temporaryFileName + "] Detected path " + detectedPaths));
         return listEvents;
     }
 
@@ -393,7 +573,7 @@ public class MilkJob {
      * @return
      */
     public List<BEvent> getParameterStream(PlugInParameter plugInParameter, OutputStream stream) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+        List<BEvent> listEvents = new ArrayList<>();
         try {
             InputStream instream = (InputStream) parameters.get(plugInParameter.name + cstPrefixStreamValue);
             // the document is not uploaded - not consider as an error
@@ -408,7 +588,7 @@ public class MilkJob {
                 stream.write(buffer, 0, bytesRead);
             }
         } catch (IOException e) {
-            listEvents.add(new BEvent(EVENT_ERROR_READING_PARAMFILE, e, "ParameterFile[" + plugInParameter.name + "]"));
+            listEvents.add(new BEvent(eventErrorReadingParamFile, e, "ParameterFile[" + plugInParameter.name + "]"));
             logger.severeException(e, ".getParameterStream:Error writing parameter ");
         }
         return listEvents;
@@ -419,28 +599,46 @@ public class MilkJob {
     
     private final static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+    
+    /* ******************************************************************************** *
+     *                                                                                 
+     *
+     * Serialization (JSON)
+     * 
+     * We need to saved different properties, to ensure to not saved everything when needed.
+     * Jobs has different component
+     *    - prefixPropertiesBase ==> getMap()
+     *    - prefixPropertiesAskStop => direct askStop()
+     *    - prefixPropertiesSavedExecution ==> 
+     *    - prefixPropertiesTrackExecution ==>
+     *    
+     * ******************************************************************************** */
+
     /**
      * describe the plug tour
      * 
      * @return
      */
 
-    private final static String cstJsonPrefixHumanReadable = "st";
-    private final static String cstJsonPluginName = "pluginname";
-    private final static String cstJsonEnable = "enable";
+    private final static String CSTJSON_PREFIX_HUMANREADABLE = "st";
+    private final static String CSTJSON_PLUGINNAME = "pluginname";
+    private final static String CSTJSON_ENABLE = "enable";
 
-    private final static String CST_JSON_PARAMETERS_DEF = "parametersdef";
-    private final static String cstJsonAnalysisDef = "analysisdef";
+    private final static String CSTJSON_PARAMETERS_DEF = "parametersdef";
+    private final static String CSTJSON_ANALYSISDEF = "analysisdef";
 
-    private final static String cstJsonParameters = "parameters";
+    private final static String CSTJSON_PARAMETERS = "parameters";
     // private final static String cstJsonParameterValue = "value";
 
-    private final static String cstJsonPlugInDisplayName = "plugindisplayname";
-    private final static String cstJsonDescription = "description";
+    public final static String CSTJSON_PARAMETER_DELAY_SCOPE = "scope";
+    public final static String CSTJSON_PARAMETER_DELAY_VALUE = "value";
+    
+    private final static String CSTJSON_PLUGIN_DISPLAYNAME = "plugindisplayname";
+    private final static String CSTJSON_DESCRIPTION = "description";
     private final static String cstJsonExplanation = "explanation";
     private final static String cstJsonNextExecution = "nextexecution";
     private final static String cstJsonLastExecution = "lastexecution";
-    private final static String cstJsonName = "name";
+    private final static String CSTJSON_NAME = "name";
     private final static String cstJsonId = "id";
     private final static String cstJsonImmediateExecution = "imediateExecution";
     private final static String cstJsonAskForStop = "askForStop";
@@ -473,38 +671,41 @@ public class MilkJob {
      * @return
      */
 
+    
     @SuppressWarnings("unchecked")
-    public static MilkJob getInstanceFromJson(String jsonSt, MilkJobFactory milkPlugInTourFactory) {
-        Map<String, Object> jsonMap = (Map<String, Object>) JSONValue.parse(jsonSt);
+    public static MilkJob getInstanceFromMap( Map<String,Object> jsonMap, MilkJobFactory milkJobFactory) {
         if (jsonMap == null)
             return null;
-
-        String plugInName = (String) jsonMap.get(cstJsonPluginName);
-        MilkPlugInFactory milkPlugInFactory = milkPlugInTourFactory.getMilkPlugInFactory();
+        
+        String plugInName = (String) jsonMap.get(CSTJSON_PLUGINNAME);
+        MilkPlugInFactory milkPlugInFactory = milkJobFactory.getMilkPlugInFactory();
 
         MilkPlugIn plugIn = milkPlugInFactory.getPluginFromName(plugInName);
         if (plugIn == null)
             return null;
 
-        String name = (String) jsonMap.get(cstJsonName);
-        MilkJob milkJob = new MilkJob(name, plugIn, milkPlugInTourFactory);
-        milkJob.description = (String) jsonMap.get(cstJsonDescription);
+        String name = (String) jsonMap.get(CSTJSON_NAME);
+        MilkJob milkJob = new MilkJob(name, plugIn, milkJobFactory);
+        milkJob.description = (String) jsonMap.get(CSTJSON_DESCRIPTION);
 
         milkJob.idJob = getLongValue(jsonMap.get(cstJsonId), 0L);
 
         // clone the parameters !
         // new HashMap<>(description.getParametersMap()) not need at this moment because the maps is created
-        milkJob.parameters = (Map<String, Object>) jsonMap.get(cstJsonParameters);
+        milkJob.parameters = (Map<String, Object>) jsonMap.get(CSTJSON_PARAMETERS);
 
         @SuppressWarnings("unused")
-        List<Map<String, Object>> listParametersDef = (List<Map<String, Object>>) jsonMap.get(CST_JSON_PARAMETERS_DEF);
+        List<Map<String, Object>> listParametersDef = (List<Map<String, Object>>) jsonMap.get(CSTJSON_PARAMETERS_DEF);
 
         milkJob.cronSt = (String) jsonMap.get(cstJsonCron);
         milkJob.hostsRestriction = (String) jsonMap.get(cstJsonHostsRestriction);
 
         // search the name if all the list
-        milkJob.isEnable = getBooleanValue(jsonMap.get(cstJsonEnable), false);
+        milkJob.isEnable = getBooleanValue(jsonMap.get(CSTJSON_ENABLE), false);
 
+       //  milkJob.trackExecution.readTrackExecutionFromMap(jsonMap);
+        
+        /*
         milkJob.trackExecution.askForStop = getBooleanValue(jsonMap.get(cstJsonAskForStop), false);
 
         Long lastExecutionDateLong = (Long) jsonMap.get(cstJsonLastExecution);
@@ -525,21 +726,40 @@ public class MilkJob {
             milkJob.trackExecution.endDateEstimated = new Date(milkJob.trackExecution.startTime + milkJob.trackExecution.endTimeEstimatedInMs);
         }
         milkJob.trackExecution.inExecutionHostName = (String) jsonMap.get(cstJsonRegisterInExecutionHost);
-
-        if (milkJob.isEnable && milkJob.trackExecution.nextExecutionDate == null)
-            milkJob.calculateNextExecution();
+         */
+        
+        /* Do not calculate this : we read the job section per section
+         * if (milkJob.isEnable && milkJob.trackExecution.nextExecutionDate == null)
+            milkJob.calculateNextExecution("GetInstanceFromJson, Enable and not date");
+            */
 
         // get the last saved execution
         // nota: MilkSerialize saved this information in a different variable, then it overide this value by calling the getreadSavedExecution() methiod
+        /*
         List<Map<String, Object>> list = (List<Map<String, Object>>) jsonMap.get(cstJsonSavedExec);
         if (list != null) {
             for (Map<String, Object> execSaveMap : list) {
                 milkJob.listSavedExecution.add(SavedExecution.getInstance(execSaveMap));
             }
         }
+        */
         return milkJob;
     }
 
+    public void readSavedExecutionFromList(List<Map<String, Object>> jsonList) {
+        if (jsonList != null) {
+            for (Map<String, Object> execSaveMap : jsonList) {
+                listSavedExecution.add(SavedExecution.getInstance(execSaveMap));
+            }
+        }
+    }
+    public void readTrackExecutionFromMap(Map<String,Object> jsonMap ) {
+        trackExecution.readTrackExecutionFromMap( jsonMap );
+    }
+    /**
+     * Getter for Serialisation
+     * 
+     */
     /**
      * how to calcul the map
      * To send to the browser: everything
@@ -569,39 +789,35 @@ public class MilkJob {
      * browser need to have the parameters definition AND the value, save need only the parameter
      * value.
      * 
-     * @see getInstanceFromJson
-     * @param withExplanation
-     * @param allJobInformation
      * @return
      */
     public Map<String, Object> getMap(MapContentParameter mapContent) {
 
-        Map<String, Object> map = new HashMap<String, Object>();
-        map.put(cstJsonName, getName());
+        Map<String, Object> map = new HashMap<>();
+        map.put(CSTJSON_NAME, getName());
         map.put(cstJsonId, getId());
-        map.put(cstJsonPluginName, plugIn.getName());
-        map.put(cstJsonDescription, description);
+        map.put(CSTJSON_PLUGINNAME, plugIn.getName());
+        map.put(CSTJSON_DESCRIPTION, description);
         if (mapContent.withExplanation) {
             map.put(cstJsonExplanation, plugIn.getDescription().explanation);
-            map.put(cstJsonPlugInDisplayName, plugIn.getDescription().label);
+            map.put(CSTJSON_PLUGIN_DISPLAYNAME, plugIn.getDescription().label);
         }
         map.put(cstJsonCron, cronSt);
         map.put(cstJsonHostsRestriction, hostsRestriction);
 
         // Parameters values
         Map<String, Object> mapParametersValue = new HashMap<>();
-        map.put(cstJsonParameters, mapParametersValue);
+        map.put(CSTJSON_PARAMETERS, mapParametersValue);
 
         // parameter definition
-        map.put(CST_JSON_PARAMETERS_DEF, collectParameterList(plugIn.getDefinitionDescription().inputParameters, mapParametersValue));
+        map.put(CSTJSON_PARAMETERS_DEF, collectParameterList(plugIn.getDefinitionDescription().inputParameters, mapParametersValue));
 
         // Analysis definition
-        map.put(cstJsonAnalysisDef, collectParameterList(plugIn.getDefinitionDescription().analysisParameters, mapParametersValue));
+        map.put(CSTJSON_ANALYSISDEF, collectParameterList(plugIn.getDefinitionDescription().analysisParameters, mapParametersValue));
 
-        map.put(cstJsonEnable, isEnable);
+        map.put(CSTJSON_ENABLE, isEnable);
 
         if (mapContent.trackExecution) {
-            // todo map.put(cstJsonImmediateExecution, trackExecution.isImmediateExecution);
             map.put("trackExecution", trackExecution.getMap());
 
         }
@@ -609,13 +825,36 @@ public class MilkJob {
             map.put(cstJsonAskForStop, trackExecution.askForStop);
         }
         if (mapContent.savedExecution) {
-            map.put(cstJsonSavedExec, getListSavedExecution());
+            map.put(cstJsonSavedExec, getMapListSavedExecution());
         }
         return map;
     }
+    
+    public Map<String,Object> getTrackExecution() {
+        return trackExecution.getMap();
+    }
+    
+    public List<Map<String, Object>> getMapListSavedExecution() {
+        // save the last execution
+        List<Map<String, Object>> listExecution = new ArrayList<>();
+        for (SavedExecution savedExecution : listSavedExecution) {
+            listExecution.add(savedExecution.getMap());
+        }
+        return listExecution;
+    }
+
+   
+   
+    /* ******************************************************************************** *
+     *                                                                                 
+     *
+     * Parameters (JSON)
+     * 
+     *
+     * ******************************************************************************** */
 
     private List<Map<String, Object>> collectParameterList(List<PlugInParameter> listPlugInParameters, Map<String, Object> mapParametersValue) {
-        List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
+        List<Map<String, Object>> list = new ArrayList<>();
         for (PlugInParameter plugInParameter : listPlugInParameters) {
 
             // complete with the value
@@ -629,39 +868,44 @@ public class MilkJob {
                 mapParametersValue.put(plugInParameter.name, parameters.get(plugInParameter.name) == null ? plugInParameter.defaultValue : parameters.get(plugInParameter.name));
             }
 
+            // Definition may change: this is the time to check the content
+            boolean valueIsAnArray=false;
+            if (plugInParameter.typeParameter == TypeParameter.ARRAY || plugInParameter.typeParameter == TypeParameter.ARRAYMAP || plugInParameter.typeParameter == TypeParameter.ARRAYPROCESSNAME)
+                valueIsAnArray=true;
+            
+            if (valueIsAnArray && mapParametersValue.get(plugInParameter.name) !=null && (! (mapParametersValue.get(plugInParameter.name) instanceof List))) {
+                List<Object> listObject = new ArrayList<>();
+                listObject.add(mapParametersValue.get(plugInParameter.name) );
+                mapParametersValue.put(plugInParameter.name, listObject);
+            }
+            if (plugInParameter.typeParameter == TypeParameter.DELAY) {
+                if ( ! (mapParametersValue.get(plugInParameter.name) instanceof Map)) {
+                    Map<String, Object> valueMapDelay = new HashMap<>();
+                    Object valueScope = parameters.get(plugInParameter.name);
+                    if (valueScope==null)
+                        valueScope= plugInParameter.defaultValue;
+                    if (valueScope==null)
+                        valueScope="";
+                    DelayResult delayResult = MilkPlugInToolbox.getTimeFromDelay( null, valueScope.toString(), new Date(), true);
+                    valueMapDelay.put(CSTJSON_PARAMETER_DELAY_SCOPE, delayResult.scope.toString());
+                    valueMapDelay.put(CSTJSON_PARAMETER_DELAY_VALUE, delayResult.delay);
+                    mapParametersValue.put(plugInParameter.name, valueMapDelay);
+                }
+            }
             // Parameters Definition
             list.add(plugInParameter.getMap());
         }
         return list;
     }
 
-    public List<Map<String, Object>> getListSavedExecution() {
-        // save the last execution
-        List<Map<String, Object>> listExecution = new ArrayList<Map<String, Object>>();
-        for (SavedExecution savedExecution : listSavedExecution) {
-            listExecution.add(savedExecution.getMap());
-        }
-        return listExecution;
-    }
-
-    public String getListSavedExecutionJsonSt() {
-        return JSONValue.toJSONString(getListSavedExecution());
-    }
-
-    /**
-     * serialize in JSON the content of the plugTour
-     * 
-     * @return
-     */
-    public String getJsonSt(MapContentParameter mapContent) {
-        return JSONValue.toJSONString(getMap(mapContent));
-    }
+   
 
     private void generateId() {
         // sleep a little to be sure to have a unique ID in case of a loop
         try {
             Thread.sleep(2);
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
         idJob = System.currentTimeMillis();
     }
@@ -681,128 +925,7 @@ public class MilkJob {
      * /*
      */
     /* ******************************************************************************** */
-    public class TrackExecution {
-
-        
-        public boolean isImmediateExecution() {
-            return isImmediateExecution;
-        }
-
-        
-        public void setImmediateExecution(boolean isImmediateExecution) {
-            this.isImmediateExecution = isImmediateExecution;
-        }
-
-        
-        public boolean isAskForStop() {
-            return askForStop;
-        }
-
-        
-        public void setAskForStop(boolean askForStop) {
-            this.askForStop = askForStop;
-        }
-
-        
-        public Date getNextExecutionDate() {
-            return nextExecutionDate;
-        }
-
-        
-        public void setNextExecutionDate(Date nextExecutionDate) {
-            this.nextExecutionDate = nextExecutionDate;
-        }
-
-        
-        public Date getLastExecutionDate() {
-            return lastExecutionDate;
-        }
-
-        
-        public void setLastExecutionDate(Date lastExecutionDate) {
-            this.lastExecutionDate = lastExecutionDate;
-        }
-
-        
-        public ExecutionStatus getLastExecutionStatus() {
-            return lastExecutionStatus;
-        }
-
-        
-        public void setLastExecutionStatus(ExecutionStatus lastExecutionStatus) {
-            this.lastExecutionStatus = lastExecutionStatus;
-        }
-
-        
-        public boolean isInExecution() {
-            return inExecution;
-        }
-
-        
-        public void setInExecution(boolean inExecution) {
-            this.inExecution = inExecution;
-        }
-
-        
-        public long getStartTime() {
-            return startTime;
-        }
-
-        
-        public void setStartTime(long startTime) {
-            this.startTime = startTime;
-        }
-
-        
-        public long getPercent() {
-            return percent;
-        }
-
-        
-        public void setPercent(long percent) {
-            this.percent = percent;
-        }
-
-        
-        public long getEndTimeEstimatedInMs() {
-            return endTimeEstimatedInMs;
-        }
-
-        
-        public void setEndTimeEstimatedInMs(long endTimeEstimatedInMs) {
-            this.endTimeEstimatedInMs = endTimeEstimatedInMs;
-        }
-
-        
-        public long getTotalTimeEstimatedInMs() {
-            return totalTimeEstimatedInMs;
-        }
-
-        
-        public void setTotalTimeEstimatedInMs(long totalTimeEstimatedInMs) {
-            this.totalTimeEstimatedInMs = totalTimeEstimatedInMs;
-        }
-
-        
-        public Date getEndDateEstimated() {
-            return endDateEstimated;
-        }
-
-        
-        public void setEndDateEstimated(Date endDateEstimated) {
-            this.endDateEstimated = endDateEstimated;
-        }
-
-        
-        public String getInExecutionHostName() {
-            return inExecutionHostName;
-        }
-
-        
-        public void setInExecutionHostName(String inExecutionHostName) {
-            this.inExecutionHostName = inExecutionHostName;
-        }
-
+    private class TrackExecution {
         /**
          * Job will be start at the next heartBeat.
          * See trackExecution attribute to describe an executiong job
@@ -813,7 +936,7 @@ public class MilkJob {
         /**
          * keep the last Execution Date and Status, for the dashboard
          */
-        public Date nextExecutionDate;
+        private Date nextExecutionDate;
         public Date lastExecutionDate;
         private ExecutionStatus lastExecutionStatus;
 
@@ -827,17 +950,7 @@ public class MilkJob {
         public String inExecutionHostName;
 
         public TrackExecution() {
-            // nothing special todo here
         };
-
-        public String getHumanTimeEstimated(boolean withMs) {
-
-            return TypesCast.getHumanDuration(endTimeEstimatedInMs, withMs);
-        }
-
-        public String getJsonSt() {
-            return JSONValue.toJSONString(getMap());
-        }
 
         public Map<String, Object> getMap() {
             Map<String, Object> map = new HashMap<>();
@@ -845,9 +958,9 @@ public class MilkJob {
             map.put(cstJsonImmediateExecution, trackExecution.isImmediateExecution);
             map.put(cstJsonAskForStop, trackExecution.askForStop);
             map.put(cstJsonNextExecution, trackExecution.nextExecutionDate == null ? 0 : trackExecution.nextExecutionDate.getTime());
-            map.put(cstJsonNextExecution + cstJsonPrefixHumanReadable, trackExecution.nextExecutionDate == null ? "" : sdf.format(trackExecution.nextExecutionDate.getTime()));
+            map.put(cstJsonNextExecution + CSTJSON_PREFIX_HUMANREADABLE, trackExecution.nextExecutionDate == null ? "" : sdf.format(trackExecution.nextExecutionDate.getTime()));
             map.put(cstJsonLastExecution, trackExecution.lastExecutionDate == null ? 0 : trackExecution.lastExecutionDate.getTime());
-            map.put(cstJsonLastExecution + cstJsonPrefixHumanReadable, trackExecution.lastExecutionDate == null ? "" : sdf.format(trackExecution.lastExecutionDate));
+            map.put(cstJsonLastExecution + CSTJSON_PREFIX_HUMANREADABLE, trackExecution.lastExecutionDate == null ? "" : sdf.format(trackExecution.lastExecutionDate));
             String executionStatus = trackExecution.lastExecutionStatus == null ? null : trackExecution.lastExecutionStatus.toString().toLowerCase();
             map.put(cstJsonlastExecutionStatus, executionStatus);
 
@@ -855,15 +968,14 @@ public class MilkJob {
             map.put(cstJsonInExecutionStartTime, trackExecution.startTime);
             map.put(cstJsonInExecutionPercent, trackExecution.percent);
             map.put(cstJsonInExecutionEndTimeEstimatedInMS, trackExecution.endTimeEstimatedInMs);
-            map.put(cstJsonInExecutionEndTimeEstimatedInMS + cstJsonPrefixHumanReadable, trackExecution.getHumanTimeEstimated(false));
-            map.put(cstJsonInExecutionEndDateEstimated + cstJsonPrefixHumanReadable, trackExecution.endDateEstimated == null ? "" : sdf.format(trackExecution.endDateEstimated));
+            map.put(cstJsonInExecutionEndTimeEstimatedInMS + CSTJSON_PREFIX_HUMANREADABLE, getHumanTimeEstimated(false));
+            map.put(cstJsonInExecutionEndDateEstimated + CSTJSON_PREFIX_HUMANREADABLE, trackExecution.endDateEstimated == null ? "" : sdf.format(trackExecution.endDateEstimated));
             map.put(cstJsonRegisterInExecutionHost, trackExecution.inExecutionHostName);
             return map;
         }
-
-        @SuppressWarnings("unchecked")
-        public void readFromJson(String jsonSt) {
-            Map<String, Object> jsonMap = (Map<String, Object>) JSONValue.parse(jsonSt);
+        
+        public void readTrackExecutionFromMap(Map<String, Object> jsonMap) {
+           //  Map<String, Object> jsonMap = (Map<String, Object>) JSONValue.parse(jsonSt);
             isImmediateExecution = getBooleanValue(jsonMap.get(cstJsonImmediateExecution), false);
             askForStop = getBooleanValue(jsonMap.get(cstJsonAskForStop), false);
 
@@ -892,40 +1004,8 @@ public class MilkJob {
 
     }
 
-    public TrackExecution trackExecution = new TrackExecution();
-
-    /**
-     * reload information for the database: user can ask a stop
-     * 
-     * @return
-     */
-    public boolean isAskedForStop() {
-        // load on the database
-        MilkFactoryOp jobLoaded = milkJobFactory.dbLoadJob(idJob);
-        trackExecution.askForStop = jobLoaded.job.trackExecution.askForStop;
-        return trackExecution.askForStop;
-    }
-
-    public void setAskForStop(boolean askForStop) {
-        this.trackExecution.askForStop = askForStop;
-    }
-
-    
-    public boolean inExecution() {
-        return trackExecution.inExecution;
-    }
-
-    public void setInExecution( boolean inExecution ) {
-        if (trackExecution != null)
-            trackExecution.inExecution = inExecution;
-    }
-    public void registerExecutionOnHost(String hostName) {
-        trackExecution.inExecutionHostName = hostName;
-    }
-
-    public String getHostRegistered() {
-        return trackExecution.inExecutionHostName;
-    }
+ 
+   
 
     /* ******************************************************************************** */
     /*                                                                                  */
@@ -959,15 +1039,15 @@ public class MilkJob {
         }
 
         public Map<String, Object> getMap() {
-            Map<String, Object> map = new HashMap<String, Object>();
+            Map<String, Object> map = new HashMap<>();
             map.put(cstJsonSaveExecDate, executionDate.getTime());
-            map.put(cstJsonSaveExecDate + cstJsonPrefixHumanReadable, sdf.format(executionDate));
+            map.put(cstJsonSaveExecDate + CSTJSON_PREFIX_HUMANREADABLE, sdf.format(executionDate));
             map.put(cstJsonSaveExecStatus, executionStatus.toString());
             map.put(cstJsonSaveExecListEventsSt, listEventSt);
             map.put(cstJsonSaveExecExplanation, explanation);
             map.put(cstJsonSaveExecItemsProcessed, nbItemsProcessed);
             map.put(cstJsonSaveExecTimeinMs, executionTimeInMs);
-            map.put(cstJsonSaveExecTimeinMs + cstJsonPrefixHumanReadable, TypesCast.getHumanDuration(executionTimeInMs, false));
+            map.put(cstJsonSaveExecTimeinMs + CSTJSON_PREFIX_HUMANREADABLE, TypesCast.getHumanDuration(executionTimeInMs, false));
 
             map.put(cstJsonSaveExecHostName, hostName);
             return map;
@@ -995,17 +1075,10 @@ public class MilkJob {
     }
 
     // save a tour execution
-    List<SavedExecution> listSavedExecution = new ArrayList<SavedExecution>();
+    List<SavedExecution> listSavedExecution = new ArrayList<>();
 
-    @SuppressWarnings("unchecked")
-    public void readSavedExecutionFromJson(String jsonSt) {
-        List<Map<String, Object>> jsonList = (List<Map<String, Object>>) JSONValue.parse(jsonSt);
-        if (jsonList != null) {
-            for (Map<String, Object> execSaveMap : jsonList) {
-                listSavedExecution.add(SavedExecution.getInstance(execSaveMap));
-            }
-        }
-    }
+
+   
 
     /**
      * register an execution. Keep the last 10

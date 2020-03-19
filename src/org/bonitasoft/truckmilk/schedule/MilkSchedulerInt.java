@@ -8,9 +8,27 @@ import java.util.List;
 import java.util.Map;
 
 import org.bonitasoft.log.event.BEvent;
+import org.bonitasoft.truckmilk.toolbox.MilkLog;
+import org.hibernate.bytecode.internal.javassist.FastClass;
 
-public interface MilkSchedulerInt {
+import lombok.Data;
 
+public abstract class MilkSchedulerInt {
+ 
+    protected MilkSchedulerFactory factory;
+    public MilkSchedulerInt( MilkSchedulerFactory factory ) {
+        this.factory = factory;
+    }
+    
+    public MilkSchedulerFactory getFactory() {
+        return factory;
+    }
+    
+    /**
+     * return true if the scheduler need to be restarted each time a user access to the page for the first time
+     * @return
+     */
+    public abstract boolean needRestartAtInitialization();
     /**
      * initialize. Then the schedule must call back the engine on the method
      * milkCmdControl.executeOneTime( tenantId );
@@ -19,9 +37,9 @@ public interface MilkSchedulerInt {
      * @param forceReset
      * @return
      */
-    public List<BEvent> startup(long tenantId, boolean forceReset);
+    public abstract List<BEvent> startup(long tenantId, boolean forceReset);
 
-    public List<BEvent> shutdown(long tenantId);
+    public abstract List<BEvent> shutdown(long tenantId);
 
     /**
      * true if the scheduler is running (controled by start / stop
@@ -32,17 +50,17 @@ public interface MilkSchedulerInt {
         STOPPED, SHUTDOWN, STARTED
     };
 
-    public class StatusScheduler {
+    public static class StatusScheduler {
 
         public TypeStatus status;
-        public List<BEvent> listEvents = new ArrayList<BEvent>();
+        public List<BEvent> listEvents = new ArrayList<>();
     }
 
-    public List<BEvent> check(long tenantId);
+    public abstract List<BEvent> check(long tenantId);
 
-    public StatusScheduler getStatus(long tenantId);
+    public abstract StatusScheduler getStatus(long tenantId);
 
-    public List<BEvent> operation(Map<String, Serializable> parameters);
+    public abstract List<BEvent> operation(Map<String, Serializable> parameters);
 
     /**
      * return the scheduler type
@@ -51,21 +69,21 @@ public interface MilkSchedulerInt {
         QUARTZ, THREADSLEEP
     };
 
-    public TypeScheduler getType();
+    public abstract TypeScheduler getType();
 
     /**
      * return the date of the next HeartBeat
      * 
      * @return
      */
-    public Date getDateNextHeartBeat(long tenantId);
+    public abstract Date getDateNextHeartBeat(long tenantId);
 
     /**
      * info to give to the administrator
      * 
      * @return
      */
-    public String getDescription();
+    public abstract String getDescription();
 
     /**
      * Deploy the scheduler
@@ -77,11 +95,12 @@ public interface MilkSchedulerInt {
      * @param tenantId
      * @return
      */
-    public List<BEvent> checkAndDeploy(boolean forceDeploy, File pageDirectory, long tenantId);
+    public abstract List<BEvent> checkAndDeploy(boolean forceDeploy, File pageDirectory, long tenantId);
 
     /**
      * reset the scheduler
      */
-    public List<BEvent> reset(long tenantId);
+    public abstract List<BEvent> reset(long tenantId);
 
+   
 }

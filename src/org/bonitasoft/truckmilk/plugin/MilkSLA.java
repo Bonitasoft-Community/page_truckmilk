@@ -45,6 +45,8 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
+import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.PlaceHolder;
@@ -58,112 +60,112 @@ public class MilkSLA extends MilkPlugIn {
 
     static MilkLog logger = MilkLog.getLogger(MilkSLA.class.getName());
 
-    private static BEvent EVENT_NO_PROCESS_FILTER = new BEvent(MilkPurgeArchive.class.getName(), 1,
+    private static BEvent eventNoProcessFilter = new BEvent(MilkPurgeArchive.class.getName(), 1,
             Level.APPLICATIONERROR,
             "No process filter", "The process filter is empty", "SLA can't run.",
             "Give a process name");
 
-    private static BEvent EVENT_NO_PROCESS_MATCH_FILTER = new BEvent(MilkPurgeArchive.class.getName(), 2,
+    private static BEvent eventNoProcessMatchFilter = new BEvent(MilkPurgeArchive.class.getName(), 2,
             Level.APPLICATIONERROR,
             "No process found", "No process is found with the given filter", "This filter does not apply.",
             "Check the process name (you must give as minimum one process)");
 
-    private static BEvent EVENT_VARIABLE_REGISTRATION_NOT_FOUND = new BEvent(MilkSLA.class.getName(), 3,
+    private static BEvent eventVariableRegistrationNotFound = new BEvent(MilkSLA.class.getName(), 3,
             Level.APPLICATIONERROR,
             "Variable not found", "The variable registration referenced in the rule does not exist in this process", "Impossible to declare the rule was executed or not. SLA considere this is already executed then.",
             "Add the process variable as a MAP, else use the delaiRegistration");
 
-    private static BEvent EVENT_NO_MECHANISM_REGISTER = new BEvent(MilkSLA.class.getName(), 4,
+    private static BEvent eventNoMechanismRegistered = new BEvent(MilkSLA.class.getName(), 4,
             Level.APPLICATIONERROR,
             "No Rebound mechanism registered", "To detect if a rule is already executed or not, two mechanism is possible, by a variable or a Duration slot. No mechanism is selected.", "Impossible to declare the rule was executed or not. SLA considere this is already executed then.",
             "Choose a mechanism");
 
-    private static BEvent EVENT_VARIABLE_REGISTRATON_CLASS_ERROR = new BEvent(MilkSLA.class.getName(), 5,
+    private static BEvent eventVariableRegistrationClassError = new BEvent(MilkSLA.class.getName(), 5,
             Level.APPLICATIONERROR,
             "Variable Class Error", "The variable registration referenced in the rule must be a Map", "Impossible to declare the rule was executed or not. SLA considere this is already executed then.",
             "Reference this variable as a HASHMAP");
 
-    private static BEvent EVENT_VARIABLE_UPDATE_FAILED = new BEvent(MilkSLA.class.getName(), 6,
+    private static BEvent eventVariableUpdateFailed = new BEvent(MilkSLA.class.getName(), 6,
             Level.APPLICATIONERROR,
             "Update Variable failed", "After the execution, the variable must be updated to not reexecute the same SLA. Update failed", "The task will be reexecuted.",
             "Check the error");
 
-    private static BEvent EVENT_UNKNOW_ACTION = new BEvent(MilkSLA.class.getName(), 7,
+    private static BEvent eventUnknowAction = new BEvent(MilkSLA.class.getName(), 7,
             Level.APPLICATIONERROR,
             "Unknow Action",
             "Action unknown",
             "Give an existing action.",
             "Check the action of the rule");
 
-    private static BEvent EVENT_ASSIGN_TASK_FAILED = new BEvent(MilkSLA.class.getName(), 8,
+    private static BEvent eventAssignTaskFailed = new BEvent(MilkSLA.class.getName(), 8,
             Level.APPLICATIONERROR,
             "Assignement failed",
             "It is not possible to assign a task to a user",
             "Task is not assigned",
             "Check the error of assignement");
 
-    private static BEvent EVENT_USER_NOT_FOUND = new BEvent(MilkSLA.class.getName(), 9,
+    private static BEvent eventUserNotFound = new BEvent(MilkSLA.class.getName(), 9,
             Level.APPLICATIONERROR,
             "User not found",
             "The requested user is not found",
             "No action done",
             "Check the user name in your organization");
 
-    private static BEvent EVENT_NO_USER = new BEvent(MilkSLA.class.getName(), 10,
+    private static BEvent eventNoUser = new BEvent(MilkSLA.class.getName(), 10,
             Level.APPLICATIONERROR,
             "No user found for this task",
             "This task is not pending or assign to any user",
             "Operation faiked",
             "Check the tasks");
 
-    private static BEvent EVENT_ACTOR_NOT_FOUND = new BEvent(MilkSLA.class.getName(), 11,
+    private static BEvent eventActorNotFound = new BEvent(MilkSLA.class.getName(), 11,
             Level.APPLICATIONERROR,
             "No actor in the tasks",
             "This task does not have an actor",
             "Operation failed",
             "Check the task");
 
-    private static BEvent EVENT_SLA_EXECUTION_DONE = new BEvent(MilkSLA.class.getName(), 12,
+    private static BEvent eventSLAExecutionDone = new BEvent(MilkSLA.class.getName(), 12,
             Level.SUCCESS,
             "SLA rules executed",
             "A set of execution rule was performed");
 
-    private static BEvent EVENT_CASEID_NOT_SET = new BEvent(MilkSLA.class.getName(), 13,
+    private static BEvent eventCaseIDNotSet = new BEvent(MilkSLA.class.getName(), 13,
             Level.APPLICATIONERROR,
             "CaseId not set",
             "Give a correct CASEID for the analysis", "No analysis is performed", "Case Id is a number");
 
-    private static BEvent EVENT_SLA_ANALYSIS = new BEvent(MilkSLA.class.getName(), 14,
+    private static BEvent eventSLAAnalysis = new BEvent(MilkSLA.class.getName(), 14,
             Level.SUCCESS,
             "Analysis is done",
             "Please find the analysis");
 
-    private static BEvent EVENT_SLA_ERROR = new BEvent(MilkSLA.class.getName(), 15,
+    private static BEvent eventSLAError = new BEvent(MilkSLA.class.getName(), 15,
             Level.ERROR,
             "Error during execution",
             "An error arrived during the execution", "Execution stopped", "Contact the adminstrator");
 
-    private static BEvent EVENT_PROCESSID_NOT_FOUND = new BEvent(MilkSLA.class.getName(), 16,
+    private static BEvent eventProcessIdNotFound = new BEvent(MilkSLA.class.getName(), 16,
             Level.ERROR,
             "processID not found",
             "This task reference an unknow process Definition ID",
             "Operation failed",
             "Check the Process ID");
-    private static BEvent EVENT_JSONERROR = new BEvent(MilkSLA.class.getName(), 17,
+    private static BEvent eventJSONError = new BEvent(MilkSLA.class.getName(), 17,
             Level.APPLICATIONERROR,
             "Json error",
             "Json does not respect the Json format",
             "Operation failed",
             "Check the source JSON");
 
-    private static BEvent EVENT_PROCESSCONTRACTVIOLATION = new BEvent(MilkSLA.class.getName(), 18,
+    private static BEvent eventProcessContractViolation = new BEvent(MilkSLA.class.getName(), 18,
             Level.APPLICATIONERROR,
             "Contract violation error",
             "Contract to start the process is not correct",
             "Operation failed",
             "Check the contract and the given input");
 
-    private static BEvent EVENT_MESSAGE_ERROR = new BEvent(MilkSLA.class.getName(), 18,
+    private static BEvent eventMessageError = new BEvent(MilkSLA.class.getName(), 18,
             Level.APPLICATIONERROR,
             "Message error",
             "A message can't be send",
@@ -202,7 +204,7 @@ public class MilkSLA extends MilkPlugIn {
 
     
 
-    public static PlugInParameter cstParamAnalyseCaseId = PlugInParameter.createInstanceButton("AnalyseCaseId", "Analyse a specific case", Arrays.asList("CaseId"), Arrays.asList(""), "Give a caseId and an explanation will be return to describe what was done for this caseId", "Click on the button to start the analysis");
+    private static PlugInParameter cstParamAnalyseCaseId = PlugInParameter.createInstanceButton("AnalyseCaseId", "Analyse a specific case", Arrays.asList("CaseId"), Arrays.asList(""), "Give a caseId and an explanation will be return to describe what was done for this caseId", "Click on the button to start the analysis");
 
     /**
      * 
@@ -268,7 +270,7 @@ public class MilkSLA extends MilkPlugIn {
         public Set<String> getListTaskNames() {
             if (listTasksName != null)
                 return listTasksName;
-            listTasksName = new HashSet<String>();
+            listTasksName = new HashSet<>();
             if (taskName != null) {
                 StringTokenizer st = new StringTokenizer(taskName, "#");
                 while (st.hasMoreTokens()) {
@@ -292,7 +294,7 @@ public class MilkSLA extends MilkPlugIn {
         private static final long serialVersionUID = 2538564973248284226L;
         @SuppressWarnings("unused")
         public Exception e;
-        public List<BEvent> listEvents = new ArrayList<BEvent>();
+        public final List<BEvent> listEvents = new ArrayList<>();
     }
 
     /**
@@ -320,8 +322,7 @@ public class MilkSLA extends MilkPlugIn {
      * check the Job's environment
      */
     public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
-        return listEvents;
+        return new ArrayList<>();
     };
 
     /* ******************************************************************************** */
@@ -421,7 +422,7 @@ public class MilkSLA extends MilkPlugIn {
             Long caseId = TypesCast.getLong(argsParameters.get("CaseId"), null);
             if (caseId == null) {
                 List<BEvent> listEvents = new ArrayList<BEvent>();
-                listEvents.add(EVENT_CASEID_NOT_SET);
+                listEvents.add(eventCaseIDNotSet);
                 return listEvents;
             }
             PlugTourOutput plugTourOutput = executeSLA(input, caseId, apiAccessor);
@@ -452,39 +453,41 @@ public class MilkSLA extends MilkPlugIn {
         }
     }
 
-    public PlugTourOutput executeSLA(MilkJobExecution input, Long analysisCaseId, APIAccessor apiAccessor) {
+    public PlugTourOutput executeSLA(MilkJobExecution jobExecution, Long analysisCaseId, APIAccessor apiAccessor) {
         CollectAnalysisExecution collectAnalysisExecution = new CollectAnalysisExecution();
         collectAnalysisExecution.caseId = analysisCaseId;
         collectAnalysisExecution.isActive = analysisCaseId != null;
 
-        PlugTourOutput plugTourOutput = input.getPlugTourOutput();
+        PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
         ProcessAPI processAPI = apiAccessor.getProcessAPI();
         IdentityAPI identityAPI = apiAccessor.getIdentityAPI();
         // get Input 
-        String processName = input.getInputStringParameter(cstParamProcessName);
-        List<Map<String, Object>> listRuleSLA = input.getInputListMapParameter(cstParamRuleSLA);
-        long maxTasks = input.getInputLongParameter(cstParamMaximumTask);
+
+        String processName = jobExecution.getInputStringParameter(cstParamProcessName);
+        List<Map<String, Object>> listRuleSLA = jobExecution.getInputListMapParameter(cstParamRuleSLA);
+        long maxTasks = jobExecution.getInputLongParameter(cstParamMaximumTask);
         int numberOfExecution = 0;
         int numberOfAnalysis = 0;
-        String detailsExecution = "";
+        StringBuilder detailsExecution =  new StringBuilder();
         try {
             if (processName == null || processName.trim().length() == 0) {
-                plugTourOutput.addEvent(EVENT_NO_PROCESS_FILTER);
+                plugTourOutput.addEvent(eventNoProcessFilter);
                 return plugTourOutput;
             }
-            SearchResult<ProcessDeploymentInfo> searchProcessInfo = getListProcessDefinitionId(input, cstParamProcessName, processAPI);
-            if (searchProcessInfo.getCount() == 0) {
-                plugTourOutput.addEvent(new BEvent(EVENT_NO_PROCESS_MATCH_FILTER, "ProcessName[" + processName + "]"));
+           ListProcessesResult listProcessesResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessName, true, null, null, processAPI);
+                   
+            if (listProcessesResult.listProcessDeploymentInfo.isEmpty()) {
+                plugTourOutput.addEvents( listProcessesResult.listEvents );
                 return plugTourOutput;
             }
 
-            for (ProcessDeploymentInfo processInfo : searchProcessInfo.getResult()) {
+            for (ProcessDeploymentInfo processDeployment : listProcessesResult.listProcessDeploymentInfo) {
 
                 // search all tasks
                 boolean searchOnAllTasks = false;
-                collectAnalysisExecution.addExplanation(true, "CheckProcess [" + processInfo.getName() + "/" + processInfo.getVersion() + "] processId[" + processInfo.getProcessId() + "]");
+                collectAnalysisExecution.addExplanation(true, "CheckProcess [" + processDeployment.getName() + "/" + processDeployment.getVersion() + "] processId[" + processDeployment.getProcessId() + "]");
 
-                List<String> setTasks = new ArrayList<String>();
+                List<String> setTasks = new ArrayList<>();
                 for (Map<String, Object> oneRule : listRuleSLA) {
                     Rule rule = new Rule(oneRule);
                     if (rule.isAllTasks())
@@ -513,7 +516,7 @@ public class MilkSLA extends MilkPlugIn {
                     // run 20 task
                     // search all active human task according the rule - we don't want a big request, so we must truncate per 
                     SearchOptionsBuilder searchOption = new SearchOptionsBuilder((int) (pageIndexTask * maxTasks), (int) maxTasks);
-                    searchOption.filter(HumanTaskInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processInfo.getProcessId());
+                    searchOption.filter(HumanTaskInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processDeployment.getProcessId());
                     if (!searchOnAllTasks) {
                         searchOption.leftParenthesis();
                         for (int i = 0; i < 20; i++) {
@@ -550,7 +553,7 @@ public class MilkSLA extends MilkPlugIn {
                                 collectAnalysisExecution.addExplanation(false, " ****** ANALYSIS RULE PercentThreashold[" + rule.percentThreashold + "] **");
                                 // ok, this rule apply.
                                 try {
-                                    if (!isRuleActive(humanTask, rule, input, processAPI, collectAnalysisExecution)) {
+                                    if (!isRuleActive(humanTask, rule, jobExecution, processAPI, collectAnalysisExecution)) {
                                         collectAnalysisExecution.addExplanation(false, "~~~> Rule Not active  ******");
                                         continue;
                                     }
@@ -559,10 +562,10 @@ public class MilkSLA extends MilkPlugIn {
                                     if (collectAnalysisExecution.isActive)
                                         collectAnalysisExecution.addExplanation(false, "~~~> Rule READY TO BE EXECUTED  ******");
                                     else {
-                                        detailsExecution += humanTask.getRootContainerId() + ",";
-                                        List<BEvent> listEvents = executeRule(humanTask, rule, input, processAPI, identityAPI);
+                                        detailsExecution.append( humanTask.getRootContainerId() + ",");
+                                        List<BEvent> listEvents = executeRule(humanTask, rule, jobExecution, processAPI, identityAPI);
                                         plugTourOutput.addEvents(listEvents);
-                                        updateCase(humanTask, rule, input, processAPI);
+                                        updateCase(humanTask, rule, jobExecution, processAPI);
                                     }
                                 } catch (ExceptionWithEvents e) {
                                     plugTourOutput.addEvents(e.listEvents);
@@ -576,9 +579,9 @@ public class MilkSLA extends MilkPlugIn {
             if (!collectAnalysisExecution.isActive) {
                 if (numberOfExecution == 0) {
                     plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
-                    plugTourOutput.addEvent(new BEvent(EVENT_SLA_EXECUTION_DONE, "Analysis:" + numberOfAnalysis+" tasks"));
+                    plugTourOutput.addEvent(new BEvent(eventSLAExecutionDone, "Analysis:" + numberOfAnalysis+" tasks"));
                 } else
-                    plugTourOutput.addEvent(new BEvent(EVENT_SLA_EXECUTION_DONE, "On cases:" + detailsExecution + " Analysis:" + numberOfAnalysis+" tasks"));
+                    plugTourOutput.addEvent(new BEvent(eventSLAExecutionDone, "On cases:" + detailsExecution.toString() + " Analysis:" + numberOfAnalysis+" tasks"));
 
                 if (plugTourOutput.getListEvents() != null && BEventFactory.isError(plugTourOutput.getListEvents()))
                     plugTourOutput.executionStatus = ExecutionStatus.ERROR;
@@ -588,13 +591,13 @@ public class MilkSLA extends MilkPlugIn {
             e1.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();
             logger.severe("MilkSLA: ~~~~~~~~~~  : ERROR " + e1 + " at " + exceptionDetails);
-            plugTourOutput.addEvent(new BEvent(EVENT_SLA_ERROR, e1, ""));
+            plugTourOutput.addEvent(new BEvent(eventSLAError, e1, ""));
 
             plugTourOutput.executionStatus = ExecutionStatus.ERROR;
         }
 
         if (analysisCaseId != null) {
-            plugTourOutput.addEvent(new BEvent(EVENT_SLA_ANALYSIS, collectAnalysisExecution.explanation));
+            plugTourOutput.addEvent(new BEvent(eventSLAAnalysis, collectAnalysisExecution.explanation));
         }
         
         return plugTourOutput;
@@ -632,7 +635,7 @@ public class MilkSLA extends MilkPlugIn {
         long currentTime = System.currentTimeMillis();
         long relativeTime = currentTime - startDate.getTime();
         long delayExpected = dueDate.getTime() - startDate.getTime();
-        int percent = (int) ((double) 100.0 * relativeTime / delayExpected);
+        int percent = (int) ( 100.0 * relativeTime / delayExpected);
         if (percent <= rule.percentThreashold) {
             collectAnalysisExecution.addExplanation(false, "NOT YET: task_percent[" + percent + "]/rule.Percent[" + rule.percentThreashold + "]");
             return false;
@@ -672,8 +675,8 @@ public class MilkSLA extends MilkPlugIn {
                 // based on a variable
                 data = processAPI.getProcessDataInstance(variableName, humanTask.getParentProcessInstanceId());
                 @SuppressWarnings("unchecked")
-                Map<String, Object> dataMap = data.getValue() == null ? new HashMap<String, Object>() : (Map<String, Object>) data.getValue();
-                // key is actibityID + percent threasholf
+                Map<String, Object> dataMap = data.getValue() == null ? new HashMap<>() : (Map<String, Object>) data.getValue();
+                // key is actibityID + percent threashold
                 if (dataMap.containsKey(humanTask.getId() + "_" + rule.percentThreashold)) {
                     collectAnalysisExecution.addExplanation(false, "Variable[" + variableName + "] contains key[" + humanTask.getId() + "_" + rule.percentThreashold + "] (already executed)");
                     return true;
@@ -699,18 +702,18 @@ public class MilkSLA extends MilkPlugIn {
             }
 
             ExceptionWithEvents ev = new ExceptionWithEvents();
-            ev.listEvents.add(EVENT_NO_MECHANISM_REGISTER);
+            ev.listEvents.add(eventNoMechanismRegistered);
             throw ev;
 
         } catch (ClassCastException ec) {
             ExceptionWithEvents ev = new ExceptionWithEvents();
             ev.e = ec;
-            ev.listEvents.add(new BEvent(EVENT_VARIABLE_REGISTRATON_CLASS_ERROR, "VariableName[" + variableName + "] Class[" + (data == null ? "null" : data.getValue().getClass().getName()) + "] processId[" + humanTask.getParentProcessInstanceId() + "]"));
+            ev.listEvents.add(new BEvent(eventVariableRegistrationClassError, "VariableName[" + variableName + "] Class[" + (data == null ? "null" : data.getValue().getClass().getName()) + "] processId[" + humanTask.getParentProcessInstanceId() + "]"));
             throw ev;
         } catch (DataNotFoundException ed) {
             ExceptionWithEvents ev = new ExceptionWithEvents();
             ev.e = ed;
-            ev.listEvents.add(new BEvent(EVENT_VARIABLE_REGISTRATION_NOT_FOUND, "VariableName[" + variableName + "] processId[" + humanTask.getParentProcessInstanceId() + "]"));
+            ev.listEvents.add(new BEvent(eventVariableRegistrationNotFound, "VariableName[" + variableName + "] processId[" + humanTask.getParentProcessInstanceId() + "]"));
             throw ev;
         }
 
@@ -733,8 +736,8 @@ public class MilkSLA extends MilkPlugIn {
                 // based on a variable
                 data = processAPI.getProcessDataInstance(variableName, humanTask.getParentProcessInstanceId());
                 @SuppressWarnings("unchecked")
-                Map<String, Object> dataMap = data.getValue() == null ? new HashMap<String, Object>() : (Map<String, Object>) data.getValue();
-                // key is actibityID + percent threasholf
+                Map<String, Object> dataMap = data.getValue() == null ? new HashMap<>() : (Map<String, Object>) data.getValue();
+                // key is actibityID + percent threashold
                 Date date = new Date();
                 dataMap.put(humanTask.getId() + "_" + rule.percentThreashold, "Execute at" + date.toString());
                 processAPI.updateProcessDataInstance(variableName, humanTask.getParentProcessInstanceId(), (HashMap) dataMap);
@@ -743,13 +746,13 @@ public class MilkSLA extends MilkPlugIn {
         } catch (DataNotFoundException ed) {
             ExceptionWithEvents ev = new ExceptionWithEvents();
             ev.e = ed;
-            ev.listEvents.add(new BEvent(EVENT_VARIABLE_REGISTRATION_NOT_FOUND, "VariableName[" + variableName + "] processId[" + humanTask.getParentProcessInstanceId() + "]"));
+            ev.listEvents.add(new BEvent(eventVariableRegistrationNotFound, "VariableName[" + variableName + "] processId[" + humanTask.getParentProcessInstanceId() + "]"));
             throw ev;
 
         } catch (UpdateException eu) {
             ExceptionWithEvents ev = new ExceptionWithEvents();
             ev.e = eu;
-            ev.listEvents.add(new BEvent(EVENT_VARIABLE_UPDATE_FAILED, "VariableName[" + variableName + "] processId[" + humanTask.getParentProcessInstanceId() + "] updateFail[" + eu.getMessage()));
+            ev.listEvents.add(new BEvent(eventVariableUpdateFailed, "VariableName[" + variableName + "] processId[" + humanTask.getParentProcessInstanceId() + "] updateFail[" + eu.getMessage()));
             throw ev;
 
         }
@@ -766,7 +769,7 @@ public class MilkSLA extends MilkPlugIn {
      * @return
      */
     private List<BEvent> executeRule(HumanTaskInstance humanTask, Rule rule, MilkJobExecution input, ProcessAPI processAPI, IdentityAPI identityAPI) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+        List<BEvent> listEvents = new ArrayList<>();
         String userName = "";
         try {
             if (rule.getAction() == ACTION.EMAILUSER) {
@@ -802,7 +805,7 @@ public class MilkSLA extends MilkPlugIn {
                 List<User> listUsers = processAPI.getPossibleUsersOfPendingHumanTask(humanTask.getId(), 0, 10000);
                 User user = listUsers.size() > 0 ? listUsers.get(0) : null;
                 if (user == null)
-                    listEvents.add(new BEvent(EVENT_NO_USER, "Task [" + humanTask.getName() + "] Id[" + humanTask.getId() + "]"));
+                    listEvents.add(new BEvent(eventNoUser, "Task [" + humanTask.getName() + "] Id[" + humanTask.getId() + "]"));
                 else {
                     if (level > 10)
                         level = 10;
@@ -841,9 +844,11 @@ public class MilkSLA extends MilkPlugIn {
                 ProcessDeploymentInfo processDeploymentInfo = null;
                 ResolvedPlaceHolder resolvedPlaceHolder =null;
                 try {
-                    SearchResult<ProcessDeploymentInfo> listProcessDeploymenInfo = getListProcessDefinitionId(processNameVersion, processAPI);
+                    
+                    
+                    SearchResult<ProcessDeploymentInfo> listProcessDeploymenInfo = MilkPlugInToolbox.getListProcessDefinitionId(processNameVersion, processAPI);
                     if (listProcessDeploymenInfo.getCount() == 0)
-                        listEvents.add(new BEvent(EVENT_NO_PROCESS_MATCH_FILTER, "ProcessName[" + processNameVersion + "]"));
+                        listEvents.add(new BEvent(eventNoProcessMatchFilter, "ProcessName[" + processNameVersion + "]"));
                     else {
                         processDeploymentInfo = listProcessDeploymenInfo.getResult().get(0);
                         resolvedPlaceHolder = resolvePlaceHolderProcess(humanTask, rule, input, jsonInput, processAPI);
@@ -852,7 +857,7 @@ public class MilkSLA extends MilkPlugIn {
                             processAPI.startProcessWithInputs(processDeploymentInfo.getProcessId(), resolvedPlaceHolder.jsonMap);
                     }
                 } catch (ContractViolationException | ProcessActivationException | ProcessExecutionException ce) {
-                    listEvents.add(new BEvent(EVENT_PROCESSCONTRACTVIOLATION, ce,
+                    listEvents.add(new BEvent(eventProcessContractViolation, ce,
                             "JSon[" + jsonInput + "] jsonInputResolved["+(resolvedPlaceHolder==null ? null : resolvedPlaceHolder.jsonResolved)
                             +"] ProcessId[" + (processDeploymentInfo == null ? null : processDeploymentInfo.getProcessId())
                                     + "] ProcessName[" + (processDeploymentInfo == null ? null : processDeploymentInfo.getName())
@@ -860,7 +865,7 @@ public class MilkSLA extends MilkPlugIn {
                                     + "] ProcessActivation[" + (processDeploymentInfo == null ? null : processDeploymentInfo.getActivationState().toString()) + "]"));
 
                 } catch (SearchException e1) {
-                    listEvents.add(new BEvent(EVENT_NO_PROCESS_MATCH_FILTER, "ProcessName[" + processNameVersion + "]"));
+                    listEvents.add(new BEvent(eventNoProcessMatchFilter, "ProcessName[" + processNameVersion + "]"));
 
                 }
 
@@ -874,9 +879,9 @@ public class MilkSLA extends MilkPlugIn {
                 String jsonMessageCorrelation = st.hasMoreTokens() ? st.nextToken() : null;
                 ProcessDeploymentInfo processDeploymentInfo = null;
                 try {
-                    SearchResult<ProcessDeploymentInfo> listProcessDeploymenInfo = getListProcessDefinitionId(targetProcess, processAPI);
+                    SearchResult<ProcessDeploymentInfo> listProcessDeploymenInfo = MilkPlugInToolbox.getListProcessDefinitionId(targetProcess, processAPI);
                     if (listProcessDeploymenInfo.getCount() == 0)
-                        listEvents.add(new BEvent(EVENT_NO_PROCESS_MATCH_FILTER, "ProcessName[" + targetProcess + "]"));
+                        listEvents.add(new BEvent(eventNoProcessMatchFilter, "ProcessName[" + targetProcess + "]"));
                     else {
                         processDeploymentInfo = listProcessDeploymenInfo.getResult().get(0);
 
@@ -901,21 +906,21 @@ public class MilkSLA extends MilkPlugIn {
                         }
                     }
                 } catch (Exception e1) {
-                    listEvents.add(new BEvent(EVENT_MESSAGE_ERROR, "ProcessName[" + targetProcess + "]"));
+                    listEvents.add(new BEvent(eventMessageError, "ProcessName[" + targetProcess + "]"));
 
                 }
 
             } else
-                listEvents.add(new BEvent(EVENT_UNKNOW_ACTION, "Rule[" + rule.getUniqueId() + "] Action[" + rule.action + "]"));
+                listEvents.add(new BEvent(eventUnknowAction, "Rule[" + rule.getUniqueId() + "] Action[" + rule.action + "]"));
         } catch (UpdateException e) {
-            listEvents.add(new BEvent(EVENT_ASSIGN_TASK_FAILED, "Rule [" + rule.getUniqueId() + " task[" + humanTask.getId() + "] user[" + userName + "]"));
+            listEvents.add(new BEvent(eventAssignTaskFailed, "Rule [" + rule.getUniqueId() + " task[" + humanTask.getId() + "] user[" + userName + "]"));
         } catch (UserNotFoundException e) {
-            listEvents.add(new BEvent(EVENT_USER_NOT_FOUND, "Rule [" + rule.getUniqueId() + " task[" + humanTask.getId() + "] user[" + userName + "]"));
+            listEvents.add(new BEvent(eventUserNotFound, "Rule [" + rule.getUniqueId() + " task[" + humanTask.getId() + "] user[" + userName + "]"));
 
         } catch (ActorNotFoundException e) {
-            listEvents.add(new BEvent(EVENT_ACTOR_NOT_FOUND, "Rule [" + rule.getUniqueId() + " task[" + humanTask.getId() + "]"));
+            listEvents.add(new BEvent(eventActorNotFound, "Rule [" + rule.getUniqueId() + " task[" + humanTask.getId() + "]"));
         } catch (ProcessDefinitionNotFoundException ed) {
-            listEvents.add(new BEvent(EVENT_PROCESSID_NOT_FOUND, "Rule [" + rule.getUniqueId() + " task[" + humanTask.getId() + "] processID referenced in task[" + humanTask.getProcessDefinitionId() + "]"));
+            listEvents.add(new BEvent(eventProcessIdNotFound, "Rule [" + rule.getUniqueId() + " task[" + humanTask.getId() + "] processID referenced in task[" + humanTask.getProcessDefinitionId() + "]"));
 
         }
 
@@ -941,12 +946,12 @@ public class MilkSLA extends MilkPlugIn {
 
     }
 
-    public static String cstMarqueurDueDateReplaced = "##DueDateReplacedToBeReplacedByALocalTime##";
+    public final static String cstMarqueurDueDateReplaced = "##DueDateReplacedToBeReplacedByALocalTime##";
 
-    public static class  ResolvedPlaceHolder {
+    public static class ResolvedPlaceHolder {
         Map<String, Serializable> jsonMap;
         String jsonResolved;
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+        List<BEvent> listEvents = new ArrayList<>();
     }
     
     @SuppressWarnings("unchecked")
@@ -954,7 +959,7 @@ public class MilkSLA extends MilkPlugIn {
         ResolvedPlaceHolder resolvedPlaceHolder = new ResolvedPlaceHolder();
         try {
 
-            Map<String, Object> placeHolder = new HashMap<String, Object>();
+            Map<String, Object> placeHolder = new HashMap<>();
             placeHolder.put("percentThreashold", String.valueOf(rule.percentThreashold));
 
             // format :"2019-12-10T11:42",
@@ -982,7 +987,7 @@ public class MilkSLA extends MilkPlugIn {
                     resolvedPlaceHolder.jsonMap.put(key, localDateTime);
             }
         } catch (Exception e) {
-            resolvedPlaceHolder.listEvents.add( new BEvent(EVENT_JSONERROR, e, "JSonInput[" + jsonInput + "] JsonResoled["+resolvedPlaceHolder.jsonResolved+"]"));
+            resolvedPlaceHolder.listEvents.add( new BEvent(eventJSONError, e, "JSonInput[" + jsonInput + "] JsonResoled["+resolvedPlaceHolder.jsonResolved+"]"));
         }
         return resolvedPlaceHolder;
     }

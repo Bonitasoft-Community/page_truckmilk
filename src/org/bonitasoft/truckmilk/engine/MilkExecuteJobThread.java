@@ -18,6 +18,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugTourOutput;
 import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SaveJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.schedule.MilkSchedulerFactory;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 /**
@@ -29,14 +30,15 @@ public class MilkExecuteJobThread extends Thread {
 
     static MilkLog logger = MilkLog.getLogger(MilkExecuteJobThread.class.getName());
 
-    private final static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss SSS");
+    
+    private SimpleDateFormat sdfSynthetic = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    private static BEvent EVENT_PLUGIN_VIOLATION = new BEvent(MilkExecuteJobThread.class.getName(), 1, Level.ERROR,
+    private static BEvent eventPlugInViolation = new BEvent(MilkExecuteJobThread.class.getName(), 1, Level.ERROR,
             "Plug in violation",
             "A plug in must return a status on each execution. The plug in does not respect the contract",
             "No report is saved", "Contact the plug in creator");
 
-    private static BEvent EVENT_PLUGIN_ERROR = new BEvent(MilkExecuteJobThread.class.getName(), 2, Level.ERROR,
+    private static BEvent eventPlugInError = new BEvent(MilkExecuteJobThread.class.getName(), 2, Level.ERROR,
             "Plug in error", "A plug in throw an error", "No report is saved", "Contact the plug in creator");
 
     private MilkJob milkJob;
@@ -53,87 +55,104 @@ public class MilkExecuteJobThread extends Thread {
      * @return
      */
     public String checkAndStart(Date currentDate) {
-        String executionDescription = "JobName[" + milkJob.getName() + "]:";
-
+        StringBuilder executionDescription = new StringBuilder();
+        executionDescription.append( "Job[" + milkJob.toString() + "]:" );
+        boolean saveJob=false;
         tagTheDate = currentDate;
 
         if (!milkJob.isInsideHostsRestriction()) {
-            executionDescription += "Host Restriction[" + milkJob.hostsRestriction + "] so can't start in this host;";
-            return executionDescription;
+            executionDescription.append( "Host Restriction[" + milkJob.hostsRestriction + "] so can't start in this host;");
+            return executionDescription.toString();
         }
 
         if (milkJob.inExecution()) {
-            executionDescription += "In execution;";
-            return executionDescription;
+            executionDescription.append( "In execution;");
+            return executionDescription.toString();
         }
-        executionDescription += "Enable=" + milkJob.isEnable + ",ImmediateExecution=" + milkJob.isImmediateExecution() + ";";
-        if (milkJob.isEnable || milkJob.isImmediateExecution()) {
-            // protection : recalculate a date then
-            if (milkJob.trackExecution.nextExecutionDate == null)
-                milkJob.calculateNextExecution();
-
-            executionDescription += "Next executionDate=" + (milkJob.trackExecution.nextExecutionDate == null ? "null" : sdf.format(milkJob.trackExecution.nextExecutionDate)) + ";";
-            if (milkJob.isImmediateExecution() ||
-                    (milkJob.trackExecution.nextExecutionDate != null
-                            && milkJob.trackExecution.nextExecutionDate.getTime() < currentDate.getTime())) {
-
-                // Attention, in a Cluster environment, we must not start the job on two different node.
-                if (!synchronizeClusterDoubleStart()) {
-                    executionDescription += "Executed on different host-do not start;";
-                    return executionDescription;
+        // already logged in the toString() executionDescription.append( (milkJob.isEnable()? " ENABLE " : " Disable ") + (milkJob.isImmediateExecution()?" ImmediateExecution ":"") + ";");
+        if (milkJob.isEnable() || milkJob.isImmediateExecution()) {
+            
+            boolean start=milkJob.isImmediateExecution();
+            if (milkJob.isEnable()) {
+                // protection : recalculate a date then for a enable
+                if (milkJob.getNextExecutionDate() == null) {
+                    milkJob.calculateNextExecution("HeartBeat-NextExecutionDate Is Set");
+                    executionDescription.append("No NextExecutionDate, recalculate to["+sdfSynthetic.format(milkJob.getNextExecutionDate())+"]");
+                    // we calculated a date : save it
+                    saveJob=true;
                 }
+                // already in the toString() executionDescription.append( "Next[" + milkJob.getNextExecutionDateSt() + "];");
+                // check if we need to start now
+                if ( (milkJob.getNextExecutionDate() != null
+                        && milkJob.getNextExecutionDate().getTime() <= currentDate.getTime())) {
+                    start=true;
+                }
+            }
+            // Attention, in a Cluster environment, we must not start the job on two different node.
+            if (start) {
+                String statusDoubleStart= synchronizeClusterDoubleStart();
+                if (statusDoubleStart != null) {
+                    executionDescription.append( statusDoubleStart );
+                    return executionDescription.toString();
+                }
+             }
+            
+            // if we start, job will be saved
+            if (start) {
                 // now, it's locked on this node 
-
-                if (milkJob.trackExecution.isImmediateExecution())
-                    executionDescription += "(i)";
-                executionDescription += "STARTED;";
-
+                executionDescription.append( "  *** STARTED *** ;");
                 this.start();
+            } else if (saveJob) {
+                milkJob.milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceStartExecutionJob());
 
             }
+                
         } // end isEnable
-        return executionDescription;
+        return executionDescription.toString();
     }
 
-    private boolean synchronizeClusterDoubleStart() {
+    /**
+     * return null if everything is OK, else a status
+     * @return
+     */
+    private String synchronizeClusterDoubleStart() {
         InetAddress ip;
         try {
             ip = InetAddress.getLocalHost();
         } catch (UnknownHostException e1) {
-            logger.severe("MilkExecuteJobThread: can't get the ipAddress, synchronization on a cluster can't work");
-            return true;
+            return "synchronizeClusterDoubleStart: Can't get the ipAddress, don't start Jobs";
         }
         MilkJobFactory milkJobFactory = milkJob.milkJobFactory;
         // register this host to start
         milkJob.registerExecutionOnHost(ip.getHostAddress());
 
-        logger.info("synchronizeClusterDoubleStart StartJob - instantiationHost [" + ip.getHostAddress() + "]");
+        // logger.info("synchronizeClusterDoubleStart StartJob - instantiationHost [" + ip.getHostAddress() + "]");
 
         milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceTrackExecution());
 
         try {
-            Thread.sleep(2 * 1000);
+            Thread.sleep(2L * 1000L);
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
 
         // ok, read it : is that still me ?
         MilkFactoryOp milkJobRead = milkJobFactory.dbLoadJob(milkJob.getId());
         if (milkJobRead.job != null && milkJobRead.job.getHostRegistered().equals(ip.getHostAddress()))
-            return true; // that's me ! 
+            return null; // that's me ! 
 
         // someone else steel my job, be fair, do nothing
-        logger.info("Save StartJob - Something else register for this job[" + (milkJobRead.job == null ? "Can't read job" : milkJobRead.job.getHostRegistered()) + "] myself=[" + ip.getHostAddress() + "]");
-
-        return false;
+        return "synchronizeClusterDoubleStart: Jobs already register on["+ (milkJobRead.job == null ? "Can't read job" : milkJobRead.job.getHostRegistered()) + "] myself=[" + ip.getHostAddress() + "]";
     }
 
     /** now do the real execution */
     public void run() {
 
         MilkJobFactory milkJobFactory = milkJob.milkJobFactory;
+        MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
         ConnectorAPIAccessorImpl connectorAccessorAPI = new ConnectorAPIAccessorImpl(milkJobFactory.getTenantId());
-
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+        
+        List<BEvent> listEvents = new ArrayList<>();
         MilkPlugIn plugIn = milkJob.getPlugIn();
         PlugTourOutput output = null;
         try {
@@ -151,25 +170,27 @@ public class MilkExecuteJobThread extends Thread {
             long timeBegin = System.currentTimeMillis();
             milkJobExecution.start();
             try {
-                logger.info("Start Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
+
+                milkReportEngine.reportHeartBeatInformation("Start Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")" );
 
                 // save the status in the database
                 // save the start Status (so general) and the track Status, plus askStop to false
                 listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceStartExecutionJob()));
 
                 output = plugIn.execute(milkJobExecution, connectorAccessorAPI);
+                
                 output.hostName = hostName;
-                String listEventsSt = "";
+                StringBuilder listEventsSt = new StringBuilder();
                 for (final BEvent event : listEvents) {
-                    listEventsSt += event.toString() + " <~> ";
+                    listEventsSt.append( event.toString() + " <~> ");
                 }
-                logger.info("End Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")" + listEventsSt);
+                logger.info("End Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")" + listEventsSt.toString());
 
                 // force the status ABORD status
                 if (milkJobExecution.pleaseStop() && (output.executionStatus == ExecutionStatus.SUCCESS))
                     output.executionStatus = ExecutionStatus.SUCCESSABORT;
                 // if the user ask to stop, then this is a successabort if this is correct (do not change a ERROR)
-                if (milkJob.trackExecution.askForStop && (output.executionStatus == ExecutionStatus.SUCCESS || output.executionStatus == ExecutionStatus.SUCCESSPARTIAL))
+                if (milkJob.isAskForStop() && (output.executionStatus == ExecutionStatus.SUCCESS || output.executionStatus == ExecutionStatus.SUCCESSPARTIAL))
                     output.executionStatus = ExecutionStatus.SUCCESSABORT;
             } catch (Exception e) {
 
@@ -179,7 +200,7 @@ public class MilkExecuteJobThread extends Thread {
                 logger.severe(" Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + e.getMessage() + " at " + exceptionDetails);
                 if (output == null) {
                     output = new PlugTourOutput(milkJob);
-                    output.addEvent(new BEvent(EVENT_PLUGIN_VIOLATION, "Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + e.getMessage() + " at " + exceptionDetails));
+                    output.addEvent(new BEvent(eventPlugInViolation, "Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + e.getMessage() + " at " + exceptionDetails));
                     output.executionStatus = ExecutionStatus.CONTRACTVIOLATION;
                 }
             } catch (Error er) {
@@ -189,7 +210,7 @@ public class MilkExecuteJobThread extends Thread {
                 logger.severe(" Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + er.getMessage() + " at " + exceptionDetails);
                 if (output == null) {
                     output = new PlugTourOutput(milkJob);
-                    output.addEvent(new BEvent(EVENT_PLUGIN_VIOLATION, "Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + er.getMessage() + " at " + exceptionDetails));
+                    output.addEvent(new BEvent(eventPlugInViolation, "Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + er.getMessage() + " at " + exceptionDetails));
                     output.executionStatus = ExecutionStatus.CONTRACTVIOLATION;
                 }
             }
@@ -203,7 +224,7 @@ public class MilkExecuteJobThread extends Thread {
 
         } catch (Exception e) {
             output = new PlugTourOutput(milkJob);
-            output.addEvent(new BEvent(EVENT_PLUGIN_ERROR, e, "PlugIn[" + plugIn.getName() + "]"));
+            output.addEvent(new BEvent(eventPlugInError, e, "PlugIn[" + plugIn.getName() + "]"));
             output.executionStatus = ExecutionStatus.ERROR;
             logger.severe(" Execution error " + e.getMessage());
         }
@@ -216,7 +237,10 @@ public class MilkExecuteJobThread extends Thread {
             listEvents.addAll(output.getListEvents());
         }
         // calculate the next time
-        listEvents.addAll(milkJob.calculateNextExecution());
+
+        listEvents.addAll(milkJob.calculateNextExecution("End-Of-Execution-recalculate"));
+        milkReportEngine.reportHeartBeatInformation("End Job[" + milkJob.getName() + "] (" + milkJob.getId() + ") Status["+output.executionStatus.toString()+"] NewNextDate["+sdfSynthetic.format(milkJob.getNextExecutionDate())+"]");
+
         milkJob.setImmediateExecution(false);
         milkJob.setAskForStop(false);
         milkJob.setInExecution(false); // double check the end

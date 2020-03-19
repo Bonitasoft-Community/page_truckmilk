@@ -42,14 +42,19 @@
 		<dependency>
 			<groupId>org.bonitasoft.log.event</groupId>
 			<artifactId>bonita-event</artifactId>
-			<version>1.7.0</version>
+			<version>1.8.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.bonitasoft.custompage</groupId>
 			<artifactId>CustomPageWorker</artifactId>
 			<version>1.4.0</version>
 		</dependency>
-
+		<dependency>
+			<groupId>org.bonitasoft.custompage</groupId>
+			<artifactId>CustomPageGrumman</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+		
 		<dependency>
 			<groupId>org.bonitasoft.command</groupId>
 			<artifactId>bonita-commanddeployment</artifactId>
@@ -65,6 +70,12 @@
 			<groupId>com.googlecode.json-simple</groupId>
 			<artifactId>json-simple</artifactId>
 			<version>1.1</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.18.12</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>

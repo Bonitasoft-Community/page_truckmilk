@@ -22,7 +22,7 @@ import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
 public class MilkJobExecution {
 
-    static MilkLog logger = MilkLog.getLogger(MilkSLA.class.getName());
+    static MilkLog logger = MilkLog.getLogger(MilkJobExecution.class.getName());
 
     public String tourName;
     // this parameters is initialised with the value in the PlugTour, and may change after
@@ -83,6 +83,12 @@ public class MilkJobExecution {
         return TypesCast.getString(tourParameters.get(name), defaultValue);
     }
 
+    public Map<String,Object> getInputMapParameter(PlugInParameter parameter) {
+        return (Map<String,Object>) tourParameters.get(parameter.name);
+
+    }
+
+    
     public void getStreamParameter(PlugInParameter plugInParameter, OutputStream output) {
 
         if (plugInParameter.typeParameter == TypeParameter.FILEREAD || plugInParameter.typeParameter == TypeParameter.FILEREADWRITE || plugInParameter.typeParameter == TypeParameter.FILEWRITE) {
@@ -239,13 +245,13 @@ public class MilkJobExecution {
     }
 
     /**
-     * Plug in can set an % of advancement if it want
+     * Plug in can set an step. Attention, it's not an ADD, but to set the step where works are (so, you can come back if you wants)
      * 
      * @param advancementInPercent
      */
     public void setAvancementStep(long step) {
         if (totalStep != 0)
-            setAvancement((int) (100 * step / totalStep));
+            setAvancement((int) ((100 * step) / totalStep));
         // register in the tour the % of advancement, and then calculated an estimated end date.
     }
 
@@ -256,14 +262,14 @@ public class MilkJobExecution {
      * @param advancementInPercent
      */
     public void setAvancement(int advancementInPercent) {
-        if (advancementInPercent != milkJob.trackExecution.percent) {
+        if (advancementInPercent != milkJob.getPercent()) {
             // update
-            milkJob.trackExecution.percent = advancementInPercent;
+            milkJob.setPercent( advancementInPercent );
             long timeExecution = System.currentTimeMillis() - startTimeMs;
             if (timeExecution > 0 && advancementInPercent > 0) {
-                milkJob.trackExecution.totalTimeEstimatedInMs = timeExecution * 100 / advancementInPercent;
-                milkJob.trackExecution.endTimeEstimatedInMs = milkJob.trackExecution.totalTimeEstimatedInMs - timeExecution;
-                milkJob.trackExecution.endDateEstimated = new Date(milkJob.trackExecution.endTimeEstimatedInMs + startTimeMs);
+                milkJob.setTotalTimeEstimatedInMs ( timeExecution * 100 / advancementInPercent);
+                milkJob.setEndTimeEstimatedInMs( milkJob.getTotalTimeEstimatedInMs() - timeExecution );
+                milkJob.setEndDateEstimated( new Date(milkJob.getEndTimeEstimatedInMs() + startTimeMs));
                 // save the current advancement
                 SaveJobParameters saveParameters = SaveJobParameters.getInstanceTrackExecution();
                 milkJob.milkJobFactory.dbSaveJob(milkJob, saveParameters);
@@ -281,20 +287,20 @@ public class MilkJobExecution {
         startTimeMs = System.currentTimeMillis();
         pleaseStop = false;
 
-        milkJob.trackExecution.setImmediateExecution( false );
-        milkJob.trackExecution.setInExecution( true );
-        milkJob.trackExecution.startTime = startTimeMs;
-        milkJob.trackExecution.percent = 0;
-        milkJob.trackExecution.endTimeEstimatedInMs = -1;
-        milkJob.trackExecution.endDateEstimated = null;
+        milkJob.setImmediateExecution( false );
+        milkJob.setInExecution( true );
+        milkJob.setStartTime( startTimeMs );
+        milkJob.setPercent( 0 );
+        milkJob.setEndTimeEstimatedInMs( -1 );
+        milkJob.setEndDateEstimated( null );
 
     }
 
     public void end() {
-        milkJob.trackExecution.setInExecution( false );
-        milkJob.trackExecution.percent = 100;
-        milkJob.trackExecution.endTimeEstimatedInMs = 0;
-        milkJob.trackExecution.endDateEstimated = new Date();
+        milkJob.setInExecution( false );
+        milkJob.setPercent( 100 );
+        milkJob.setEndTimeEstimatedInMs( 0 );
+        milkJob.setEndDateEstimated( new Date() );
 
     }
 

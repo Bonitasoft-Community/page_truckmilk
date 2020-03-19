@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.bonitasoft.command.BonitaCommandDeployment;
 import org.bonitasoft.command.BonitaCommandDeployment.DeployStatus;
@@ -100,13 +101,17 @@ public class MilkCmdControlAPI {
         commandDescription.mainCommandClassName = MilkCmdControl.class.getName();
         commandDescription.mainJarFile = "TruckMilk-2.3-Page.jar";
         commandDescription.commandDescription = MilkCmdControl.cstCommandDescription;
-        // "bonita-commanddeployment-1.2.jar" is deployed automaticaly with BonitaCommandDeployment
-        // commandDescription.dependencyJars = new String[] { "bonita-event-1.5.0.jar", "bonita-properties-2.0.0.jar" }; // "mail-1.5.0-b01.jar", "activation-1.1.jar"};
 
-        commandDescription.addJarDependencyLastVersion("bonita-event", "1.7.0", "bonita-event-1.7.0.jar");
+
+
+        commandDescription.addJarDependencyLastVersion("bonita-event", "1.8.0", "bonita-event-1.8.0.jar");
         commandDescription.addJarDependencyLastVersion("bonita-properties", "2.1.1", "bonita-properties-2.1.1.jar");
-        CommandJarDependency cmdDependency= commandDescription.addJarDependencyLastVersion("custompage-worker", "1.4.0", "CustomPageWorker-1.4.0.jar");
+        CommandJarDependency cmdDependency;
+        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-worker", "1.4.0", "CustomPageWorker-1.4.0.jar");
         cmdDependency.setForceDeploy( true );
+        cmdDependency= commandDescription.addJarDependencyLastVersion("custompage-grumman", "1.1.0", "CustomPageGrumman-1.0.0.jar");
+        cmdDependency.setForceDeploy( true );
+
         
         // don't add the Meteor Dependency : with Bonita, all dependencies are GLOBAL. If we reference the MeteorAPI, we will have the same API for all pages
         // and that's impact the meteor page.
@@ -125,7 +130,7 @@ public class MilkCmdControlAPI {
      */
     public Map<String, Object> schedulerMaintenance(Map<String, Object> information, File pageDirectory,
             CommandAPI commandAPI, PlatformAPI platFormAPI, long tenantId) {
-        Map<String, Object> result = new HashMap<String, Object>();
+        Map<String, Object> result = new HashMap<>();
         String operation = (String) information.get("operation");
         HashMap<String, Serializable> parameters = new HashMap<String, Serializable>();
         BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(MilkCmdControl.cstCommandName);
@@ -141,6 +146,8 @@ public class MilkCmdControlAPI {
         }
 
         else if ("changescheduler".equals(operation)) {
+            for (Entry<String, Object> entry : information.entrySet())
+                parameters.put( entry.getKey(), (Serializable) entry.getValue());
             parameters.put(MilkCmdControl.cstSchedulerChangeType, (String) information.get("newscheduler"));
             result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULERCHANGE.toString(), parameters, tenantId, commandAPI);
         } else {

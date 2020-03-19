@@ -35,7 +35,7 @@ public class MeteorClientAPI {
     
     public Map<String, Object> startFromScenarioName(String name, ProcessAPI processAPI, CommandAPI commandAPI, long tenantId) {
         logger.info(logHeader + "~~~~~~~~~~ MeteorAPI.startFromName() name=" + name);
-        BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(CmdMeteor.cstCommandName);
+        BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(CmdMeteor.CSTCOMMANDNAME);
         Map<String, Object> resultCommand = new HashMap<String, Object>();
 
         final HashMap<String, Serializable> parameters = new HashMap<String, Serializable>();
@@ -52,7 +52,7 @@ public class MeteorClientAPI {
     public Map<String, Object> getStatus(final StatusParameters statusSimulation, final ProcessAPI processAPI, final CommandAPI commandAPI, long tenantId) {
 
         logger.fine(logHeader + "MeteorAPI.getStatus()");
-        BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(CmdMeteor.cstCommandName);
+        BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(CmdMeteor.CSTCOMMANDNAME);
         Map<String, Object> resultCommand = new HashMap<String, Object>();
 
         final HashMap<String, Serializable> parameters = new HashMap<String, Serializable>();

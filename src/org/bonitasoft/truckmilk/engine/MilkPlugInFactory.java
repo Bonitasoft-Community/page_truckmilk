@@ -7,8 +7,10 @@ import java.util.List;
 
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.truckmilk.plugin.MilkCancelCases;
 import org.bonitasoft.truckmilk.plugin.MilkDeleteCases;
 import org.bonitasoft.truckmilk.plugin.MilkEmailUsersTasks;
+import org.bonitasoft.truckmilk.plugin.MilkGrumman;
 import org.bonitasoft.truckmilk.plugin.MilkMeteor;
 import org.bonitasoft.truckmilk.plugin.MilkPing;
 import org.bonitasoft.truckmilk.plugin.MilkPurgeArchive;
@@ -30,15 +32,15 @@ public class MilkPlugInFactory {
 
     static MilkLog logger = MilkLog.getLogger(MilkPlugInFactory.class.getName());
 
-    private static BEvent EVENT_INTERNAL_ERROR = new BEvent(MilkPlugInFactory.class.getName(), 1, Level.ERROR,
+    private static BEvent eventInternalError = new BEvent(MilkPlugInFactory.class.getName(), 1, Level.ERROR,
             "Internal error", "Internal error, check the log");
-    private static BEvent EVENT_NOT_INITIALIZED = new BEvent(MilkPlugInFactory.class.getName(), 2, Level.ERROR,
+    private static BEvent eventNotInitialized = new BEvent(MilkPlugInFactory.class.getName(), 2, Level.ERROR,
             "Not initialized", "Factory is not initialized", "PlugIn does not work", "Call administrator");
 
     private long tenantId;
-    private List<MilkPlugIn> listPlugIns = new ArrayList<MilkPlugIn>();
+    private List<MilkPlugIn> listPlugIns = new ArrayList<>();
 
-    private List<BEvent> listInitialiseEvent = new ArrayList<BEvent>();
+    private List<BEvent> listInitialiseEvent = new ArrayList<>();
 
     /**
      * get an factory object. If the factory initialisation failed, getInitialiseStatus return a
@@ -56,13 +58,13 @@ public class MilkPlugInFactory {
 
     private MilkPlugInFactory(long tenantId) {
         this.tenantId = tenantId;
-        listInitialiseEvent.add(EVENT_NOT_INITIALIZED);
+        listInitialiseEvent.add(eventNotInitialized);
 
     }
 
     public long getTenantId() {
         return tenantId;
-    };
+    }
 
     /**
      * this is the list of all embedded plug in (given with the truck milk)
@@ -71,7 +73,7 @@ public class MilkPlugInFactory {
      * @return
      */
     private void collectListPlugIn(long tenantId) {
-        listPlugIns = new ArrayList<MilkPlugIn>(); // clean it
+        listPlugIns = new ArrayList<>(); // clean it
         listPlugIns.add(new MilkDeleteCases());
         // listPlugIns.add(new MilkDirectory());
         listPlugIns.add(new MilkEmailUsersTasks());
@@ -85,6 +87,8 @@ public class MilkPlugInFactory {
         listPlugIns.add(new MilkUnassignTasks() );
         listPlugIns.add(new MilkMeteor() );
         listPlugIns.add(new MilkRestartFlowNodes() );
+        listPlugIns.add(new MilkGrumman() );
+        // listPlugIns.add(new MilkCancelCases() );
     }
 
     public MilkPlugIn getPluginFromName(String name) {
@@ -99,7 +103,7 @@ public class MilkPlugInFactory {
     }
 
     public List<BEvent> initialise() {
-        listInitialiseEvent = new ArrayList<BEvent>();
+        listInitialiseEvent = new ArrayList<>();
         collectListPlugIn(tenantId);
         try {
             for (MilkPlugIn plugIn : listPlugIns) {
@@ -112,7 +116,7 @@ public class MilkPlugInFactory {
             String exceptionDetails = sw.toString();
             logger.severe("ERROR " + e + " at " + exceptionDetails);
 
-            listInitialiseEvent.add(new BEvent(EVENT_INTERNAL_ERROR, e.getMessage()));
+            listInitialiseEvent.add(new BEvent(eventInternalError, e.getMessage()));
 
         } catch (Error er) {
             StringWriter sw = new StringWriter();
@@ -120,7 +124,7 @@ public class MilkPlugInFactory {
             String exceptionDetails = sw.toString();
             logger.severe("ERROR " + er + " at " + exceptionDetails);
 
-            listInitialiseEvent.add(new BEvent(EVENT_INTERNAL_ERROR, er.getMessage()));
+            listInitialiseEvent.add(new BEvent(eventInternalError, er.getMessage()));
         }
         return listInitialiseEvent;
     }

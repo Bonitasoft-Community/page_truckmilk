@@ -2,10 +2,13 @@ package org.bonitasoft.truckmilk.engine;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.swing.text.html.HTMLDocument.HTMLReader.ParagraphAction;
 
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.ProcessAPI;
@@ -16,9 +19,9 @@ import org.bonitasoft.engine.search.SearchOptionsBuilder;
 import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.plugin.MilkPurgeArchive;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.json.simple.JSONValue;
 
@@ -57,10 +60,15 @@ public abstract class MilkPlugIn {
     public static BEvent EVENT_UNKNOW_BUTTON = new BEvent(MilkPlugIn.class.getName(), 1,
             Level.ERROR,
             "Unknow button", "A button is executed, but no action is known for this button", "No action executed.",
-            "Reference the error");
+            "Check error");
+    public final static BEvent eventExecutionError = new BEvent(MilkPlugIn.class.getName(), 2,
+            Level.ERROR,
+            "Error during plugin execution", "An error is detected", "No action executed.",
+            "Check error");
 
-    public static MilkLog logger = MilkLog.getLogger(MilkPlugIn.class.getName());
+    public final static MilkLog logger = MilkLog.getLogger(MilkPlugIn.class.getName());
 
+   
     /**
      * the base keep the description available.
      * To be sure this is correclty initialised, the factoryPlugIn, who create object, call the
@@ -135,7 +143,7 @@ public abstract class MilkPlugIn {
      * @return
      */
     protected List<BEvent> initialize(Long tenantId) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+        List<BEvent> listEvents = new ArrayList<>();
 
         // if isEmbeded, just get the description and save it localy
         if (typePlugIn == TYPE_PLUGIN.EMBEDED || typePlugIn == TYPE_PLUGIN.LOCAL)
@@ -149,18 +157,19 @@ public abstract class MilkPlugIn {
     }
 
     /**
-     * PROCESSNAME : user will have a autocomplete list to select a process + version in existing
-     * process
+     * PROCESSNAME : user will have a autocomplete list to select a process + version in existing process. Use MilkPlugInToolbox.completeListProcess() to collect the SearchOptionBuilder()
+     * ARRAYPROCESSNAME : same, but with an array of process. Use completeListProcess() to collect the SearchOptionBuilder()
+
      * ARRAY : an array on String
-     * ARRAYPROCESSNAME : an array on processName + version
      * ARRAYMAP : then the arrayMapDescription has to be given
+     * DELAY : format is <SCOPE>:VALUE. SCOPE are YEAR, MONTH, WEEK, DAY, HOUS, MN. Example: DAY:32. use MilkPlugInToolbox.getTimeFromDelay() to get the TimeStamp value 
      * FILEREAD : the plug in access this parameters in READ ONLY. Administrator is suppose to give
      * the file then.
      * FILEWRITE: the plug in write the file. Administrator can download it only
      * FILEREADWRITE : plug in and administrator can read and write the file
      */
     public enum TypeParameter {
-        USERNAME, PROCESSNAME, STRING, TEXT, JSON, LONG, OBJECT, ARRAY, ARRAYPROCESS, BOOLEAN, ARRAYMAP, BUTTONARGS, FILEREAD, FILEWRITE, FILEREADWRITE, LISTVALUES, SEPARATOR
+        USERNAME, PROCESSNAME, ARRAYPROCESSNAME, STRING, TEXT, DELAY, JSON, LONG, OBJECT, ARRAY,  BOOLEAN, ARRAYMAP, BUTTONARGS, FILEREAD, FILEWRITE, FILEREADWRITE, LISTVALUES, SEPARATOR
     };
 
     public static class ColDefinition {
@@ -182,7 +191,7 @@ public abstract class MilkPlugIn {
         }
 
         public Map<String, Object> getMap() {
-            Map<String, Object> map = new HashMap<String, Object>();
+            Map<String, Object> map = new HashMap<>();
 
             map.put("name", name);
             map.put("title", title);
@@ -297,8 +306,8 @@ public abstract class MilkPlugIn {
             return plugInParameter;
         }
 
-        public static String cstJsonParameterName = "name";
-        public static String cstJsonParameterLabel = "label";
+        public final static String CSTJSON_PARAMETERNAME = "name";
+        public final static String CSTJSON_PARAMETERLABEL = "label";
 
         /**
          * here the JSON returned to the HTML to build the parameters display
@@ -306,23 +315,28 @@ public abstract class MilkPlugIn {
          * @return
          */
         public Map<String, Object> getMap() {
-            Map<String, Object> map = new HashMap<String, Object>();
-            map.put(cstJsonParameterName, name);
-            map.put(cstJsonParameterLabel, label);
+            Map<String, Object> map = new HashMap<>();
+            map.put(CSTJSON_PARAMETERNAME, name);
+            map.put(CSTJSON_PARAMETERLABEL, label);
 
             map.put("type", typeParameter.toString());
             if (arrayMapDescription != null) {
-                List<Map<String, Object>> listDescription = new ArrayList<Map<String, Object>>();
+                List<Map<String, Object>> listDescription = new ArrayList<>();
                 for (ColDefinition col : arrayMapDescription) {
                     listDescription.add(col.getMap());
                 }
                 map.put("arraymapDefinition", listDescription);
             }
+            if (MilkPlugIn.TypeParameter.LISTVALUES.equals(typeParameter)) {
+                map.put("listValues", Arrays.asList(listValues));
+                
+            }
+
             if (MilkPlugIn.TypeParameter.BUTTONARGS.equals(typeParameter)) {
-                List<Map<String, Object>> listArgs = new ArrayList<Map<String, Object>>();
+                List<Map<String, Object>> listArgs = new ArrayList<>();
                 if (argsName != null)
                     for (int i = 0; i < argsName.size(); i++) {
-                        Map<String, Object> mapArgs = new HashMap<String, Object>();
+                        Map<String, Object> mapArgs = new HashMap<>();
                         mapArgs.put("name", i < argsName.size() ? argsName.get(i) : "");
                         mapArgs.put("value", i < argsValue.size() ? argsValue.get(i) : "");
 
@@ -357,8 +371,8 @@ public abstract class MilkPlugIn {
          * explanatino is given by the plug in, user can't change it
          */
         public String explanation;
-        public List<PlugInParameter> inputParameters = new ArrayList<PlugInParameter>();
-        public List<PlugInParameter> analysisParameters = new ArrayList<PlugInParameter>();
+        public List<PlugInParameter> inputParameters = new ArrayList<>();
+        public List<PlugInParameter> analysisParameters = new ArrayList<>();
 
         public String cronSt = "0 0/10 * 1/1 * ? *"; // every 10 mn
 
@@ -383,7 +397,7 @@ public abstract class MilkPlugIn {
             for (String key : mapJson.keySet()) {
                 if (key.endsWith("_label"))
                     continue;
-                Object label = (String) mapJson.get(key + "_label");
+                Object label = mapJson.get(key + "_label");
                 if (label == null)
                     label = key;
                 addParameter(PlugInParameter.createInstance(key, label.toString(), TypeParameter.STRING, mapJson.get(key), null));
@@ -391,7 +405,7 @@ public abstract class MilkPlugIn {
         }
 
         public Map<String, Object> getParametersMap() {
-            Map<String, Object> map = new HashMap<String, Object>();
+            Map<String, Object> map = new HashMap<>();
             for (PlugInParameter plugInParameter : inputParameters) {
                 map.put(plugInParameter.name, plugInParameter.defaultValue);
             }
@@ -423,20 +437,22 @@ public abstract class MilkPlugIn {
         return (description == null ? this.getClass().getName() : description.name);
     }
 
+    public final static String CSTJSON_DISPLAYNAME="displayname";
+    
     /**
      * describe the plug in
      * 
      * @return
      */
     public Map<String, Object> getMap() {
-        Map<String, Object> result = new HashMap<String, Object>();
+        Map<String, Object> result = new HashMap<>();
         result.put("name", description == null ? null : description.name);
-        result.put("displayname", description == null ? null : description.label);
+        result.put( CSTJSON_DISPLAYNAME, description == null ? null : description.label);
         result.put("description", description == null ? null : description.description);
         result.put("embeded", typePlugIn == TYPE_PLUGIN.EMBEDED);
         result.put("local", typePlugIn == TYPE_PLUGIN.LOCAL);
         result.put("cmd", typePlugIn == TYPE_PLUGIN.COMMAND);
-        result.put("category", description.category.toString());
+        result.put("category", description == null ? null : description.category.toString());
         result.put("type", typePlugIn.toString());
 
         return result;
@@ -573,57 +589,12 @@ public abstract class MilkPlugIn {
      * @return
      */
     public List<BEvent> buttonParameters(String buttonName, MilkJobExecution input, Map<String, Object> argsParameters, APIAccessor apiAccessor) {
-        return new ArrayList<BEvent>();
+        return new ArrayList<>();
     }
 
-    /* ******************************************************************************** */
-    /*                                                                                  */
-    /* Tool for plug in */
-    /*                                                                                  */
-    /*                                                                                  */
-    /* ******************************************************************************** */
-
-    public List<BEvent> createCase() {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
-        return listEvents;
-    }
-
-    public List<BEvent> executeTasks() {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
-        return listEvents;
-    }
-    public SearchResult<ProcessDeploymentInfo> getListProcessDefinitionId(MilkJobExecution jobExecution, PlugInParameter parameterName, ProcessAPI processAPI) throws SearchException {
-        String processNameVersion = jobExecution.getInputStringParameter(parameterName);
-        return getListProcessDefinitionId(processNameVersion, processAPI);
-    }
-    /**
-     * when the parameter is a TypeParameter.PROCESSNAME
-     * @param processNameVersion
-     * @param processAPI
-     * @return
-     * @throws SearchException
-     */
-    public SearchResult<ProcessDeploymentInfo> getListProcessDefinitionId(String processNameVersion, ProcessAPI processAPI) throws SearchException {
-        
-        processNameVersion = processNameVersion.trim();
-        String processNameOnly = processNameVersion;
-        String processVersionOnly = null;
-        if (processNameVersion.endsWith(")")) {
-            int firstParenthesis = processNameVersion.lastIndexOf("(");
-            if (firstParenthesis != -1) {
-                processNameOnly = processNameVersion.substring(0, firstParenthesis);
-                processVersionOnly = processNameVersion.substring(firstParenthesis + 1, processNameVersion.length() - 1);
-            }
-        }
-        SearchOptionsBuilder searchOption = new SearchOptionsBuilder(0, 1000);
-        searchOption.filter(ProcessDeploymentInfoSearchDescriptor.NAME, processNameOnly.trim());
-        if (processVersionOnly != null) {
-            searchOption.filter(ProcessDeploymentInfoSearchDescriptor.VERSION, processVersionOnly.trim());
-        }
-        searchOption.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE, "ENABLED");
-
-        return processAPI.searchProcessDeploymentInfos(searchOption.done());
-
-    }
+   
+    
+    
+   
 
 }

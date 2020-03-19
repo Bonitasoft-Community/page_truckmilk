@@ -1,6 +1,7 @@
 package org.bonitasoft.truckmilk.engine;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,7 +77,7 @@ public class MilkJobFactory {
     };
 
     // keep the list of all tour
-    Map<Long, MilkJob> listJobsId = new HashMap<Long, MilkJob>();
+    Map<Long, MilkJob> listJobsId = new HashMap<>();
 
     /*
      * Map<String, MilkPlugInTour> listToursName = new HashMap<String, MilkPlugInTour>();
@@ -89,12 +90,24 @@ public class MilkJobFactory {
      * return listToursName;
      * }
      */
-    public MilkJob getById(Long id) {
-        return listJobsId.get(id);
-    }
+   
 
     public Map<Long, MilkJob> getMapJobsId() {
         return listJobsId;
+    }
+    /**
+     * return the job Index by the Id
+     * 
+     * @param name
+     * @return
+     */
+
+    public MilkJob getJobById(Long id) {
+        return listJobsId.get(id);
+    }
+
+    public Collection<MilkJob> getListJobs() {
+        return getMapJobsId().values();
     }
 
     /**

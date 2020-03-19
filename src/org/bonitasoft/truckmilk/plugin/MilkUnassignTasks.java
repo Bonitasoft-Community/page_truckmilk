@@ -6,6 +6,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.StringTokenizer;
 import java.util.logging.Logger;
 
 import org.bonitasoft.engine.api.APIAccessor;
@@ -21,6 +23,8 @@ import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
+import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 
 import groovy.time.TimeCategory;
@@ -36,27 +40,25 @@ import groovy.time.TimeDuration;
 
 public class MilkUnassignTasks extends MilkPlugIn {
 
-	Logger logger = Logger.getLogger( MilkUnassignTasks.class.getName() );
-	
-	// private static PlugInParameter cstParamProcessName = PlugInParameter.createInstance("processName", "Process Name", TypeParameter.STRING, null, "List of processes to run");
-	// private static PlugInParameter cstParamProcessVersion = PlugInParameter.createInstance("processVersion", "Process Version", TypeParameter.STRING, null, "Version of process to run. Leave blank for all versions.");
-    private static PlugInParameter cstParamTaskName = PlugInParameter.createInstance("taskName", "Task Name", TypeParameter.STRING, null, "The task name to search for");
+    Logger logger = Logger.getLogger(MilkUnassignTasks.class.getName());
+
+    private static PlugInParameter cstParamTaskName = PlugInParameter.createInstance("taskName", "Tasks Name", TypeParameter.STRING, null, "The task name to search for. If empty, all tasks in process are concerned. A list of tasks, separate by , can be provided too.");
     private static PlugInParameter cstParamCheckoutTime = PlugInParameter.createInstance("checkoutTime", "Checkout time execution (in mn)", TypeParameter.LONG, 15, "How many minutes until the item should be unassigned");
     private static PlugInParameter cstParamProcessName = PlugInParameter.createInstance("ProcessName", "Process Name", TypeParameter.PROCESSNAME, "", "Process name is mandatory. You can specify the process AND the version, or only the process name: all versions of this process is then checked");
 
-    private static BEvent eventTaskReported = new BEvent(MilkUnassignTasks.class.getName(), 1, Level.INFO, 
-    		"Unassign Task !", "The unassign task job is executed correctly");
+    private static BEvent eventTaskReported = new BEvent(MilkUnassignTasks.class.getName(), 1, Level.INFO,
+            "Unassign Task !", "The unassign task job is executed correctly");
     private static BEvent eventTaskNameInvalid = new BEvent(MilkUnassignTasks.class.getName(), 2, Level.APPLICATIONERROR,
             "Task name not found", "Task name is required");
-    private static BEvent userIdNotFound = new BEvent(MilkUnassignTasks.class.getName(), 3, Level.ERROR, 
-    		"AssigneeID Not found", "Could not locate the AssigneeID via IdentityAPI");
-    
-    private static BEvent EVENT_NO_PROCESS_FILTER = new BEvent(MilkUnassignTasks.class.getName(), 4,
+    private static BEvent userIdNotFound = new BEvent(MilkUnassignTasks.class.getName(), 3, Level.ERROR,
+            "AssigneeID Not found", "Could not locate the AssigneeID via IdentityAPI");
+
+    private static BEvent eventNoprocessFilter = new BEvent(MilkUnassignTasks.class.getName(), 4,
             Level.APPLICATIONERROR,
             "No process filter", "The process filter is empty", "SLA can't run.",
             "Give a process name");
 
-    private static BEvent EVENT_NO_PROCESS_MATCH_FILTER = new BEvent(MilkUnassignTasks.class.getName(), 5,
+    private static BEvent eventNoprocessMatchFilter = new BEvent(MilkUnassignTasks.class.getName(), 5,
             Level.APPLICATIONERROR,
             "No process found", "No process is found with the given filter", "This filter does not apply.",
             "Check the process name (you must give as minimum one process)");
@@ -75,15 +77,15 @@ public class MilkUnassignTasks extends MilkPlugIn {
      */
     @Override
     public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
-        return new ArrayList<BEvent>();
+        return new ArrayList<>();
     }
 
     /**
      * check the Job's environment
      */
     public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
-        return listEvents;
+        return new ArrayList<>();
+
     };
 
     /**
@@ -108,94 +110,85 @@ public class MilkUnassignTasks extends MilkPlugIn {
     @Override
     public PlugTourOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
         PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
-    	
-        // task name is required
-        String taskName = jobExecution.getInputStringParameter(cstParamTaskName.name, null);
-        if(taskName == null) {
-        	plugTourOutput.addEvent(eventTaskNameInvalid);
-        	plugTourOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
-        	return plugTourOutput;
-        }
-        Long checkoutTime = jobExecution.getInputLongParameter(cstParamCheckoutTime.name, 15L);
-        String processName = jobExecution.getInputStringParameter(cstParamProcessName);
-        logger.info("MilkUnassignTasks: ProcessName: ["+processName+"] TaskName: ["+taskName+"] checkouttime: ["+checkoutTime+"]");
-        
-        try {
-            // process name is required
-            
-            if (processName == null || processName.trim().length() == 0) {
-                plugTourOutput.addEvent(EVENT_NO_PROCESS_FILTER);
-                return plugTourOutput;
-            }
-            SearchResult<ProcessDeploymentInfo> procList = getListProcessDefinitionId(jobExecution, cstParamProcessName, apiAccessor.getProcessAPI());
-            if (procList.getCount() == 0) {
-                plugTourOutput.addEvent(new BEvent(EVENT_NO_PROCESS_MATCH_FILTER, "ProcessName[" + processName + "]"));
-                return plugTourOutput;
-            }
-            
-            
-        	
-        	for(ProcessDeploymentInfo proc : procList.getResult()) {
-        		logger.info("MilkUnassignTasks: ProcessName: ["+proc.getName()+"] Version: ["+proc.getVersion()+"] Id: ["+proc.getProcessId()+"]");
-            	
-            	// search for assigned tasks        
-                SearchOptionsBuilder searchTasks = new SearchOptionsBuilder(0, 10000);
-                searchTasks.filter(HumanTaskInstanceSearchDescriptor.PROCESS_DEFINITION_ID, proc.getProcessId());
-                searchTasks.differentFrom(HumanTaskInstanceSearchDescriptor.ASSIGNEE_ID, 0); // unassigned
-                searchTasks.filter(HumanTaskInstanceSearchDescriptor.STATE_NAME, "ready");
-        		searchTasks.filter(HumanTaskInstanceSearchDescriptor.DISPLAY_NAME, taskName);
 
-            	List<HumanTaskInstance> tasks = apiAccessor.getProcessAPI().searchHumanTaskInstances(searchTasks.done()).getResult();
-            	jobExecution.setAvancementTotalStep(Long.valueOf(tasks.size()));
-            	logger.info("MilkUnassignTasks: unassign Task Count: " + tasks.size());
-            	     
-            	// loop through task list and determine if checkout duration meets threshold
-            	Map<String, String> listUnassignTasks = new HashMap<String, String>();
-            	for(HumanTaskInstance task : tasks) {
-            		
-            		if(jobExecution.pleaseStop()) {
-        				break;
-        			}
-        			jobExecution.setAvancementStep(1);
-        			
-        			TimeDuration duration = TimeCategory.minus(new Date(), task.getClaimedDate());
-    				if(duration.getMinutes() >= checkoutTime) {		
-    					//logger.info("Unassigning task id: " + task.getId());
-    					try {
-    						User assigneeUser = apiAccessor.getIdentityAPI().getUser(task.getAssigneeId());
-                            apiAccessor.getProcessAPI().assignUserTask(task.getId(), 0);
-    						//plugTourOutput.addEvent(new BEvent(eventTaskReported, taskName + " task has been unassigned from UserID: " + task.getAssigneeId() + " , " + assigneeUser.getFirstName() + " " + assigneeUser.getLastName()));
-    						
-    						String taskReporting = listUnassignTasks.get(assigneeUser.getFirstName() + " " + assigneeUser.getLastName());
-    						taskReporting = (taskReporting==null ? "" : ",") + task.getId();
-    						listUnassignTasks.put(assigneeUser.getFirstName() + " " + assigneeUser.getLastName(), taskReporting);
-    						for (String key : listUnassignTasks.keySet())
-    						{
-    							plugTourOutput.addEvent(new BEvent(eventTaskReported, key +":"+listUnassignTasks.get( key )));
-    						}
-    					}
-    					catch (UserNotFoundException e1) {
-    						plugTourOutput.addEvent(userIdNotFound);
-    						plugTourOutput.addEvent( new BEvent( userIdNotFound, "User Id["+ task.getAssigneeId() +"]"));
-    					}		
-    					catch (UpdateException e) {
-    						 plugTourOutput.addEvent(new BEvent(eventTaskReported, "Error un-assigning taskId: " + task.getId()));
-    					}
-    				}
-            	}
-        	}
-        	
+        // task name is required
+        String taskNameList = jobExecution.getInputStringParameter(cstParamTaskName);
+
+        Long checkoutTime = jobExecution.getInputLongParameter(cstParamCheckoutTime);
+
+        try {
+            // one process name is required
+            SearchOptionsBuilder searchTasks = new SearchOptionsBuilder(0, 10000);
+            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessName, true, searchTasks, HumanTaskInstanceSearchDescriptor.PROCESS_DEFINITION_ID, apiAccessor.getProcessAPI());
+
+            if (listProcessResult.listProcessDeploymentInfo.isEmpty()) {
+                plugTourOutput.addEvents(listProcessResult.listEvents);
+                return plugTourOutput;
+            }
+
+            // search for assigned tasks        
+            listProcessResult.sob.and();
+            listProcessResult.sob.differentFrom(HumanTaskInstanceSearchDescriptor.ASSIGNEE_ID, 0); // unassigned
+            listProcessResult.sob.filter(HumanTaskInstanceSearchDescriptor.STATE_NAME, "ready");
+            if (taskNameList != null && taskNameList.trim().length() > 0) {
+                StringTokenizer st = new StringTokenizer(taskNameList, ",");
+                listProcessResult.sob.leftParenthesis();
+                int countTask = 0;
+                while (st.hasMoreTokens()) {
+                    if (countTask > 0)
+                        listProcessResult.sob.or();
+                    countTask++;
+                    listProcessResult.sob.filter(HumanTaskInstanceSearchDescriptor.NAME, st.nextToken());
+                }
+                listProcessResult.sob.rightParenthesis();
+            }
+
+            List<HumanTaskInstance> tasks = apiAccessor.getProcessAPI().searchHumanTaskInstances(listProcessResult.sob.done()).getResult();
+            jobExecution.setAvancementTotalStep((long) tasks.size());
+            logger.info("MilkUnassignTasks: unassign Task Count: " + tasks.size());
+
+            // loop through task list and determine if checkout duration meets threshold
+            Map<String, String> listUnassignTasks = new HashMap<>();
+            long count = 0;
+            for (HumanTaskInstance task : tasks) {
+
+                if (jobExecution.pleaseStop()) {
+                    break;
+                }
+                jobExecution.setAvancementStep(count);
+                count++;
+
+                TimeDuration duration = TimeCategory.minus(new Date(), task.getClaimedDate());
+                if (duration.getMinutes() >= checkoutTime) {
+                    logger.fine("Unassigning task id: " + task.getId());
+                    try {
+                        User assigneeUser = apiAccessor.getIdentityAPI().getUser(task.getAssigneeId());
+                        apiAccessor.getProcessAPI().assignUserTask(task.getId(), 0);
+                        String userKey = assigneeUser.getFirstName() + " " + assigneeUser.getLastName();
+                        String taskReporting = listUnassignTasks.get(userKey);
+                        taskReporting = (taskReporting == null ? "" : taskReporting + ", ") + task.getName() + "[" + task.getId() + "]";
+                        listUnassignTasks.put(userKey, taskReporting);
+
+                    } catch (UserNotFoundException e1) {
+                        plugTourOutput.addEvent(new BEvent(userIdNotFound, "User Id[" + task.getAssigneeId() + "]"));
+                    } catch (UpdateException e) {
+                        plugTourOutput.addEvent(new BEvent(eventTaskReported, "Error un-assigning taskId: " + task.getId()));
+                    }
+                }
+            }
+            for (Entry<String, String> entry : listUnassignTasks.entrySet()) {
+                plugTourOutput.addEvent(new BEvent(eventTaskReported, entry.getKey() + ":" + entry.getValue()));
+            }
+
+        } catch (SearchException e) {
+            plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+            plugTourOutput.addEvent(new BEvent(eventTaskNameInvalid, e.getMessage()));
+            return plugTourOutput;
         }
-        catch(SearchException e) {
-        	plugTourOutput.executionStatus = ExecutionStatus.ERROR;
-        	plugTourOutput.addEvent(new BEvent(eventTaskNameInvalid, e.getMessage()));
-        	return plugTourOutput;
-        }
-        
-        
-        plugTourOutput.addEvent(new BEvent(eventTaskReported, "Finished checking tasks to unassign"));
+
+        logger.fine("Finished checking tasks to unassign");
         plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
-        
+
         if (jobExecution.pleaseStop())
             plugTourOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
 
