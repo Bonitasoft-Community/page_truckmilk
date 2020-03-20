@@ -76,9 +76,9 @@ public class MilkPurgeArchive extends MilkPlugIn {
         SearchResult<ArchivedProcessInstance> searchArchivedProcessInstance;
 
         try {
-            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, true, searchActBuilder, ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, apiAccessor.getProcessAPI());
+            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, searchActBuilder, ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, apiAccessor.getProcessAPI());
 
-            if (listProcessResult.listProcessDeploymentInfo.isEmpty()) {
+            if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
                 plugTourOutput.addEvents(listProcessResult.listEvents);
                 plugTourOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
@@ -138,13 +138,13 @@ public class MilkPurgeArchive extends MilkPlugIn {
         Long endTime = System.currentTimeMillis();
         
         plugTourOutput.addEvent(new BEvent(eventDeletionSuccess, "Purge:" + plugTourOutput.nbItemsProcessed+" in "+TypesCast.getHumanDuration(endTime-beginTime, true)));
+        plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
 
         } catch (DeletionException e) {
             logger.severe("Error Delete Archived ProcessInstance=[" + sourceProcessInstanceIds + "] Error[" + e.getMessage() + "]");
             plugTourOutput.executionStatus = ExecutionStatus.ERROR;
             plugTourOutput.addEvent(new BEvent(eventDeletionFailed, e, "Purge:" + sourceProcessInstanceIds));
         }
-        plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
 
         return plugTourOutput;
     }

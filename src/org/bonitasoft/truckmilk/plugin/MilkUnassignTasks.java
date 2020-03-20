@@ -21,6 +21,7 @@ import org.bonitasoft.engine.identity.UserNotFoundException;
 import org.bonitasoft.engine.search.SearchOptionsBuilder;
 import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
+import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
@@ -32,9 +33,9 @@ import groovy.time.TimeDuration;
 
 /* ******************************************************************************** */
 /*                                                                                  */
-/* Ping */
+/* MilkUnassignTasks */
 /*                                                                                  */
-/* this class may be use as a skeleton for a new plug in */
+/* Unassign tasks */
 /*                                                                                  */
 /* ******************************************************************************** */
 
@@ -119,9 +120,9 @@ public class MilkUnassignTasks extends MilkPlugIn {
         try {
             // one process name is required
             SearchOptionsBuilder searchTasks = new SearchOptionsBuilder(0, 10000);
-            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessName, true, searchTasks, HumanTaskInstanceSearchDescriptor.PROCESS_DEFINITION_ID, apiAccessor.getProcessAPI());
+            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessName, false, searchTasks, HumanTaskInstanceSearchDescriptor.PROCESS_DEFINITION_ID, apiAccessor.getProcessAPI());
 
-            if (listProcessResult.listProcessDeploymentInfo.isEmpty()) {
+            if (BEventFactory.isError(listProcessResult.listEvents)) {
                 plugTourOutput.addEvents(listProcessResult.listEvents);
                 return plugTourOutput;
             }

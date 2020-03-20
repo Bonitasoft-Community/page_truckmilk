@@ -289,7 +289,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 if ((milkSchedulerFactory.getScheduler() != null)) {
                     StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(executeParameters.tenantId);
                     if (statusScheduler.status == TypeStatus.STARTED) {
-                        milkHeartBeat.executeOneTimeNewThread(this, executeParameters.tenantId);
+                        milkHeartBeat.executeOneTimeNewThread(this, false, executeParameters.tenantId);
                     }
                     else
                     {
@@ -643,7 +643,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 addSchedulerStatus=true;
                 if ("heartbeat".equals( executeParameters.parametersCommand.get("scheduleroperation")))
                 {
-                    milkHeartBeat.executeOneTimeNewThread(this, executeParameters.tenantId);
+                    milkHeartBeat.executeOneTimeNewThread(this, true, executeParameters.tenantId);
                 }
                 else 
                 {

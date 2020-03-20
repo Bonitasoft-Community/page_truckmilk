@@ -12,23 +12,19 @@ import java.util.Map;
 
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.ProcessAPI;
-import org.bonitasoft.engine.bpm.process.ActivationState;
 import org.bonitasoft.engine.bpm.process.ArchivedProcessInstance;
 import org.bonitasoft.engine.bpm.process.ArchivedProcessInstancesSearchDescriptor;
 import org.bonitasoft.engine.bpm.process.ProcessDefinition;
-import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfo;
-import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfoSearchDescriptor;
 import org.bonitasoft.engine.bpm.process.ProcessInstanceSearchDescriptor;
 import org.bonitasoft.engine.exception.SearchException;
 import org.bonitasoft.engine.search.Order;
 import org.bonitasoft.engine.search.SearchOptionsBuilder;
 import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
-import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.ExecutionStatus;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
@@ -71,7 +67,7 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
      */
     public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
         return new ArrayList<>();
-    };
+    }
 
     /**
      * check the Job's environment
@@ -79,7 +75,7 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
     public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
         return new ArrayList<>();
 
-    };
+    }
 
     @Override
     public PlugTourOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
@@ -101,9 +97,9 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
 
             SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, (int) maximumInReport);
 
-            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, true, searchActBuilder, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, apiAccessor.getProcessAPI());
+            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, searchActBuilder, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, apiAccessor.getProcessAPI());
 
-            if (listProcessResult.listProcessDeploymentInfo.isEmpty()) {
+            if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
                 plugTourOutput.addEvents(listProcessResult.listEvents);
                 plugTourOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
@@ -147,23 +143,24 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
                 if (jobExecution.pleaseStop())
                     break;
                 countInArchive++;
-                String line = String.valueOf(archivedProcessInstance.getSourceObjectId()) + separatorCSV;
+                StringBuilder line = new StringBuilder();
+                line.append( String.valueOf(archivedProcessInstance.getSourceObjectId()) + separatorCSV);
                 long processId = archivedProcessInstance.getProcessDefinitionId();
                 if (!cacheProcessDefinition.containsKey(processId)) {
                     try {
                         ProcessDefinition processDefinition = processAPI.getProcessDefinition(processId);
-                        cacheProcessDefinition.put(processId, processDefinition.getName() + separatorCSV + processDefinition.getVersion() + separatorCSV);
+                        cacheProcessDefinition.put(processId, processDefinition.getName() + separatorCSV + processDefinition.getVersion());
                     } catch (Exception e) {
-                        cacheProcessDefinition.put(processId, separatorCSV + " " + separatorCSV);
+                        cacheProcessDefinition.put(processId, " " + separatorCSV+ " ");
                     }
                 }
-                line += cacheProcessDefinition.get(processId);
-                line += TypesCast.sdfCompleteDate.format(archivedProcessInstance.getArchiveDate());
-                line += ";";
-                w.write(line + "\n");
+                line.append( cacheProcessDefinition.get(processId) + separatorCSV);
+                line.append( TypesCast.sdfCompleteDate.format(archivedProcessInstance.getArchiveDate()) + separatorCSV);
+                line.append( ""+separatorCSV); // status
+                w.write(line.toString() + "\n");
                 jobExecution.addManagedItem(1);
 
-                jobExecution.setAvancementStep(20 + (int) (100 * countInArchive / searchArchivedProcessInstance.getResult().size()));
+                jobExecution.setAvancementStep(20L + (long) (100 * countInArchive / searchArchivedProcessInstance.getResult().size()));
 
             }
             w.flush();

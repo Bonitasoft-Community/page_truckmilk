@@ -23,7 +23,7 @@
   
   
   <link rel="stylesheet" href="css/animate.css" />
-  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="3rd-party/bootstrap/css/bootstrap.min.css">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/style.css">
 
@@ -84,7 +84,7 @@
 					<div class="font-style: italic;">
 					The <span style="color: red;font-weight: bold;">B</span>onita <span style="color: red;font-weight: bold;">SC</span>heduler&nbsp;
 					</div>
-					<a href="" ng-click="ctrl.showhistory( ! ctrl.isshowhistory )">V2.3.4</a>
+					<a href="" ng-click="ctrl.showhistory( ! ctrl.isshowhistory )">V2.3.5</a>
 				</center>
 			</td></tr>
 			<tr><td>
@@ -121,20 +121,23 @@
 		<!--  ************************************************************  -->		
 		<!-- Keep it ng-show, else the file drop will not work ! -->	
 		<div class="col-lg-12" ng-show="ctrl.navbaractiv == 'Jobs'">
-		<table><tr style="height:25px">
-			<td>
+		<table width="100%"><tr style="height:25px">
+			<td style="width: 150px;">
 				<input ng-model="ctrl.autorefresh" type="checkbox">Automatic refresh
-			</td> 
-			<td>
+			</td> <td  style="width: 50px;">
 				&nbsp;&nbsp;&nbsp;
-			</td><td>
+			</td><td  style="width: 250px;">
 				<div ng-if="ctrl.inprogress">
 					<span class="Loading">.</span>Please wait, work in progress
 				</div>
 			</td>
-			<td>
+			<td  style="width: 50px;">
 				<button ng-click="ctrl.refresh( false )" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress">Refresh</button>		
 			</td>
+			<td style="text-align:right">
+				<button ng-click="ctrl.schedulerMaintenance('heartbeat')" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress" title="Force a HeartBeat">
+						<span class="glyphicon glyphicon-heart"></span>
+				</button>
 		</tr>		
 		</table>
 			
@@ -240,7 +243,8 @@
 							
 							
 							<!--  one icon per report to download -->
-							<td ng-repeat="parameterdef in plugtour.parametersdef" style="text-align:center; vertical-align:top;">											
+							<td ng-repeat="parameterdef in plugtour.parametersdef" style="text-align:center; vertical-align:top;">	
+																	
 								<div ng-if="parameterdef.type ==='FILEWRITE' || parameterdef.type ==='FILEREADWRITE' || parameterdef.type ==='FILEREAD'" >
 									<div ng-if="plugtour.parametersvalue[ parameterdef.name ] === 'AVAILABLE'" style="padding: 0px 5px;">
 										<a  href="{{ctrl.downloadParameterFile(plugtour, parameterdef)}}" title="{{parameterdef.explanation}}" target="top">
@@ -444,18 +448,18 @@
 											
 											<tr style="vertical-align: top; border-top: 1px solid #ddd;">
 												<td style="padding: 15px" >Plug In</td>
-												<td><div style=" font-style: italic;">{{plugtour.plugindisplayname}}</div></td>
+												<td><div style=" font-style: italic;padding: 15px">{{plugtour.plugindisplayname}}</div></td>
 											</tr>
 							
 							
 											<tr style="vertical-align: top; border-top: 1px solid #ddd;">
 												<td style="padding: 15px" >Identifier</td>
-												<td>{{plugtour.id}}</td>
+												<td style="padding: 15px">{{plugtour.id}}</td>
 											</tr>
 											
 											<tr style="vertical-align: top; border-top: 1px solid #ddd;">
 												<td style="padding: 15px" >Description</td>
-												<td ><textarea rows="4" cols="50" ng-model="plugtour.description"></textarea></td>
+												<td ><textarea rows="4" cols="100" ng-model="plugtour.description"></textarea></td>
 											</tr>
 											<tr>
 												<td style="padding: 15px" >Explanations</td>
@@ -477,11 +481,11 @@
 												<td style="vertical-align: top; border-top: 1px solid #ddd;">
 			
 													<!--  PROCESSNAME, STRING, TEXT, LONG, OBJECT, ARRAY, BOOLEAN -->
-													<!-- 	 Type={{parameterdef.type}} / Value=<div class="label label-info">{{plugtour.parametersvalue[ parameterdef.name ]}}</div> 
-													parameterDef={{parameterdef}} --> 
+													<!-- Type={{parameterdef.type}} / Value=<div class="label label-info">{{plugtour.parametersvalue[ parameterdef.name ]}}</div> 
+													parameterDef={{parameterdef}} -->  
 													
 													<div ng-if="parameterdef.type ==='PROCESSNAME'">
-														<span ng-if="parameterdef.inprogress"   class="Loading"></span>
+														<span ng-if="ctrl.inprogress"   class="Loading">.</span>
 														<md-autocomplete md-selected-item="parameterdef.value" 
 															md-search-text="plugtour.parametersvalue[ parameterdef.name ]" 
 															md-items="item in ctrl.query( 'queryprocess', plugtour.parametersvalue[ parameterdef.name ], parameterdef )" 
@@ -492,6 +496,7 @@
 										    				md-menu-class="AutocompleteDropDown">
 															  <span md-highlight-text="parameterdef.value">{{item.display}}</span>
 														</md-autocomplete>
+														<div ng-if="parameterdef.nbProcess">(Total processes:{{parameterdef.nbProcess}})</div>
 													</div>
 															
 													<div ng-if="parameterdef.type ==='ARRAYPROCESSNAME'">													
@@ -508,6 +513,7 @@
 															</tr>
 															</table>
 														</td><td>
+															<span ng-if="ctrl.inprogress"   class="Loading">.</span>
 															<md-autocomplete md-selected-item="parameterdef.value" 
 																md-search-text="parameterdef.value_search" 
 																md-items="item in ctrl.query( 'queryprocess', parameterdef.value_search, parameterdef )" 
@@ -518,6 +524,7 @@
 											    				md-menu-class="AutocompleteDropDown">
 																  <span md-highlight-text="parameterdef.value">{{item.display}}</span>
 															</md-autocomplete>
+															<div ng-if="parameterdef.nbProcess">(Total processes:{{parameterdef.nbProcess}})</div>
 															
 															
 															<button ng-click="ctrl.addInArray(plugtour.parametersvalue[ parameterdef.name ], parameterdef.value.id)" class="btn btn-success btn-xs" ng-disabled="ctrl.inprogress">Add</button>
@@ -530,6 +537,7 @@
 														
 															
 													<div ng-if="parameterdef.type ==='USERNAME'">
+														<span ng-if="ctrl.inprogress"   class="Loading">.</span>
 														<md-autocomplete md-selected-item="parameterdef.value" 
 															md-search-text="parameterdef.value_search" 
 															md-items="item in ctrl.query( 'queryusers', plugtour.parametersvalue[ parameterdef.name ], parameterdef)" 
@@ -540,6 +548,7 @@
 										    				md-menu-class="AutocompleteDropDown">
 															  <span md-highlight-text="parameterdef.value">{{item.display}}</span>
 														</md-autocomplete>
+														<div ng-if="parameterdef.nbUsers">(Total users:{{parameterdef.nbUsers}})</div>
 													
 													</div>							
 																			<!-- parameterdef.value -->
@@ -734,7 +743,7 @@
 													parameterDef={{parameterdef}} -->
 													
 													<div ng-if="parameterdef.type ==='PROCESSNAME'">
-														<span ng-if="parameterdef.inprogress"   class="Loading"></span>
+														<span ng-if="parameterdef.inprogress"   class="Loading">.</span>
 														<md-autocomplete md-selected-item="parameterdef.value" 
 															md-search-text="plugtour.parametersvalue[ parameterdef.name ]" 
 															md-items="item in ctrl.query( 'queryprocess', plugtour.parametersvalue[ parameterdef.name ], parameterdef )" 
@@ -1133,7 +1142,7 @@
 								</tr></tr>
 								<tr><td style="padding: 10px;">
 									<button ng-click="ctrl.schedulerMaintenance('heartbeat')" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress" title="Force a HeartBeat">
-										Heart Beat
+										<span style="glyphicon glyphicon-heart">.</span>Heart Beat
 									</button>
 								</td></tr><tr><td style="padding: 10px;">
 									<button ng-click="ctrl.schedulerMaintenance('reset')" class="btn btn-warning btn-xs" ng-disabled="ctrl.inprogress" title="Reset the scheduler (Shutdown, Started)">

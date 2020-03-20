@@ -556,6 +556,9 @@ public abstract class MilkPlugIn {
             return listEvents;
         }
 
+        public void setNbItemsProcessed( int nbItemsProcessed) {
+            this.nbItemsProcessed= nbItemsProcessed;
+        }
         public void setParameterStream(PlugInParameter param, InputStream stream) {
             if (param.typeParameter == TypeParameter.FILEWRITE || param.typeParameter == TypeParameter.FILEREADWRITE) {
                 // update the PLUGIN parameters

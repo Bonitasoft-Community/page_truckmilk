@@ -240,7 +240,7 @@ public class MilkAccessAPI {
      * @return
      */
     public Map<String, String> readParameterHeader(Parameter parameter) {
-        Map<String, String> mapHeaders = new HashMap<String, String>();
+        Map<String, String> mapHeaders = new HashMap<>();
 
         Long plugInTourId = TypesCast.getLong(parameter.information.get("plugintour"), 0L);
         long tenantId = parameter.apiSession.getTenantId();

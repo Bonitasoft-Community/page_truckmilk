@@ -21,7 +21,7 @@ import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
-import com.sun.xml.bind.v2.util.TypeCast;
+
 
 public class MilkPlugInToolbox {
     
@@ -70,26 +70,36 @@ public class MilkPlugInToolbox {
         }
 
         processParametersResult.sob= sob ==null ? new SearchOptionsBuilder(0,10000): sob;
-        processParametersResult.sob.leftParenthesis();
-        int count=0;
-        for (int i=0;i<processParametersResult.listProcessNameVersion.size();i++) {
-              
-            String processNameVersion = processParametersResult.listProcessNameVersion.get(0);
-            SearchResult<ProcessDeploymentInfo> searchResult = getListProcessDefinitionId(processNameVersion, processAPI);
-            if (searchResult.getCount()==0)
-            {
-                processParametersResult.listEvents.add( new BEvent(eventNoProcessByTheFilter, "ProcessFilter["+processNameVersion+"]"));
+        boolean oneProcessFound=false;
+        if (! processParametersResult.listProcessNameVersion.isEmpty())
+        {
+            int count=0;
+            for (int i=0;i<processParametersResult.listProcessNameVersion.size();i++) {
+                  
+                String processNameVersion = processParametersResult.listProcessNameVersion.get( i );
+                SearchResult<ProcessDeploymentInfo> searchResult = getListProcessDefinitionId(processNameVersion, processAPI);
+                if (searchResult.getCount()==0)
+                {
+                    processParametersResult.listEvents.add( new BEvent(eventNoProcessByTheFilter, "ProcessFilter["+processNameVersion+"]"));
+                }
+                for (ProcessDeploymentInfo processDeployment : searchResult.getResult())
+                {
+                    if (! oneProcessFound) {
+                        oneProcessFound=true;
+                        processParametersResult.sob.leftParenthesis();
+                    }
+
+                    if (count>0)
+                        processParametersResult.sob.or();
+                    count++;
+                    processParametersResult.sob.filter( searchAttributName, processDeployment.getProcessId() );
+                    processParametersResult.listProcessDeploymentInfo.add( processDeployment );
+                }
             }
-            for (ProcessDeploymentInfo processDeployment : searchResult.getResult())
-            {
-                if (count>0)
-                    processParametersResult.sob.or();
-                count++;
-                processParametersResult.sob.filter( searchAttributName, processDeployment.getProcessId() );
-                processParametersResult.listProcessDeploymentInfo.add( processDeployment );
+            if (oneProcessFound) {
+                processParametersResult.sob.rightParenthesis();
             }
         }
-        processParametersResult.sob.rightParenthesis();
         if (expectOneProcessMinimum && processParametersResult.listProcessDeploymentInfo.isEmpty()) {
             processParametersResult.listEvents.add( eventNoProcessesListFilter);
         }
@@ -134,7 +144,7 @@ public class MilkPlugInToolbox {
     /*                                                                                  */
     /*                                                                                  */
     /* ******************************************************************************** */
-    public enum DELAYSCOPE { YEAR, MONTH, WEEK, DAY, HOUR, MN };
+    public enum DELAYSCOPE { YEAR, MONTH, WEEK, DAY, HOUR, MN }
     public static class DelayResult {
         public List<BEvent> listEvents= new ArrayList<>();
         public DELAYSCOPE scope;

@@ -28,6 +28,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
+import org.bonitasoft.truckmilk.toolbox.CSVOperation;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 import org.quartz.CronExpression;
@@ -229,7 +230,7 @@ public @Data class MilkJob {
 
     public List<BEvent> calculateNextExecution(String origin) {
         List<BEvent> listEvents = new ArrayList<>();
-        logger.info(LOGGER_HEADER+"Calculate Next Execution["+toString()+"] by ["+origin+"]");
+        logger.fine(LOGGER_HEADER+"Calculate Next Execution["+toString()+"] by ["+origin+"]");
         try {
             CronExpression cronExp = new CronExpression(cronSt);
             setNextExecutionDate( cronExp.getNextValidTimeAfter(new Date()));
@@ -268,7 +269,7 @@ public @Data class MilkJob {
         return (trackExecution.nextExecutionDate == null ? "null" : sdfSynthetic.format(trackExecution.nextExecutionDate));
     }
     public void setNextExecutionDate(Date nextExecutionDate) {
-        logger.info(LOGGER_HEADER+ "Job["+name + "] (enable:" + isEnable +") Set Execution Date ["+(nextExecutionDate==null ? "null":sdf.format(nextExecutionDate))+"]");
+        logger.fine(LOGGER_HEADER+ "Job["+name + "] (enable:" + isEnable +") Set Execution Date ["+(nextExecutionDate==null ? "null":sdf.format(nextExecutionDate))+"]");
         this.trackExecution.nextExecutionDate = nextExecutionDate;
     }
     
@@ -478,7 +479,7 @@ public @Data class MilkJob {
             listParentTmpFile.add(pageDirectory.getCanonicalPath() + "/../../../tmp/");
             listParentTmpFile.add(pageDirectory.getCanonicalPath() + "/../../");
         } catch (Exception e) {
-            logger.info(".setTourFileParameter: error get CanonicalPath of pageDirectory[" + e.toString() + "]");
+            logger.severe(".setTourFileParameter: error get CanonicalPath of pageDirectory[" + e.toString() + "]");
             listEvents.add(eventCantFindTemporaryPath);
             return listEvents;
         }
@@ -553,6 +554,8 @@ public @Data class MilkJob {
      */
     public void setParameterStream(PlugInParameter plugInParameter, InputStream stream) {
         parameters.put(plugInParameter.name + cstPrefixStreamValue, stream);
+        
+        // CSVOperation.saveFile("c:/temp/SetFile"+plugInParameter.name+".csv", stream);
     }
 
     /**
@@ -587,6 +590,9 @@ public @Data class MilkJob {
                     break;
                 stream.write(buffer, 0, bytesRead);
             }
+            
+            // For debug
+            // CSVOperation.saveFile("c:/temp/upload-"+plugInParameter.name+".csv", instream);
         } catch (IOException e) {
             listEvents.add(new BEvent(eventErrorReadingParamFile, e, "ParameterFile[" + plugInParameter.name + "]"));
             logger.severeException(e, ".getParameterStream:Error writing parameter ");

@@ -88,7 +88,7 @@ public class MilkPlugInFactory {
         listPlugIns.add(new MilkMeteor() );
         listPlugIns.add(new MilkRestartFlowNodes() );
         listPlugIns.add(new MilkGrumman() );
-        // listPlugIns.add(new MilkCancelCases() );
+        listPlugIns.add(new MilkCancelCases() );
     }
 
     public MilkPlugIn getPluginFromName(String name) {

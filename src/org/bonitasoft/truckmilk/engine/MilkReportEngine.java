@@ -132,14 +132,18 @@ public class MilkReportEngine {
     /*                                                                                  */
     /* ******************************************************************************** */
 
-    private void reduceLists() {
+    private   void reduceLists() {
         if (nbSavedHeartBeat < 60)
             nbSavedHeartBeat = 60;
-        while (listSaveHeartBeatInformation.size() > nbSavedHeartBeat)
-            listSaveHeartBeatInformation.remove(0);
-        
-        while (listSaveReportInformation.size() > 50)
-            listSaveReportInformation.remove(0);
+        synchronized( listSaveHeartBeatInformation ) {
+            while (listSaveHeartBeatInformation.size() > nbSavedHeartBeat)
+                listSaveHeartBeatInformation.remove(0);
+        }
+            
+        synchronized( listSaveReportInformation ) {   
+            while (listSaveReportInformation.size() > 50)
+                listSaveReportInformation.remove(0);
+        }
         
     }
 
@@ -183,7 +187,9 @@ public class MilkReportEngine {
                 nbSavedHeartBeat = getIntegerValue(bonitaProperties.get(BONITAPROPERTIES_SCHEDULERNBSAVEDHEARTBEAT), 60);
                 logHeartBeat = getBooleanValue(bonitaProperties.get(BONITAPROPERTIES_SCHEDULERLOGINFOBEAT), true);
                 
-                listSaveHeartBeatInformation = loadExistingList(bonitaProperties, BONITAPROPERTIES_SCHEDULERSAVEDHEARTBEAT, listSaveHeartBeatInformation);
+                synchronized( listSaveHeartBeatInformation ) {
+                    loadExistingList(bonitaProperties, BONITAPROPERTIES_SCHEDULERSAVEDHEARTBEAT, listSaveHeartBeatInformation);
+                }
                 isInitialised = true;
     
             }
@@ -195,11 +201,15 @@ public class MilkReportEngine {
             listKeys.add(BONITAPROPERTIES_SCHEDULERNBSAVEDHEARTBEAT);
             
             /** save history */
-            saveList( bonitaProperties, listKeys, BONITAPROPERTIES_SCHEDULERSAVEDHEARTBEAT, listSaveHeartBeatInformation);
+            synchronized( listSaveHeartBeatInformation ) {
+                saveList( bonitaProperties, listKeys, BONITAPROPERTIES_SCHEDULERSAVEDHEARTBEAT, listSaveHeartBeatInformation);
+            }
         }
         
         else {
-            saveList( bonitaProperties, listKeys, BONITAPROPERTIES_REPORT, listSaveReportInformation);            
+            synchronized( listSaveReportInformation ) {
+                saveList( bonitaProperties, listKeys, BONITAPROPERTIES_REPORT, listSaveReportInformation);
+            }
         }
         listEvents.addAll(bonitaProperties.storeCollectionKeys(listKeys));
         return listEvents;

@@ -21,12 +21,16 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.toolbox.CSVOperation;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
+
+import lombok.Data;
 
 public class MilkPurgeArchivedListPurge extends MilkPlugIn {
 
     static MilkLog logger = MilkLog.getLogger(MilkPurgeArchivedListPurge.class.getName());
+    private final static String LOGGER_LABEL="MilkPurgeArchivedListPurge ";
 
     private static BEvent eventDeletionSuccess = new BEvent(MilkPurgeArchivedListPurge.class.getName(), 1, Level.SUCCESS,
             "Deletion done with success", "Archived Cases are deleted with success");
@@ -61,7 +65,7 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
         return new ArrayList<>();
     }
 
-    private class Statistic {
+    private @Data class Statistic {
 
         long pleaseStopAfterManagedItems = 0;
         long countIgnored = 0;
@@ -86,15 +90,11 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
         ProcessAPI processAPI = apiAccessor.getProcessAPI();
         // get Input 
         long beginManipulateCsv = System.currentTimeMillis();
-        ByteArrayOutputStream outputByte = new ByteArrayOutputStream();
-        jobExecution.getStreamParameter(cstParamInputDocument, outputByte);
-        if (outputByte.size() == 0) {
-            // no document uploaded
-            plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
-            return plugTourOutput;
-        }
+        
+        String separatorCSV = jobExecution.getInputStringParameter(cstParamSeparatorCSV);
+
+      
         Statistic statistic = new Statistic();
-        statistic.totalLineCsv = nbLinesInCsv(outputByte);
         
         long endManipulateCsv = System.currentTimeMillis();
         statistic.sumTimeManipulateCsv = endManipulateCsv - beginManipulateCsv;
@@ -103,21 +103,27 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
         jobExecution.setPleaseStopAfterManagedItems(jobExecution.getInputLongParameter(cstParamMaximumDeletionInCase), 5000L);
         statistic.pleaseStopAfterManagedItems = jobExecution.getPleaseStopAfterManagerItems();
 
-        String separatorCSV = jobExecution.getInputStringParameter(cstParamSeparatorCSV);
 
         List<Long> sourceProcessInstanceIds = new ArrayList<>();
         long nbAnalyseAlreadyReported = 0;
         try {
+            CSVOperation csvOperation = new CSVOperation();
+            
+            csvOperation.loadCsvDocument(jobExecution, cstParamInputDocument, separatorCSV);
+            statistic.totalLineCsv = csvOperation.getCount();
+            if (statistic.totalLineCsv == 0) {
+                // no document uploaded
+                plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+                return plugTourOutput;
+            }
+       
             jobExecution.setAvancementTotalStep(statistic.totalLineCsv);
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(outputByte.toByteArray())));
-            String line = reader.readLine();
-            // read the header
-            String[] header = line == null ? new String[0] : line.split(separatorCSV);
 
             long lineNumber = 1;
             StringBuilder analysis = new StringBuilder();
-            while ((line = reader.readLine()) != null) {
+            Map<String, String> record;
+            while ( (record = csvOperation.getNextRecord())  != null) {
 
                 if (jobExecution.pleaseStop()) {
                     analysis.append("Stop asked;");
@@ -127,9 +133,6 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
                 jobExecution.setAvancementStep(lineNumber);
                 lineNumber++;
 
-                Map<String, String> record = getMap(header, line, separatorCSV);
-                if (record == null)
-                    continue;
                 Long caseId = TypesCast.getLong(record.get(MilkPurgeArchivedListGetList.cstColCaseId), null);
                 String status = TypesCast.getString(record.get(MilkPurgeArchivedListGetList.cstColStatus), null);
 
@@ -329,7 +332,8 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
         }
         long endTimeDelete = System.currentTimeMillis();
 
-        logger.info("MilkPurgeArchivedListPurge.delete: search in " + (endTimeSearch - startTimeSearch) + " ms , delete in " + (endTimeDelete - startTimeDelete) + " ms for " + listRealId.size() + " nbCaseDeleted=" + nbCaseDeleted);
+        logger.info(LOGGER_LABEL+".delete: search in " + (endTimeSearch - startTimeSearch) + " ms , delete in " + (endTimeDelete - startTimeDelete) + " ms for " + listRealId.size() + " nbCaseDeleted=" + nbCaseDeleted);
+        logger.fine(LOGGER_LABEL+".delete InternalCaseDeletion="+statistic.nbCasesDeleted);
         statistic.countNbItems += listRealId.size();
         statistic.sumTimeDeleted += endTimeDelete - startTimeDelete;
         return listRealId.size();

@@ -57,7 +57,7 @@
 		} ];
 		this.listplugin = [];
 		this.newtourname = '';
-		this.refreshDate=null;
+		this.refreshDate= new Date();
 		this.scheduler={ 'enable': false, listtypeschedulers:[]};
 		
 		
@@ -555,7 +555,8 @@
 		// -----------------------------------------------------------------------------------------
 		this.query = function(queryName, textSearch, parameterDef) {
 			console.log("query:Start");
-			var self=parameterDef;
+			var selfParameterDef=parameterDef;
+			var self=this;
 			self.inprogress=true;
 			console.log("operationTour.query ["+queryName+"] on ["+textSearch+"] inprogress<=true");
 
@@ -578,9 +579,9 @@
 				}
 				self.inprogress=false;
 				console.log("Query.receiveData HTTP inProgress<=false result="+angular.toJson(jsonResult.data, false));
-			 	self.list =  jsonResult.data.listProcess;
-		
-				return self.list;
+				selfParameterDef.list 			=  jsonResult.data.listProcess;
+				selfParameterDef.nbProcess		=  jsonResult.data.nbProcess;
+				return selfParameterDef.list;
 			}, function ( jsonResult ) {
 				console.log("QueryUser HTTP THEN");
 				self.inprogress=false;
@@ -694,7 +695,7 @@
 			var json = encodeURIComponent(angular.toJson(param, true));
 			// do not calculate a new date now:we will have a recursive call in
 			// Angular
-			return "?page=custompage_truckmilk&action=downloadParamFile&paramjson=" + json+'&t='+this.refreshDate;
+			return "?page=custompage_truckmilk&action=downloadParamFile&paramjson=" + json+'&t='+this.refreshDate.getTime();
 		}
 		
 		

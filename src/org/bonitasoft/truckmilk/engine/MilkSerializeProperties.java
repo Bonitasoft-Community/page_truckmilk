@@ -81,7 +81,7 @@ public class MilkSerializeProperties {
      * @param milkJobFactory
      * @return
      */
-    private MilkJob getInstanceFromBonitaProperties(Long jobId) {
+    private MilkJob getInstanceFromBonitaProperties(Long jobId /*, SaveJobParameters loadParameters */) {
         String jobSt = (String) bonitaProperties.get(jobId.toString());
         logger.fine(".getInstanceFromBonitaProperties begin Read JobId[" + jobId + "] jsonst=" + jobSt);
         
@@ -223,7 +223,7 @@ public class MilkSerializeProperties {
     }
 
     public List<BEvent> dbSaveAllJobs() {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+        List<BEvent> listEvents = new ArrayList<>();
         bonitaProperties.setCheckDatabase(false);
         logger.info(".dbSaveAllJobs-begin ***");
 

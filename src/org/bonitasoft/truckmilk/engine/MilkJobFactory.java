@@ -245,7 +245,7 @@ public class MilkJobFactory {
     public static class MilkFactoryOp {
 
         public MilkJob job;
-        public List<BEvent> listEvents = new ArrayList<BEvent>();
+        public List<BEvent> listEvents = new ArrayList<>();
     }
 
     /**
@@ -262,7 +262,12 @@ public class MilkJobFactory {
         return milkFactoryOp;
 
     }
+    public MilkFactoryOp dbLoadPartialJob(Long idJob) {
+        MilkFactoryOp milkFactoryOp = new MilkFactoryOp();
+        milkFactoryOp.job = milkSerialize.dbLoadJob(idJob);
+        return milkFactoryOp;
 
+    }
     /**
      * save a particular plug tour
      * 

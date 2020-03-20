@@ -2,16 +2,20 @@ package org.bonitasoft.truckmilk.plugin;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.ProcessAPI;
 import org.bonitasoft.engine.bpm.process.ProcessDefinition;
 import org.bonitasoft.engine.bpm.process.ProcessInstance;
+import org.bonitasoft.engine.bpm.process.ProcessInstanceNotFoundException;
 import org.bonitasoft.engine.bpm.process.ProcessInstanceSearchDescriptor;
 import org.bonitasoft.engine.exception.DeletionException;
 import org.bonitasoft.engine.search.Order;
@@ -22,11 +26,10 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.toolbox.CSVOperation;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
@@ -41,12 +44,12 @@ public class MilkCancelCases extends MilkPlugIn {
     private final static String CSTOPERATION_DIRECT = "Cancel or Delete";
     private final static String CSTOPERATION_FROMLIST = "Cancel or Delete from the CSV list";
 
-    private final static String CSTTRIGGER_STARTDATE = "STARTDATE";
-    private final static String CSTTRIGGER_LASTUPDATEDATE = "LASTUPDATEDATE";
+    private final static String CSTTRIGGER_STARTDATE = "Case Start Date";
+    private final static String CSTTRIGGER_LASTUPDATEDATE = "Case Last Update Date";
 
     
-    protected final static String CSTCOL_CASEID = "caseid";
-    protected final static String CSTCOL_STATUS = "status";
+    protected final static String CSTCOL_CASEID = "Caseid";
+    protected final static String CSTCOL_STATUS = "Status";
 
     
     
@@ -61,6 +64,9 @@ public class MilkCancelCases extends MilkPlugIn {
 
     private static BEvent eventOperationUnknown = new BEvent(MilkCancelCases.class.getName(), 4, Level.APPLICATIONERROR,
             "Operation unknown", "Operation is unknown", "Nothing is done", "give a correction operation");
+
+    private static BEvent eventLoadCsvFailed = new BEvent(MilkCancelCases.class.getName(), 5, Level.ERROR,
+            "Error during Load CSV", "An error arrived during loading CSV", "Cases can't be cancelled", "Check the exception");
 
     
     private static PlugInParameter cstParamMaximumCancellationInCases = PlugInParameter.createInstance("maximumcancellationincases", "Maximum deletion in case", TypeParameter.LONG, 1000L, "Maximum case cancelled in one execution, to not overload the engine. Maximum of 5000 is hardcoded");
@@ -80,9 +86,9 @@ public class MilkCancelCases extends MilkPlugIn {
             new String[] { CSTTRIGGER_STARTDATE, CSTTRIGGER_LASTUPDATEDATE }, CSTTRIGGER_LASTUPDATEDATE, CSTTRIGGER_STARTDATE + " : the cases started before the delay are in the perimeter, else " + CSTTRIGGER_LASTUPDATEDATE + " only cases without any operations after the delay ");
 
     private static PlugInParameter cstParamSeparatorCSV = PlugInParameter.createInstance("separatorCSV", "Separator CSV", TypeParameter.STRING, ",", "CSV use a separator. May be ; or ,");
-    private static PlugInParameter cstParamReport = PlugInParameter.createInstanceFile("report", "List of cases reported (operation GETLIST or DIRECT)", TypeParameter.FILEWRITE, null, "List is calculated and saved in this parameter", "ListToOperate.csv", "application/CSV");
+    private static PlugInParameter cstParamReport = PlugInParameter.createInstanceFile("report", "Report Execution", TypeParameter.FILEWRITE, null, "List of cases managed is calculated and saved in this parameter", "ListToOperate.csv", "application/CSV");
 
-    private static PlugInParameter cstParamInputDocument = PlugInParameter.createInstanceFile("inputdocument", "Input List (CSV) (operation FROMLIST)", TypeParameter.FILEREAD, null, "List is a CSV containing caseid column and status column. When the status is 'DELETE' or 'CANCELLED' or 'OPERATE', then the case is operate according the status (if OPERATE, then the job operation is used)\nExample: caseId;status\n342;DELETE\n345;DELETE", "ListToPurge.csv", "text/csv");
+    private static PlugInParameter cstParamInputDocument = PlugInParameter.createInstanceFile("inputdocument", "Cases to delete/cancel", TypeParameter.FILEREAD, null, "List is a CSV containing caseid column and status column. When the status is 'DELETE' or 'CANCELLED' or 'OPERATE', then the case is operate according the status (if OPERATE, then the job operation is used)\nExample: caseId;status\n342;DELETE\n345;DELETE", "ListToPurge.csv", "text/csv");
 
     
     
@@ -128,9 +134,9 @@ public class MilkCancelCases extends MilkPlugIn {
 
             SearchOptionsBuilder searchBuilderCase = new SearchOptionsBuilder(0, (int) maximumCancellationInCases+1 );
 
-            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, true, searchBuilderCase, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, apiAccessor.getProcessAPI());
+            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, searchBuilderCase, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, apiAccessor.getProcessAPI());
 
-            if (listProcessResult.listProcessDeploymentInfo.isEmpty()) {
+            if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
                 plugTourOutput.addEvents(listProcessResult.listEvents);
                 plugTourOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
@@ -155,12 +161,12 @@ public class MilkCancelCases extends MilkPlugIn {
             ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
             Writer w = new OutputStreamWriter(arrayOutputStream);
 
-            w.write(CSTCOL_CASEID + separatorCSV +CSTCOL_STATUS + separatorCSV + "explanation" + separatorCSV + "\n");
+            w.write(CSTCOL_CASEID + separatorCSV + "Process"+ separatorCSV + "Version"+ separatorCSV + "StartDate"+ separatorCSV+"LastUpdate"+separatorCSV+CSTCOL_STATUS + separatorCSV + "explanation" + separatorCSV + "\n");
 
             
             
             SourceData sourceData;
-            // get source of case
+            //---------------------------------- get source of case
             if (CSTOPERATION_GETLIST.equals(operation) || CSTOPERATION_DIRECT.equals(operation))
             {
                 long timeSearch = delayResult.delayDate.getTime();
@@ -169,6 +175,15 @@ public class MilkCancelCases extends MilkPlugIn {
             }
             else if (CSTOPERATION_FROMLIST.equals(operation)) {
                 sourceData = new SourceDataCSV();
+                try
+                {
+                    ((SourceDataCSV)sourceData).initialize( jobExecution, cstParamInputDocument, separatorCSV,  processAPI);
+                }
+                catch(Exception e) {
+                    plugTourOutput.addEvent( new BEvent(eventLoadCsvFailed, e, ""));
+                    plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+                    return plugTourOutput;
+                }
                 
             } else
             {
@@ -177,8 +192,15 @@ public class MilkCancelCases extends MilkPlugIn {
                 
             }
             
+            if (sourceData.getCount()==0) {
+                plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+                return plugTourOutput;
+            }
+            //---------------------------------- operation
+
+            Map<Long, String> cacheProcessDefinition = new HashMap<>();
+
             // do the job            
-            StringBuilder synthesis= new StringBuilder();
             long beginTime = System.currentTimeMillis();
             int count=0;
             int totalNumberCase=0;
@@ -187,64 +209,77 @@ public class MilkCancelCases extends MilkPlugIn {
                 if (jobExecution.pleaseStop())
                     break;
                 jobExecution.setAvancementStep(count);
-                Long processInstanceId = sourceData.getNextProcessId();
-                synthesis.append( processInstanceId+", ");
+                count++;
+                SourceProcessInstance sourceProcessInstance = sourceData.getNextProcessInstance();
                 
-                String status="";
+                StringBuilder synthesis= new StringBuilder();
+                if (sourceProcessInstance.processInstance !=null)
+                    synthesis.append( sourceProcessInstance.processInstance.getId() +separatorCSV);
+                else if (sourceProcessInstance.originalCaseId !=null)
+                    synthesis.append( sourceProcessInstance.originalCaseId +separatorCSV);
+                else
+                    synthesis.append( " " +separatorCSV);
+                
+                if (sourceProcessInstance.processInstance !=null) {
+                    long processDefinitionId = sourceProcessInstance.processInstance.getProcessDefinitionId();
+                    if (!cacheProcessDefinition.containsKey(processDefinitionId)) {
+                        try {
+                            ProcessDefinition processDefinition = processAPI.getProcessDefinition(processDefinitionId);
+                            cacheProcessDefinition.put(processDefinitionId, processDefinition.getName() + separatorCSV + processDefinition.getVersion() );
+                        } catch (Exception e) {
+                            cacheProcessDefinition.put(processDefinitionId, " "+ separatorCSV + " " );
+                        }
+                    }
+                    synthesis.append( cacheProcessDefinition.get(processDefinitionId) + separatorCSV);
+                }
+                else
+                    synthesis.append( "" + separatorCSV);
+                synthesis.append( (sourceProcessInstance.processInstance !=null ? TypesCast.sdfCompleteDate.format(sourceProcessInstance.processInstance.getStartDate()):"")+ separatorCSV);
+                synthesis.append( (sourceProcessInstance.processInstance !=null ? TypesCast.sdfCompleteDate.format(sourceProcessInstance.processInstance.getLastUpdate()):"")+ separatorCSV);
+                
+                String status=sourceProcessInstance.statusLoad;
                 String explanation="";
-                // according the action on the 
-                if (CSTOPERATION_GETLIST.equals(operation)) {
-                    // save in the report
-                }
-                else if (CSTACTION_DELETION.equals( action )){
-                    try {
-                        processAPI.deleteProcessInstance( processInstanceId );
-                        status="DELETED";
-                    } catch(DeletionException e) {
-                        plugTourOutput.addEvent( new BEvent(eventDeletionFailed, e, ""));
-                        status="DELETIONERROR";
-                        explanation=e.getMessage();
-                    }
-                }
-                else if (CSTACTION_CANCELLATION.equals( action )){ 
-                    try
+                if (sourceProcessInstance.processInstance != null)
                     {
-                        processAPI.cancelProcessInstance( processInstanceId );
-                        status="CANCELLED";
-                    } catch(Exception e) {
-                    plugTourOutput.addEvent(new BEvent(eventCancelFailed, e, ""));
-                    status="CANCELLATIONERROR";
-                    explanation=e.getMessage();
+                    // according the action on the 
+                    if (CSTOPERATION_GETLIST.equals(operation)) {
+                        // save in the report
                     }
-                }
-                totalNumberCase++;
-                
+                    else if (CSTACTION_DELETION.equals( action )){
+                        try {
+                            processAPI.deleteProcessInstance( sourceProcessInstance.processInstance.getId() );
+                            status="DELETED";
+                        } catch(DeletionException e) {
+                            plugTourOutput.addEvent( new BEvent(eventDeletionFailed, e, ""));
+                            status="DELETIONERROR";
+                            explanation=e.getMessage();
+                        }
+                    }
+                    else if (CSTACTION_CANCELLATION.equals( action )){ 
+                        try
+                        {
+                            processAPI.cancelProcessInstance( sourceProcessInstance.processInstance.getId() );
+                            status="CANCELLED";
+                        } catch(Exception e) {
+                        plugTourOutput.addEvent(new BEvent(eventCancelFailed, e, ""));
+                        status="CANCELLATIONERROR";
+                        explanation=e.getMessage();
+                        }
+                    }
+                    totalNumberCase++;
+                    }
                 // report in CSV
-                StringBuilder line = new StringBuilder();
-                line.append( String.valueOf( processInstanceId ) + separatorCSV);
-                /*
-                long processId = archivedProcessInstance.getProcessDefinitionId();
-                if (!cacheProcessDefinition.containsKey(processId)) {
-                    try {
-                        ProcessDefinition processDefinition = processAPI.getProcessDefinition(processId);
-                        cacheProcessDefinition.put(processId, processDefinition.getName() + separatorCSV + processDefinition.getVersion() + separatorCSV);
-                    } catch (Exception e) {
-                        cacheProcessDefinition.put(processId, separatorCSV + " " + separatorCSV);
-                    }
-                }
-                line.append( cacheProcessDefinition.get(processId);
-                line.append( TypesCast.sdfCompleteDate.format(archivedProcessInstance.getArchiveDate());
-                */
-                line.append( status + separatorCSV);
-                line.append( explanation + separatorCSV);
-                line.append( "\n");
-                w.write(line.toString());
+                
+                synthesis.append( status + separatorCSV);
+                synthesis.append( explanation + separatorCSV);
+                w.write(synthesis.toString()+"\n");
             }
             long endTime = System.currentTimeMillis();
-
-            plugTourOutput.addEvent(new BEvent(eventOperationSuccess, "Treated:" + totalNumberCase + " in " + (endTime-beginTime) + " ms "+synthesis.toString()));
+            w.flush();
+            w.close();
+            plugTourOutput.addEvent(new BEvent(eventOperationSuccess, "Treated:" + totalNumberCase + " in " + (endTime-beginTime) + " ms "));
             plugTourOutput.setParameterStream(cstParamReport, new ByteArrayInputStream(arrayOutputStream.toByteArray()));
-
+            plugTourOutput.nbItemsProcessed= totalNumberCase;
             if (totalNumberCase==0)
                 plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
             else if (totalNumberCase < sourceData.getCount())
@@ -288,12 +323,24 @@ public class MilkCancelCases extends MilkPlugIn {
     /* SourceData interface                                                             */
     /*                                                                                  */
     /********************************************************************************** */
-
+    
+    public class SourceProcessInstance {
+        ProcessInstance processInstance;
+        String statusLoad="";
+        Long originalCaseId;
+        public SourceProcessInstance(ProcessInstance processInstance, String statusLoad, Long originalCaseId) {
+            this.processInstance = processInstance;
+            this.statusLoad = statusLoad;
+            this.originalCaseId = originalCaseId;
+        }
+    }
+    
     private interface SourceData {
 
         public long getCount();
 
-        public Long getNextProcessId();
+        public SourceProcessInstance getNextProcessInstance();
+        
     }
 
     /********************************************************************************** */
@@ -327,17 +374,16 @@ public class MilkCancelCases extends MilkPlugIn {
 
         @Override
         public long getCount() {
-            return searchResult.getCount();
+            return searchResult.getResult().size();
         }
 
         @Override
-        public Long getNextProcessId() {
-            if (currentPosition>= searchResult.getCount())
+        public SourceProcessInstance getNextProcessInstance() {
+            if (currentPosition>= searchResult.getResult().size())
                 return null;
-            Long nextId = searchResult.getResult().get( currentPosition).getId();
+            SourceProcessInstance sourceProcessInstance = new SourceProcessInstance(searchResult.getResult().get( currentPosition ), "", searchResult.getResult().get( currentPosition ).getId());
             currentPosition++;
-            return nextId;
-
+            return sourceProcessInstance;
         }
 
     }
@@ -348,18 +394,41 @@ public class MilkCancelCases extends MilkPlugIn {
     /********************************************************************************** */
 
     private class SourceDataCSV implements SourceData {
-
-        @Override
-        public long getCount() {
-            return 0;
-        }
-
-        @Override
-        public Long getNextProcessId() {
-            // TODO Auto-generated method stub
-            return null;
+        ProcessAPI processAPI;
+        CSVOperation csvOperation;
+        
+        
+        public long initialize(MilkJobExecution jobExecution, PlugInParameter inputCsv, String separatorCSV,  ProcessAPI processAPI) throws IOException {
+            this.processAPI = processAPI;
+            csvOperation = new CSVOperation();
+            return csvOperation.loadCsvDocument(jobExecution, inputCsv, separatorCSV);
         }
         
+        @Override
+        public long getCount() {
+            return csvOperation.getCount();
+        }
+
+        @Override
+        public SourceProcessInstance getNextProcessInstance() {
+            Long caseId=null;
+            try
+            {
+                Map<String, String> record = csvOperation.getNextRecord();
+                caseId = TypesCast.getLong( record.get( CSTCOL_CASEID), null);
+                if (caseId==null)
+                    return new SourceProcessInstance( null, "No column["+CSTCOL_CASEID+"] in CSV", null);
+                return new SourceProcessInstance( processAPI.getProcessInstance( caseId ), "", caseId);
+
+            }
+            catch(ProcessInstanceNotFoundException e) {
+                return new SourceProcessInstance( null, "ProcessInstance["+caseId+"] not found", caseId);
+            }
+            catch(Exception e) {
+                return new SourceProcessInstance( null, "Error "+e.getMessage(), caseId);
+            }
+        }
+       
     }
 
 }

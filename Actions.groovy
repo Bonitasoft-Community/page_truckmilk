@@ -273,14 +273,18 @@ public class Actions {
             {
               List listProcess = new ArrayList();
               Object jsonParam = (paramJsonSt==null ? null : JSONValue.parse(paramJsonSt));              
-              String processFilter = jsonParam.get("userfilter");
-              SearchOptionsBuilder searchOptionsBuilder = new SearchOptionsBuilder(0,100);
-              // searchOptionsBuilder.filter(ProcessDeploymentInfoSearchDescriptor.NAME, processFilter);
+              String processFilter = (jsonParam == null ? "" : jsonParam.get("userfilter"));
+              SearchOptionsBuilder searchOptionsBuilder = new SearchOptionsBuilder(0,20);
+              // searchOptionsBuilder.greaterOrEquals(ProcessDeploymentInfoSearchDescriptor.NAME, processFilter);
+              // searchOptionsBuilder.lessOrEquals(ProcessDeploymentInfoSearchDescriptor.NAME, processFilter+"z");
+              searchOptionsBuilder.searchTerm(processFilter);
+              
               searchOptionsBuilder.sort(  ProcessDeploymentInfoSearchDescriptor.NAME,  Order.ASC);
               searchOptionsBuilder.sort(  ProcessDeploymentInfoSearchDescriptor.VERSION,  Order.ASC);
+              Set<String> setProcessesWithoutVersion=new HashSet<String>();
               
               SearchResult<ProcessDeploymentInfo> searchResult = processAPI.searchProcessDeploymentInfos(searchOptionsBuilder.done() );
-              logger.fine("TruckMilk:Search process deployment containing ["+processFilter+"] - found "+searchResult.getCount());
+              logger.info("TruckMilk:Search process deployment containing ["+processFilter+"] - found "+searchResult.getCount());
 
               for (final ProcessDeploymentInfo processDeploymentInfo : searchResult.getResult())
               {
@@ -288,14 +292,24 @@ public class Actions {
                   oneRecord.put("display", processDeploymentInfo.getName() + " (" + processDeploymentInfo.getVersion()+")");
                   oneRecord.put("id", processDeploymentInfo.getName() + " (" + processDeploymentInfo.getVersion()+")");
                   listProcess.add( oneRecord );
+                  setProcessesWithoutVersion.add(processDeploymentInfo.getName());
               }
-                 actionAnswer.responseMap.put("listProcess", listProcess);
+              // add all processes without version
+              for (String processName : setProcessesWithoutVersion ) {
+                  final Map<String, Object> oneRecord = new HashMap<String, Object>();
+                  oneRecord.put("display", processName);
+                  oneRecord.put("id", processName);
+                  listProcess.add( oneRecord );
+              }
+              
+              actionAnswer.responseMap.put("listProcess", listProcess);
+              actionAnswer.responseMap.put("nbProcess", searchResult.getCount());
             }
             else if ("queryusers".equals(action))
             {
                
               List listUsers = new ArrayList();
-              final SearchOptionsBuilder searchOptionBuilder = new SearchOptionsBuilder(0, 100000);
+              final SearchOptionsBuilder searchOptionBuilder = new SearchOptionsBuilder(0, 20);
               // http://documentation.bonitasoft.com/?page=using-list-and-search-methods
               searchOptionBuilder.filter(UserSearchDescriptor.ENABLED, Boolean.TRUE);
               Object jsonParam = (paramJsonSt==null ? null : JSONValue.parse(paramJsonSt));              
@@ -313,6 +327,8 @@ public class Actions {
                   listUsers.add( oneRecord );
               }
               actionAnswer.responseMap.put("listUsers", listUsers);
+              actionAnswer.responseMap.put("nbUsers", searchResult.getCount());
+              
 
             } 
             logger.fine("#### TruckMilk:Actions END responseMap.size()="+actionAnswer.responseMap.size());

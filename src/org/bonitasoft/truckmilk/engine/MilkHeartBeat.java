@@ -31,7 +31,7 @@ public class MilkHeartBeat {
 
     
     // to avoid any transaction issue in the command (a transaction is maybe opennend by the engine, and then the processAPI usage is forbiden), let's create a thread
-    public void executeOneTimeNewThread(MilkCmdControl milkCmdControl, long tenantId) {
+    public void executeOneTimeNewThread(MilkCmdControl milkCmdControl, boolean forceBeat, long tenantId) {
         synchronized (synchronizeHeart) {
             // protection : does not start a new Thread if the current one is not finish (no two Hearthread in the same time)
             if (synchronizeHeart.heartBeatInProgress) {
@@ -39,7 +39,7 @@ public class MilkHeartBeat {
                 return;
             }
             // second protection : Quartz can call the methode TOO MUCH !
-            if (System.currentTimeMillis() < heartBeatLastExecution + 60 * 1000) {
+            if ( (! forceBeat) && System.currentTimeMillis() < heartBeatLastExecution + 60 * 1000) {
                 logger.fine(LOGGER_HEADER+"heartBeat: last execution was too close (last was " + (System.currentTimeMillis() - heartBeatLastExecution) + " ms ago)");
                 return;
             }
