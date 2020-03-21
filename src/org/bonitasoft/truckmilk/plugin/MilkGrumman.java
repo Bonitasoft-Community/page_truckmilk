@@ -20,6 +20,8 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 
 public class MilkGrumman extends MilkPlugIn {
@@ -74,6 +76,7 @@ public class MilkGrumman extends MilkPlugIn {
         plugInDescription.name = "Grumman";
         plugInDescription.description = "Execute the Grumman correction on message. See the Grumman page on Community for details.";
         plugInDescription.label = "Grumman Message correction";
+        plugInDescription.category = CATEGORY.MONITOR;
         plugInDescription.addParameter(cstParamOnlyDetection);
         plugInDescription.addParameter(cstParamReconciliationNumberOfMessages);
         plugInDescription.addParameter(cstParamReconciliationIncomplete);
@@ -85,8 +88,8 @@ public class MilkGrumman extends MilkPlugIn {
      * execution of the job. Just calculated the result according the parameters, and return it.
      */
     @Override
-    public PlugTourOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
+    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
         
         // task name is required
         boolean onlyDetection = jobExecution.getInputBooleanParameter(cstParamOnlyDetection );

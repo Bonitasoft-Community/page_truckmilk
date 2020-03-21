@@ -13,6 +13,7 @@ import org.bonitasoft.meteor.MeteorClientAPI;
 import org.bonitasoft.meteor.MeteorSimulation;
 import org.bonitasoft.meteor.cmd.CmdMeteor;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 
 public class MilkMeteor extends MilkPlugIn {
@@ -57,9 +58,9 @@ public class MilkMeteor extends MilkPlugIn {
     }
 
     @Override
-    public PlugTourOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
        
-        PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
+        MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         String scenarioName = jobExecution.getInputStringParameter(cstParamScenarioName.name, null);
         long maximumWait = jobExecution.getInputLongParameter(cstParamMaximumWait);

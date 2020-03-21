@@ -11,6 +11,7 @@ import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 
 /* ******************************************************************************** */
@@ -28,7 +29,7 @@ public class MilkPing extends MilkPlugIn {
     private final static PlugInParameter cstParamTimeExecution = PlugInParameter.createInstance("timeExecution", "Time execution (in mn)", TypeParameter.LONG, true, "The job will run this time, and will update the % of execution each minutes");
 
     private final static String LOGGER_LABEL = "MilkPing";
-    private final static Logger LOGGER = Logger.getLogger(RadarWorkers.class.getName());
+    private final static Logger LOGGER = Logger.getLogger(MilkPing.class.getName());
 
     private final static BEvent eventPing = new BEvent(MilkPing.class.getName(), 1, Level.INFO,
             "Ping !", "The ping job is executed correctly");
@@ -76,8 +77,8 @@ public class MilkPing extends MilkPlugIn {
      * execution of the job. Just calculated the result according the parameters, and return it.
      */
     @Override
-    public PlugTourOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
+    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         // if the date has to be added in the result ?
         Boolean addDate = jobExecution.getInputBooleanParameter(cstParamAddDate.name, Boolean.TRUE);

@@ -261,7 +261,7 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
                     // -  Any initialisation is already done (first call the command is called)
                     // -  Command start the thread, so the thread is correctly directly on the server side
 
-                    milkHeartBeat.executeOneTimeNewThread(milkCmdControl, tenantId);
+                    milkHeartBeat.executeOneTimeNewThread(milkCmdControl, false, tenantId);
                     nextHeartBeat = new Date(System.currentTimeMillis() + 60000);
                     Thread.sleep(60000);
                 } catch (InterruptedException e) {

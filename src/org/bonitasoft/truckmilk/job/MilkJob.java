@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -23,11 +24,11 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.ExecutionStatus;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugTourOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.toolbox.CSVOperation;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
@@ -440,14 +441,66 @@ public @Data class MilkJob {
     /* ******************************************************************************** */
     /*                                                                                  */
     /*
+     * Point of interest
+     * /*
+     */
+    /* ******************************************************************************** */
+    public class PointsOfInterest {
+        private Date date;
+        public Map<String,Double> values;
+    }
+    private List<PointsOfInterest> listAllPointsOfInterest = new ArrayList<>();
+    
+    public void addPointsOfInterest(Date date, Map<String,Double> values) {
+        PointsOfInterest pointsOfInterest = new PointsOfInterest();
+        pointsOfInterest.date = date;
+        pointsOfInterest.values=values;
+        listAllPointsOfInterest.add( pointsOfInterest);
+        while (listAllPointsOfInterest.size()>100)
+            listAllPointsOfInterest.remove(0);
+    }
+    /**
+     * for serialization
+     * @return
+     */
+    public List<Map<String,Object>> getListPointsOfInterest() {
+        List<Map<String,Object>> listPoints = new ArrayList<>();
+        for (PointsOfInterest point : listAllPointsOfInterest)
+        {
+            Map<String,Object> mapPoint = new HashMap<>();
+            mapPoint.put("date", sdf.format( point.date));
+            mapPoint.put("values", point.values);
+            listPoints.add( mapPoint);
+        }
+        return listPoints;
+    }
+    /**
+     * for serialization
+     * @return
+     */
+    public void readPointOfInterestFromList( List<Map<String,Object>> listPoints) {
+        listAllPointsOfInterest = new ArrayList<>();
+        for (Map<String,Object> pointMap : listPoints)
+        {
+            PointsOfInterest point = new PointsOfInterest();
+            try {
+                point.date = sdf.parse( (String) pointMap.get("date"));
+                point.values = (Map<String,Double>) pointMap.get("values");
+                listAllPointsOfInterest.add( point);
+            } catch (ParseException e) {
+                logger.severe(LOGGER_HEADER+" Can't decode PointOfInterest "+pointMap.toString()+" : "+e.getMessage());
+            }
+        }
+        return;
+    }
+    /* ******************************************************************************** */
+    /*                                                                                  */
+    /*
      * Job parameters
      * /*
      */
     /* ******************************************************************************** */
-
-    
-    
-    
+   
     /**
      * get the value of parameters for this tour (definition is accessible via
      * plugIn.getDescription().inputParameters
@@ -1034,7 +1087,7 @@ public @Data class MilkJob {
         public SavedExecution() {
         };
 
-        public SavedExecution(PlugTourOutput output) {
+        public SavedExecution(MilkJobOutput output) {
             executionDate = output.executionDate;
             executionStatus = output.executionStatus;
             listEventSt = BEventFactory.getSyntheticHtml(output.getListEvents());
@@ -1092,7 +1145,7 @@ public @Data class MilkJob {
      * @param currentDate
      * @param output
      */
-    public void registerExecution(Date currentDate, PlugTourOutput output) {
+    public void registerExecution(Date currentDate, MilkJobOutput output) {
         trackExecution.lastExecutionDate = output.executionDate;
         trackExecution.lastExecutionStatus = output.executionStatus;
         if (output.executionStatus == ExecutionStatus.SUCCESSNOTHING

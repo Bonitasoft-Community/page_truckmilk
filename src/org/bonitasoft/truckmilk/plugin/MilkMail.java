@@ -6,6 +6,7 @@ import java.util.List;
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.SendMailEnvironment;
 
@@ -31,8 +32,8 @@ public class MilkMail extends MilkPlugIn {
     };
 
     @Override
-    public PlugTourOutput execute(MilkJobExecution input, APIAccessor apiAccessor) {
-        PlugTourOutput plugTourOutput = input.getPlugTourOutput();
+    public MilkJobOutput execute(MilkJobExecution input, APIAccessor apiAccessor) {
+        MilkJobOutput plugTourOutput = input.getMilkJobOutput();
         return plugTourOutput;
     }
 

@@ -25,6 +25,8 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.SendMail;
@@ -73,7 +75,7 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
      * check the Job's environment
      */
     public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+        List<BEvent> listEvents = new ArrayList<>();
         return listEvents;
     };
 
@@ -82,6 +84,7 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
         PlugInDescription plugInDescription = new PlugInDescription();
         plugInDescription.name = "EmailUsersTasks";
         plugInDescription.label = "Emails users tasks";
+        plugInDescription.category = CATEGORY.TASKS;
         plugInDescription.description = "For all users part of the given profile(s), an email is send with a link on all pending tasks";
         plugInDescription.addParameter(cstParamProfilesUser);
 
@@ -103,8 +106,8 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
 
     @SuppressWarnings("unchecked")
     @Override
-    public PlugTourOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
+    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         // read profiles
         List<String> listProfilesName = (List<String>) jobExecution.getInputListParameter(cstParamProfilesUser);

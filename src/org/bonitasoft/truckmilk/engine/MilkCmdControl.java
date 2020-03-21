@@ -27,7 +27,7 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory.CreateJobStatus;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.ExecutionStatus;
-import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SaveJobParameters;
+import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJob.MapContentParameter;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
@@ -223,7 +223,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     logger.info(" Server Restart reset jobId[" + milkJob.getId() + "]");
                     // cancel the job: server restart
                     milkJob.killJob();;
-                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceAllInformations()));
+                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceAllInformations()));
                 }
             }
 
@@ -354,7 +354,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 CreateJobStatus createJobStatus = milkJobFactory.createMilkJob(jobName, plugIn);
                 executeAnswer.listEvents.addAll(createJobStatus.listEvents);
                 if (!BEventFactory.isError(executeAnswer.listEvents)) {
-                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(createJobStatus.job, SaveJobParameters.getInstanceAllInformations()));
+                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(createJobStatus.job, SerializationJobParameters.getInstanceAllInformations()));
                     if (!BEventFactory.isError(executeAnswer.listEvents))
                         executeAnswer.listEvents.add(new BEvent(eventJobRegister, "Job registered[" + createJobStatus.job.getName() + "]"));
                 }
@@ -404,7 +404,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     // enable=true will recalculate the nextExecution date : collect error
                     executeAnswer.listEvents.addAll( milkJob.setEnable(VERBE.ACTIVATEJOB.equals(verbEnum)) );
                     
-                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getBaseInformations()));
+                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getBaseInformations()));
                     if (VERBE.ACTIVATEJOB.equals(verbEnum))
                         executeAnswer.listEvents.add(new BEvent(eventJobActivated, "Job Activated[" + milkJob.getName() + "]"));
                     else
@@ -428,7 +428,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 } else {
                     detailsLogInfo.append( "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
 
-                    SaveJobParameters saveJobParameters = SaveJobParameters.getBaseInformations();
+                    SerializationJobParameters saveJobParameters = SerializationJobParameters.getBaseInformations();
 
                     // this is maybe a call only to update a file parameters
                     if (executeParameters.parametersCommand.containsKey("file")) {
@@ -438,7 +438,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                         String fileName = executeParameters.getParametersString("file");
                         String parameterName = executeParameters.getParametersString("parameter");
                         executeAnswer.listEvents.addAll(milkJob.setJobFileParameter(parameterName, fileName, pageDirectoryFile));
-                        saveJobParameters.saveFileRead = true;
+                        saveJobParameters.fileRead = true;
                     } else {
 
                         Map<String, Object> parametersObject = executeParameters.getParametersMap("parametersvalue");
@@ -449,7 +449,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                         milkJob.setDescription(executeParameters.getParametersString("description"));
                         String newName = executeParameters.getParametersString("newname");
                         milkJob.setName(newName);
-                        saveJobParameters.saveTrackExecution = true; // we may change the CronSt
+                        saveJobParameters.trackExecution = true; // we may change the CronSt
                     }
                     executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, saveJobParameters));
                     
@@ -470,7 +470,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     detailsLogInfo.append( "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
                     milkJob.setImmediateExecution(true);
                     milkJob.setAskForStop(false);
-                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceTrackExecution()));
+                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceTrackExecution()));
                     executeAnswer.listEvents.add(new BEvent(eventJobUpdated, "Job updated[" + milkJob.getName() + "]"));
                 }
                 milkReportEngine.reportOperation(executeAnswer.listEvents);
@@ -489,7 +489,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     detailsLogInfo.append( "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
 
                     milkJob.setAskForStop(true);
-                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getAskStop()));
+                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getAskStop()));
                     executeAnswer.listEvents.add(new BEvent(eventJobUpdated, "Job updated[" + milkJob.getName() + "]"));
                 }
                 milkReportEngine.reportOperation(executeAnswer.listEvents);
@@ -508,7 +508,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     detailsLogInfo.append( "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
 
                     milkJob.killJob( );
-                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceAllInformations()));
+                    executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceAllInformations()));
                     executeAnswer.listEvents.add(new BEvent(eventJobUpdated, "Job updated[" + milkJob.getName() + "]"));
                 }
                 executeAnswer.result.put(cstResultListJobs, getListMilkJobsMap(milkJobFactory));

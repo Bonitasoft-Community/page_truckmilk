@@ -8,7 +8,7 @@ import java.util.Map;
 
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
-import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SaveJobParameters;
+import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
 
 public class MilkJobFactory {
@@ -271,12 +271,12 @@ public class MilkJobFactory {
     /**
      * save a particular plug tour
      * 
-     * @param plugInTour
+     * @param milkJob
      * @param saveFileRead : this parameters can be saved only on special occasion, when the tour is updated by the administrator. In any other circumstance, it
      *        has to be protected.
      * @return
      */
-    public List<BEvent> dbSaveJob(MilkJob job, SaveJobParameters saveParameters) {
+    public List<BEvent> dbSaveJob(MilkJob job, SerializationJobParameters saveParameters) {
         return milkSerialize.dbSaveMilkJob(job, saveParameters);
     }
 

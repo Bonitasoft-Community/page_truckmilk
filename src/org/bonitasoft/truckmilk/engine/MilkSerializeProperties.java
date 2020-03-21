@@ -94,16 +94,22 @@ public class MilkSerializeProperties {
 
         //-----------------------  read the another information
 
-        String jsonStTrackExecution = (String) bonitaProperties.get(jobId.toString() + prefixPropertiesTrackExecution);
+        String jsonStTrackExecution = (String) bonitaProperties.get(jobId.toString() + CSTPREFIXPROPERTIES_TRACKEXECUTION);
         if (jsonStTrackExecution != null)
             milkJob.readTrackExecutionFromMap(getMapFromJsonSt( jsonStTrackExecution) );
 
+        
+        
+        String jsonStPointOfInterest = (String) bonitaProperties.get(jobId.toString() + CSTPREFIXPROPERTIES_POINTSOFINTEREST);
+        if (jsonStPointOfInterest != null)
+            milkJob.readPointOfInterestFromList(getListFromJsonSt( jsonStPointOfInterest) );
+
         // askstop has its own variable, so read it after the track execution
-        Object askStopObj = bonitaProperties.get(jobId.toString() + prefixPropertiesAskStop);
+        Object askStopObj = bonitaProperties.get(jobId.toString() + CSTPREFIXPROPERTIES_ASKSTOP);
         if (askStopObj != null)
             milkJob.setAskForStop( Boolean.valueOf(askStopObj.toString()));
 
-        String jsonStSavedExecution = (String) bonitaProperties.get(jobId.toString() + prefixPropertiesSavedExecution);
+        String jsonStSavedExecution = (String) bonitaProperties.get(jobId.toString() + CSTPREFIXPROPERTIES_SAVEDEXECUTION);
         if (jsonStSavedExecution != null)
             milkJob.readSavedExecutionFromList( getListFromJsonSt( jsonStSavedExecution) );
 
@@ -111,7 +117,7 @@ public class MilkSerializeProperties {
         PlugInDescription plugInDescription = milkJob.getPlugIn().getDescription();
         for (PlugInParameter parameter : plugInDescription.inputParameters) {
             if (parameter.typeParameter == TypeParameter.FILEWRITE || parameter.typeParameter == TypeParameter.FILEREADWRITE || parameter.typeParameter == TypeParameter.FILEREAD) {
-                milkJob.setParameterStream(parameter, bonitaProperties.getPropertyStream(milkJob.getId() + cstPrefixPropertiesStreamValue + parameter.name));
+                milkJob.setParameterStream(parameter, bonitaProperties.getPropertyStream(milkJob.getId() + CSTPREFIXPROPERTIES_STREAMVALUE + parameter.name));
             }
         }
         logger.fine(".getInstanceFromBonitaProperties end");
@@ -138,7 +144,7 @@ public class MilkSerializeProperties {
             // String plugInTourSt = (String) bonitaProperties.get(idTour);
             Long idTour = null;
             try {
-                if (idTourSt.endsWith(prefixPropertiesAskStop))
+                if (idTourSt.endsWith(CSTPREFIXPROPERTIES_ASKSTOP))
                     continue;
                 idTour = Long.valueOf(idTourSt);
             } catch (Exception e) {
@@ -229,7 +235,7 @@ public class MilkSerializeProperties {
 
         listEvents.addAll(bonitaProperties.loaddomainName(BONITAPROPERTIESDOMAIN));
         for (MilkJob milkJob : milkJobFactory.getMapJobsId().values()) {
-            dbSaveMilkJob(milkJob, SaveJobParameters.getInstanceAllInformations());
+            dbSaveMilkJob(milkJob, SerializationJobParameters.getInstanceAllInformations());
         }
         logger.info(".dbSaveAllJobs-end");
 
@@ -240,18 +246,19 @@ public class MilkSerializeProperties {
      * Do to asynchronous, when a user ask to stop, we must save it. In the same time, if the job report a parameters update, then we have to save it, but do
      * not override the previous update.
      */
-    public static class SaveJobParameters {
+    public static class SerializationJobParameters {
 
-        boolean saveFileRead = false;
-        boolean saveFileWrite = false;
-        boolean saveAskStop = false;
-        boolean saveTrackExecution = false;
+        boolean fileRead = false;
+        boolean fileWrite = false;
+        boolean askStop = false;
+        boolean trackExecution = false;
         boolean savedExecution = false;
         boolean saveBase = false;
+        boolean pointsOfInterest=false;
 
-        public static SaveJobParameters getInstanceTrackExecution() {
-            SaveJobParameters saveParameters = new SaveJobParameters();
-            saveParameters.saveTrackExecution = true;
+        public static SerializationJobParameters getInstanceTrackExecution() {
+            SerializationJobParameters saveParameters = new SerializationJobParameters();
+            saveParameters.trackExecution = true;
             return saveParameters;
         }
 
@@ -260,45 +267,46 @@ public class MilkSerializeProperties {
          * 
          * @return
          */
-        public static SaveJobParameters getInstanceAllInformations() {
-            SaveJobParameters saveParameters = new SaveJobParameters();
-            saveParameters.saveTrackExecution = true;
-            saveParameters.saveAskStop = true;
+        public static SerializationJobParameters getInstanceAllInformations() {
+            SerializationJobParameters saveParameters = new SerializationJobParameters();
+            saveParameters.trackExecution = true;
+            saveParameters.askStop = true;
             saveParameters.saveBase = true;
             return saveParameters;
         }
 
-        public static SaveJobParameters getInstanceEverything() {
-            SaveJobParameters saveParameters = new SaveJobParameters();
-            saveParameters.saveTrackExecution = true;
-            saveParameters.saveAskStop = true;
+        public static SerializationJobParameters getInstanceEverything() {
+            SerializationJobParameters saveParameters = new SerializationJobParameters();
+            saveParameters.trackExecution = true;
+            saveParameters.askStop = true;
             saveParameters.saveBase = true;
-            saveParameters.saveFileRead = true;
-            saveParameters.saveFileWrite = true;
+            saveParameters.fileRead = true;
+            saveParameters.fileWrite = true;
 
             return saveParameters;
         }
 
-        public static SaveJobParameters getInstanceStartExecutionJob() {
-            SaveJobParameters saveParameters = new SaveJobParameters();
-            saveParameters.saveTrackExecution = true;
+        public static SerializationJobParameters getInstanceStartExecutionJob() {
+            SerializationJobParameters saveParameters = new SerializationJobParameters();
+            saveParameters.trackExecution = true;
             saveParameters.savedExecution = false;
-            saveParameters.saveAskStop = true;
+            saveParameters.askStop = true;
             saveParameters.saveBase = false;
-            saveParameters.saveFileRead = false;
-            saveParameters.saveFileWrite = false;
+            saveParameters.fileRead = false;
+            saveParameters.fileWrite = false;
 
             return saveParameters;
         }
 
-        public static SaveJobParameters getInstanceEndExecutionJob() {
-            SaveJobParameters saveParameters = new SaveJobParameters();
-            saveParameters.saveTrackExecution = true;
+        public static SerializationJobParameters getInstanceEndExecutionJob() {
+            SerializationJobParameters saveParameters = new SerializationJobParameters();
+            saveParameters.trackExecution = true;
             saveParameters.savedExecution = true;
-            saveParameters.saveAskStop = true;
+            saveParameters.askStop = true;
             saveParameters.saveBase = false;
-            saveParameters.saveFileRead = false;
-            saveParameters.saveFileWrite = true;
+            saveParameters.fileRead = false;
+            saveParameters.fileWrite = true;
+            saveParameters.pointsOfInterest = true;
 
             return saveParameters;
         }
@@ -308,15 +316,15 @@ public class MilkSerializeProperties {
          * 
          * @return
          */
-        public static SaveJobParameters getBaseInformations() {
-            SaveJobParameters saveParameters = new SaveJobParameters();
+        public static SerializationJobParameters getBaseInformations() {
+            SerializationJobParameters saveParameters = new SerializationJobParameters();
             saveParameters.saveBase = true;
             return saveParameters;
         }
 
-        public static SaveJobParameters getAskStop() {
-            SaveJobParameters saveParameters = new SaveJobParameters();
-            saveParameters.saveAskStop = true;
+        public static SerializationJobParameters getAskStop() {
+            SerializationJobParameters saveParameters = new SerializationJobParameters();
+            saveParameters.askStop = true;
             return saveParameters;
         }
 
@@ -325,16 +333,17 @@ public class MilkSerializeProperties {
     /**
      * top let the properties purge only what is needed, each item must start by an unique name
      */
-    public static String prefixPropertiesBase = "";
-    private static String cstPrefixPropertiesStreamValue = "_s_";
+    private final static String CSTPREFIXPROPERTIES_BASE = "";
+    private final static String CSTPREFIXPROPERTIES_STREAMVALUE = "_s_";
 
-    public static String prefixPropertiesAskStop = "_askStop";
-    public static String prefixPropertiesTrackExecution = "_trackExec";
-    public static String prefixPropertiesSavedExecution = "_savedExecution";
+    private final static String CSTPREFIXPROPERTIES_ASKSTOP = "_askStop";
+    private final static String CSTPREFIXPROPERTIES_TRACKEXECUTION = "_trackExec";
+    private final static String CSTPREFIXPROPERTIES_SAVEDEXECUTION = "_savedExecution";
+    private final static String CSTPREFIXPROPERTIES_POINTSOFINTEREST = "pointofinterest";
 
     //  public static String prefixPropertiesTrackStream = "_stream";
 
-    public List<BEvent> dbSaveMilkJob(MilkJob milkJob, SaveJobParameters saveParameters) {
+    public List<BEvent> dbSaveMilkJob(MilkJob milkJob, SerializationJobParameters saveParameters) {
         List<BEvent> listEvents = new ArrayList<>();
 
         bonitaProperties.setCheckDatabase(false);
@@ -348,32 +357,38 @@ public class MilkSerializeProperties {
             mapContentParameter.savedExecution = false;
             mapContentParameter.trackExecution = false;
 
-            bonitaProperties.put(String.valueOf(milkJob.getId()) + prefixPropertiesBase, getJsonSt( milkJob.getMap(mapContentParameter)));
-            listKeys.add(milkJob.getId() + prefixPropertiesBase);
+            bonitaProperties.put(String.valueOf(milkJob.getId()) + CSTPREFIXPROPERTIES_BASE, getJsonSt( milkJob.getMap(mapContentParameter)));
+            listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_BASE);
         }
-        if (saveParameters.saveAskStop) {
-            bonitaProperties.put(String.valueOf(milkJob.getId()) + prefixPropertiesAskStop, milkJob.isAskedForStop());
-            listKeys.add(milkJob.getId() + prefixPropertiesAskStop);
+        if (saveParameters.askStop) {
+            bonitaProperties.put(String.valueOf(milkJob.getId()) + CSTPREFIXPROPERTIES_ASKSTOP, milkJob.isAskedForStop());
+            listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_ASKSTOP);
         }
         if (saveParameters.savedExecution) {
-            bonitaProperties.put(String.valueOf(milkJob.getId()) + prefixPropertiesSavedExecution, getJsonSt( milkJob.getMapListSavedExecution()));
-            listKeys.add(milkJob.getId() + prefixPropertiesSavedExecution);
+            bonitaProperties.put(String.valueOf(milkJob.getId()) + CSTPREFIXPROPERTIES_SAVEDEXECUTION, getJsonSt( milkJob.getMapListSavedExecution()));
+            listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_SAVEDEXECUTION);
         }
-        if (saveParameters.saveTrackExecution) {
-            bonitaProperties.put(String.valueOf(milkJob.getId()) + prefixPropertiesTrackExecution, getJsonSt( milkJob.getTrackExecution()) );
-            listKeys.add(milkJob.getId() + prefixPropertiesTrackExecution);
+        if (saveParameters.trackExecution) {
+            bonitaProperties.put(String.valueOf(milkJob.getId()) + CSTPREFIXPROPERTIES_TRACKEXECUTION, getJsonSt( milkJob.getTrackExecution()) );
+            listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_TRACKEXECUTION);
         }
+        
+        if (saveParameters.pointsOfInterest) {
+            bonitaProperties.put(String.valueOf(milkJob.getId()) + CSTPREFIXPROPERTIES_POINTSOFINTEREST, getJsonSt( milkJob.getListPointsOfInterest()) );
+            listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_POINTSOFINTEREST);
+        }
+        
         // save all
         PlugInDescription plugInDescription = milkJob.getPlugIn().getDescription();
         for (PlugInParameter parameter : plugInDescription.inputParameters) {
             boolean saveFile = false;
-            if (saveParameters.saveFileWrite && (parameter.typeParameter == TypeParameter.FILEWRITE || parameter.typeParameter == TypeParameter.FILEREADWRITE))
+            if (saveParameters.fileWrite && (parameter.typeParameter == TypeParameter.FILEWRITE || parameter.typeParameter == TypeParameter.FILEREADWRITE))
                 saveFile = true;
-            if (saveParameters.saveFileRead && (parameter.typeParameter == TypeParameter.FILEREADWRITE || parameter.typeParameter == TypeParameter.FILEREAD))
+            if (saveParameters.fileRead && (parameter.typeParameter == TypeParameter.FILEREADWRITE || parameter.typeParameter == TypeParameter.FILEREAD))
                 saveFile = true;
             if (saveFile) {
-                bonitaProperties.setPropertyStream(milkJob.getId() + cstPrefixPropertiesStreamValue + parameter.name, milkJob.getParameterStream(parameter));
-                listKeys.add(milkJob.getId() + cstPrefixPropertiesStreamValue + parameter.name);
+                bonitaProperties.setPropertyStream(milkJob.getId() + CSTPREFIXPROPERTIES_STREAMVALUE + parameter.name, milkJob.getParameterStream(parameter));
+                listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_STREAMVALUE + parameter.name);
             }
         }
         logger.fine(".dbSaveJob-begin keys=" + listKeys.toString());
@@ -436,9 +451,9 @@ public class MilkSerializeProperties {
 
         // remove(pluginTour.getId() does not work, so let's compare the key
         Set<String> listKeys = new HashSet<String>();
-        listKeys.add(milkJob.getId() + prefixPropertiesBase);
-        listKeys.add(milkJob.getId() + prefixPropertiesAskStop);
-        listKeys.add(milkJob.getId() + prefixPropertiesTrackExecution);
+        listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_BASE);
+        listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_ASKSTOP);
+        listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_TRACKEXECUTION);
 
         for (String key : listKeys)
             bonitaProperties.remove(key);

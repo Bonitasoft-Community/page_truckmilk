@@ -19,8 +19,10 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
@@ -63,8 +65,8 @@ public class MilkPurgeArchive extends MilkPlugIn {
 
 
     @Override
-    public PlugTourOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
+    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         long maximumDeletionInCases = jobExecution.getInputLongParameter(cstParamMaximumDeletionInCases);
         if (maximumDeletionInCases > 10000)
@@ -154,6 +156,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
         PlugInDescription plugInDescription = new PlugInDescription();
         plugInDescription.name = "PurgeArchivedCase";
         plugInDescription.label = "Purge Archived Case";
+        plugInDescription.category = CATEGORY.CASES;
         plugInDescription.description = "Purge all archived case according the filter. Filter based on different process, and purge cases older than the delai. At each round, a maximum case are deleted. If the maximum is over than 20, it's reduce to 20.";
         plugInDescription.addParameter(cstParamDelayInDay);
         plugInDescription.addParameter(cstParamMaximumDeletionInCases);

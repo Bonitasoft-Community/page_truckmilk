@@ -17,6 +17,8 @@ import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
@@ -60,18 +62,18 @@ public class MilkDeleteCases extends MilkPlugIn {
      * check the environment : for the deleteCase, nothing is required
      */
     public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
-        return new ArrayList<BEvent>();
+        return new ArrayList<>();
     };
 
     @Override
     public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
         // is the command Exist ? 
-        return new ArrayList<BEvent>();
+        return new ArrayList<>();
     }
 
     @Override
-    public PlugTourOutput execute(MilkJobExecution input, APIAccessor apiAccessor) {
-        PlugTourOutput plugTourOutput = input.getPlugTourOutput();
+    public MilkJobOutput execute(MilkJobExecution input, APIAccessor apiAccessor) {
+        MilkJobOutput plugTourOutput = input.getMilkJobOutput();
 
         ProcessAPI processAPI = apiAccessor.getProcessAPI();
         // get Input 
@@ -164,6 +166,7 @@ public class MilkDeleteCases extends MilkPlugIn {
     public PlugInDescription getDefinitionDescription() {
         PlugInDescription plugInDescription = new PlugInDescription();
         plugInDescription.name = "DeleteCases";
+        plugInDescription.category = CATEGORY.CASES;
         plugInDescription.label = "Delete Cases (active and archived)";
         plugInDescription.description = "Delete all cases in the given process, by a limitation given in parameters";
         plugInDescription.addParameter(cstParamMaximumDeletion);

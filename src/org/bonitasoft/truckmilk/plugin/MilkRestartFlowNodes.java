@@ -12,6 +12,8 @@ import org.bonitasoft.engine.bpm.flownode.FlowNodeExecutionException;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
@@ -23,12 +25,12 @@ public class MilkRestartFlowNodes  extends MilkPlugIn {
 
     static MilkLog logger = MilkLog.getLogger(MilkRestartFlowNodes.class.getName());
 
-    private final static BEvent EVENT_ERROR_EXECUTEFLOWNODE = new BEvent(MilkRestartFlowNodes.class.getName(), 1,
+    private final static BEvent eventErrorExecuteFlownode = new BEvent(MilkRestartFlowNodes.class.getName(), 1,
             Level.APPLICATIONERROR,
             "Error executed a flow node", "Executing a flow node failed", "Flow node is not restarted",
             "Check exception");
     
-    private final static BEvent EVENT_ERROR_NORADAR_WORKER = new BEvent(MilkRestartFlowNodes.class.getName(), 2,
+    private final static BEvent eventErrorNoRadarWorker = new BEvent(MilkRestartFlowNodes.class.getName(), 2,
             Level.ERROR,
             "No radar Worker found", "A radar definition is missing", "Flow nodes to restart can't be detected",
             "Check exception");
@@ -49,14 +51,15 @@ public class MilkRestartFlowNodes  extends MilkPlugIn {
         PlugInDescription plugInDescription = new PlugInDescription();
         plugInDescription.name = "ReplayFlowNodes";
         plugInDescription.label = "Replay (Stuck) Flow Nodes";
+        plugInDescription.category = CATEGORY.TASKS;
         plugInDescription.description = "Check all flow nodes in the database, and if this number is over the number of Pending flownodes, restart them";
         plugInDescription.addParameter(cstParamNumberOfFlowNodesToRestart);
         return plugInDescription;
         }
 
     @Override
-    public PlugTourOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
+    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
         
         ProcessAPI processAPI = apiAccessor.getProcessAPI();
         
@@ -67,7 +70,7 @@ public class MilkRestartFlowNodes  extends MilkPlugIn {
         RadarWorkers radarWorkers = (RadarWorkers) radarFactory.getRadars(RadarWorkers.CLASS_RADAR_NAME);
         if (radarWorkers==null)
         {
-            plugTourOutput.addEvent(new BEvent(EVENT_ERROR_NORADAR_WORKER, "Radar Worker["+RadarWorkers.CLASS_RADAR_NAME+"] not found"));
+            plugTourOutput.addEvent(new BEvent(eventErrorNoRadarWorker, "Radar Worker["+RadarWorkers.CLASS_RADAR_NAME+"] not found"));
             plugTourOutput.executionStatus =ExecutionStatus.ERROR;
             return plugTourOutput;
             
@@ -104,7 +107,7 @@ ORDER BY id;
                 
                 // the flow node may notexist, because a worker executed it in the mean time
                 oneErrorDetected=true;
-                plugTourOutput.addEvent(new BEvent(EVENT_ERROR_EXECUTEFLOWNODE, "FlowNodeId["+flowNodeId+"] caseId["+rootContainerId+"]"));
+                plugTourOutput.addEvent(new BEvent(eventErrorExecuteFlownode, "FlowNodeId["+flowNodeId+"] caseId["+rootContainerId+"]"));
 
             }
         }

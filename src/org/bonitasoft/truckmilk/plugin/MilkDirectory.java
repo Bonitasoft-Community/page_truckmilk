@@ -12,6 +12,7 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.mapper.Mapper;
 import org.bonitasoft.truckmilk.mapper.Mapper.MAPPER_POLICY;
@@ -60,8 +61,8 @@ public class MilkDirectory extends MilkPlugIn {
     };
 
     @Override
-    public PlugTourOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
+    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
         try {
             String csvPolicy = jobExecution.getInputStringParameter(cstParamCsvFilePolicy);
             String csvSeparator = jobExecution.getInputStringParameter(cstParamCsvSeparator);

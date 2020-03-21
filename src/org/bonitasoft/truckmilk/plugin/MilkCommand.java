@@ -12,6 +12,7 @@ import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.CommandAPI;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 
 /* ******************************************************************************** */
@@ -72,8 +73,8 @@ public class MilkCommand extends MilkPlugIn {
      * execution of the job. Just calculated the result according the parameters, and return it.
      */
     @Override
-    public PlugTourOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
+    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         // if the date has to be added in the result ?
         String commandName = jobExecution.getInputStringParameter(cstParamCommandName);

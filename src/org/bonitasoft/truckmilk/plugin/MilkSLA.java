@@ -46,7 +46,9 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.PlaceHolder;
@@ -333,9 +335,9 @@ public class MilkSLA extends MilkPlugIn {
     /* ******************************************************************************** */
 
     @Override
-    public PlugTourOutput execute(MilkJobExecution input, APIAccessor apiAccessor) {
+    public MilkJobOutput execute(MilkJobExecution input, APIAccessor apiAccessor) {
 
-        PlugTourOutput plugTourOutput = executeSLA(input, null, apiAccessor);
+        MilkJobOutput plugTourOutput = executeSLA(input, null, apiAccessor);
         plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
         return plugTourOutput;
     }
@@ -345,6 +347,7 @@ public class MilkSLA extends MilkPlugIn {
         PlugInDescription plugInDescription = new PlugInDescription();
         plugInDescription.name = "SLA";
         plugInDescription.label = "SLA";
+        plugInDescription.category = CATEGORY.TASKS;
         plugInDescription.explanation = "Verify the SLA on human task, then notify if we reach some level like 75% of the task duration, of 100%. Can re-affect the task to a different user if needed.<br>";
         plugInDescription.explanation += " <i>ProcessName</i> : if empty, then rule apply for all processes<br>";
         plugInDescription.explanation += " <i>Rule SLA</i><br> ";
@@ -425,7 +428,7 @@ public class MilkSLA extends MilkPlugIn {
                 listEvents.add(eventCaseIDNotSet);
                 return listEvents;
             }
-            PlugTourOutput plugTourOutput = executeSLA(input, caseId, apiAccessor);
+            MilkJobOutput plugTourOutput = executeSLA(input, caseId, apiAccessor);
             return plugTourOutput.getListEvents();
         }
         // unkonw test
@@ -453,12 +456,12 @@ public class MilkSLA extends MilkPlugIn {
         }
     }
 
-    public PlugTourOutput executeSLA(MilkJobExecution jobExecution, Long analysisCaseId, APIAccessor apiAccessor) {
+    public MilkJobOutput executeSLA(MilkJobExecution jobExecution, Long analysisCaseId, APIAccessor apiAccessor) {
         CollectAnalysisExecution collectAnalysisExecution = new CollectAnalysisExecution();
         collectAnalysisExecution.caseId = analysisCaseId;
         collectAnalysisExecution.isActive = analysisCaseId != null;
 
-        PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
+        MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
         ProcessAPI processAPI = apiAccessor.getProcessAPI();
         IdentityAPI identityAPI = apiAccessor.getIdentityAPI();
         // get Input 

@@ -25,8 +25,10 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
@@ -48,7 +50,7 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
     private static BEvent eventSynthesisReport = new BEvent(MilkPurgeArchivedListGetList.class.getName(), 3, Level.INFO,
             "Report Synthesis", "Result of search", "", "");
 
-    private static PlugInParameter cstParamDelayInDay = PlugInParameter.createInstance("delayinday", "Delai in days", TypeParameter.DELAY, MilkPlugInToolbox.DELAYSCOPE.YEAR + ":1", "Only cases archived before this delay are in the perimeter");
+    private static PlugInParameter cstParamDelayInDay = PlugInParameter.createInstance("delayinday", "Delay", TypeParameter.DELAY, MilkPlugInToolbox.DELAYSCOPE.YEAR + ":1", "Only cases archived before this delay are in the perimeter");
     private static PlugInParameter cstParamMaximumInReport = PlugInParameter.createInstance("maximuminreport", "Maximum in report", TypeParameter.LONG, 10000L, "Job stops when then number of case to delete reach this limit, in order to not create a very huge file");
     private static PlugInParameter cstParamMaximumInMinutes = PlugInParameter.createInstance("maximuminminutes", "Maximum in minutes", TypeParameter.LONG, 3L, "Job stops when the execution reach this limit, in order to not overload the server.");
     private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Process filter", TypeParameter.ARRAYPROCESSNAME, null, "Only processes in the list will be in the perimeter. No filter means all processes will be in the perimeter. Tips: give 'processName;version' to specify a special version of the process, else all versions of the process are processed");
@@ -78,8 +80,8 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
     }
 
     @Override
-    public PlugTourOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
+    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         ProcessAPI processAPI = apiAccessor.getProcessAPI();
         // get Input 
@@ -194,6 +196,7 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
         PlugInDescription plugInDescription = new PlugInDescription();
         plugInDescription.name = "ListPurgeCase";
         plugInDescription.label = "Purge Archived Cases: get List (no purge)";
+        plugInDescription.category = CATEGORY.CASES;
         plugInDescription.description = "Calculate the list of case to be purge, and update the report with the list (CSV Format).";
         plugInDescription.addParameter(cstParamDelayInDay);
         plugInDescription.addParameter(cstParamMaximumInReport);

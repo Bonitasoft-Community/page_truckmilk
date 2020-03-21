@@ -88,6 +88,21 @@
 		// getListPlugin
 		// -----------------------------------------------------------------------------------------
 
+		this.plugin = { 'showCases' : true, 'showTasks':true, 'showMonitor':true, 'showOthers':true};
+
+		this.displayPlugIn = function (plugIn ) {
+			if (plugIn.category === "CASES" && this.plugin.showCases)
+				return true;
+			if (plugIn.category === "TASKS" && this.plugin.showTasks)
+				return true;
+			if (plugIn.category === "MONITOR" && this.plugin.showMonitor)
+				return true;
+			
+			if (plugIn.category === "OTHER" && this.plugin.showOthers)
+				return true;
+			return false;
+		}
+		
 		this.getListPlugIn = function() {
 			// console.log("getListPlugIn:Start (r/o)");
 			return this.listplugin;

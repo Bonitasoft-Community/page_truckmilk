@@ -14,11 +14,9 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory.MilkFactoryOp;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.ExecutionStatus;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugTourOutput;
-import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SaveJobParameters;
+import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
-import org.bonitasoft.truckmilk.schedule.MilkSchedulerFactory;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 /**
@@ -103,7 +101,7 @@ public class MilkExecuteJobThread extends Thread {
                 executionDescription.append( "  *** STARTED *** ;");
                 this.start();
             } else if (saveJob) {
-                milkJob.milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceStartExecutionJob());
+                milkJob.milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceStartExecutionJob());
 
             }
                 
@@ -128,7 +126,7 @@ public class MilkExecuteJobThread extends Thread {
 
         // logger.info("synchronizeClusterDoubleStart StartJob - instantiationHost [" + ip.getHostAddress() + "]");
 
-        milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceTrackExecution());
+        milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceTrackExecution());
 
         try {
             Thread.sleep(2L * 1000L);
@@ -154,7 +152,7 @@ public class MilkExecuteJobThread extends Thread {
         
         List<BEvent> listEvents = new ArrayList<>();
         MilkPlugIn plugIn = milkJob.getPlugIn();
-        PlugTourOutput output = null;
+        MilkJobOutput output = null;
         try {
             String hostName = "";
             try {
@@ -175,7 +173,7 @@ public class MilkExecuteJobThread extends Thread {
 
                 // save the status in the database
                 // save the start Status (so general) and the track Status, plus askStop to false
-                listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceStartExecutionJob()));
+                listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceStartExecutionJob()));
 
                 output = plugIn.execute(milkJobExecution, connectorAccessorAPI);
                 
@@ -199,7 +197,7 @@ public class MilkExecuteJobThread extends Thread {
                 String exceptionDetails = sw.toString();
                 logger.severe(" Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + e.getMessage() + " at " + exceptionDetails);
                 if (output == null) {
-                    output = new PlugTourOutput(milkJob);
+                    output = new MilkJobOutput(milkJob);
                     output.addEvent(new BEvent(eventPlugInViolation, "Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + e.getMessage() + " at " + exceptionDetails));
                     output.executionStatus = ExecutionStatus.CONTRACTVIOLATION;
                 }
@@ -209,7 +207,7 @@ public class MilkExecuteJobThread extends Thread {
                 String exceptionDetails = sw.toString();
                 logger.severe(" Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + er.getMessage() + " at " + exceptionDetails);
                 if (output == null) {
-                    output = new PlugTourOutput(milkJob);
+                    output = new MilkJobOutput(milkJob);
                     output.addEvent(new BEvent(eventPlugInViolation, "Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + er.getMessage() + " at " + exceptionDetails));
                     output.executionStatus = ExecutionStatus.CONTRACTVIOLATION;
                 }
@@ -220,10 +218,14 @@ public class MilkExecuteJobThread extends Thread {
 
             output.executionTimeInMs = (timeEnd - timeBegin);
 
+            output.addPointOfInterest("timeexecution", output.executionTimeInMs);
+            output.addPointOfInterest("nbitems", output.nbItemsProcessed);
+            
+            milkJob.addPointsOfInterest( new Date(), output.getPointsOfInterest());
             // executionDescription += "(" + output.executionStatus + ") " + output.nbItemsProcessed + " in " + output.executionTimeInMs + ";";
 
         } catch (Exception e) {
-            output = new PlugTourOutput(milkJob);
+            output = new MilkJobOutput(milkJob);
             output.addEvent(new BEvent(eventPlugInError, e, "PlugIn[" + plugIn.getName() + "]"));
             output.executionStatus = ExecutionStatus.ERROR;
             logger.severe(" Execution error " + e.getMessage());
@@ -245,7 +247,7 @@ public class MilkExecuteJobThread extends Thread {
         milkJob.setAskForStop(false);
         milkJob.setInExecution(false); // double check the end
 
-        listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SaveJobParameters.getInstanceEndExecutionJob()));
+        listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceEndExecutionJob()));
 
         // hum, nothing where to save the listEvent of the execution.
     }

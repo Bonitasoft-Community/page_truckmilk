@@ -25,7 +25,9 @@ import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 
 import groovy.time.TimeCategory;
@@ -97,6 +99,7 @@ public class MilkUnassignTasks extends MilkPlugIn {
         PlugInDescription plugInDescription = new PlugInDescription();
 
         plugInDescription.name = "Unassign Tasks";
+        plugInDescription.category = CATEGORY.TASKS;
         plugInDescription.description = "Unassign tasks if not resolved after a specified time.";
         plugInDescription.label = "Unassign Tasks";
         plugInDescription.addParameter(cstParamProcessName);
@@ -109,8 +112,8 @@ public class MilkUnassignTasks extends MilkPlugIn {
      * execution of the job. Just calculated the result according the parameters, and return it.
      */
     @Override
-    public PlugTourOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
+    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+        MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         // task name is required
         String taskNameList = jobExecution.getInputStringParameter(cstParamTaskName);

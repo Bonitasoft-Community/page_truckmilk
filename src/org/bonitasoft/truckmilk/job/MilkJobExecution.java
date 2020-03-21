@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugTourOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
-import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SaveJobParameters;
+import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.plugin.MilkSLA;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
@@ -42,8 +42,8 @@ public class MilkJobExecution {
         this.tenantId = tenantId;
     }
 
-    public PlugTourOutput getPlugTourOutput() {
-        return new PlugTourOutput(milkJob);
+    public MilkJobOutput getMilkJobOutput() {
+        return new MilkJobOutput(milkJob);
     }
 
     /**
@@ -271,7 +271,7 @@ public class MilkJobExecution {
                 milkJob.setEndTimeEstimatedInMs( milkJob.getTotalTimeEstimatedInMs() - timeExecution );
                 milkJob.setEndDateEstimated( new Date(milkJob.getEndTimeEstimatedInMs() + startTimeMs));
                 // save the current advancement
-                SaveJobParameters saveParameters = SaveJobParameters.getInstanceTrackExecution();
+                SerializationJobParameters saveParameters = SerializationJobParameters.getInstanceTrackExecution();
                 milkJob.milkJobFactory.dbSaveJob(milkJob, saveParameters);
             }
         }

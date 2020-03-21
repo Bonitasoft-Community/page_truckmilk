@@ -5,7 +5,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +19,8 @@ import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.CSVOperation;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
@@ -81,9 +82,9 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
     }
 
     @Override
-    public PlugTourOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
 
-        PlugTourOutput plugTourOutput = jobExecution.getPlugTourOutput();
+        MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         long beginExecution = System.currentTimeMillis();
         
@@ -224,6 +225,7 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
         PlugInDescription plugInDescription = new PlugInDescription();
         plugInDescription.name = "PurgeCaseFromList";
         plugInDescription.label = "Purge Archived Cases: Purge from list";
+        plugInDescription.category = CATEGORY.CASES;
         plugInDescription.description = "Get a CSV File as input. Then, delete all case in the list where the column status ewuals DELETED";
         plugInDescription.addParameter(cstParamMaximumDeletionInCase);
         plugInDescription.addParameter(cstParamMaximumDeletionInMinutes);
@@ -236,54 +238,7 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
         return plugInDescription;
     }
 
-    /**
-     * @param header
-     * @param line
-     * @return
-     */
-    private Map<String, String> getMap(String[] header, String line, String separatorCSV) {
-        Map<String, String> record = new HashMap<>();
-        // don't use a StringTokenizer : if the line contains ;; for an empty information, StringTokenizer will merge the two separator
-
-        List<String> listString = getStringTokenizerPlus(line, separatorCSV);
-        for (int i = 0; i < header.length; i++) {
-            record.put(header[i], i < listString.size() ? listString.get(i) : null);
-        }
-        return record;
-    }
-
-    /**
-     * @param line
-     * @param charSeparator
-     * @return
-     */
-    private List<String> getStringTokenizerPlus(String line, final String charSeparator) {
-        final List<String> list = new ArrayList<>();
-        int index = 0;
-        if (line == null || line.length() == 0) {
-            return list;
-        }
-        // now remove all empty string at the end of the list (keep the minimal)
-        // then if string is "hello;this;;is;the;word;;;;"
-        // line is reduce to "hello;this;;is;the;word"
-        // nota : if the line is
-        // then if string is "hello;this;;is;the;word;; ;;"
-        // then "hello;this;;is;the;word;; "
-        while (line.endsWith(";"))
-            line = line.substring(0, line.length() - 1);
-        while (index != -1) {
-            final int nextPost = line.indexOf(charSeparator, index);
-            if (nextPost == -1) {
-                list.add(line.substring(index));
-                break;
-            } else {
-                list.add(line.substring(index, nextPost));
-            }
-            index = nextPost + 1;
-        }
-
-        return list;
-    }
+   
 
     /**
      * methid processAPI.deleteArchivedProcessInstancesInAllStates(sourceProcessInstanceIds) is very long, even if there are nothing to purge

@@ -1,9 +1,7 @@
 package org.bonitasoft.truckmilk.engine;
 
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,11 +17,13 @@ import org.bonitasoft.engine.search.SearchOptionsBuilder;
 import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
-import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.plugin.MilkPurgeArchive;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
+import org.bonitasoft.truckmilk.toolbox.TypesCast;
 import org.json.simple.JSONValue;
+
+import com.sun.xml.bind.v2.util.TypeCast;
 
 /* ******************************************************************************** */
 /*                                                                                  */
@@ -33,12 +33,10 @@ import org.json.simple.JSONValue;
  * All plugin must extends this class.
  * Then, a new plugin will be deployed as a command in the BonitaEngine, in order
  * to be called on demand by the MilkCmdControl.
- * 
- *  -------------------------- IMPORTANT
+ * -------------------------- IMPORTANT
  * Register the embeded plug in in MilkPlugInFactory.collectListPlugIn()
  * Remark: MilkCmdControl is the command who control all plugin execution.
  * --------------------------------
- * 
  * Multiple PlugTour can be define for each PlugIn
  * * Example: plugIn 'monitorEmail'
  * - plugTour "HumanRessourceEmail" / Every day / Monitor 'hr@bonitasoft.com'
@@ -68,7 +66,6 @@ public abstract class MilkPlugIn {
 
     public final static MilkLog logger = MilkLog.getLogger(MilkPlugIn.class.getName());
 
-   
     /**
      * the base keep the description available.
      * To be sure this is correclty initialised, the factoryPlugIn, who create object, call the
@@ -157,19 +154,20 @@ public abstract class MilkPlugIn {
     }
 
     /**
-     * PROCESSNAME : user will have a autocomplete list to select a process + version in existing process. Use MilkPlugInToolbox.completeListProcess() to collect the SearchOptionBuilder()
+     * PROCESSNAME : user will have a autocomplete list to select a process + version in existing process. Use MilkPlugInToolbox.completeListProcess() to
+     * collect the SearchOptionBuilder()
      * ARRAYPROCESSNAME : same, but with an array of process. Use completeListProcess() to collect the SearchOptionBuilder()
-
      * ARRAY : an array on String
      * ARRAYMAP : then the arrayMapDescription has to be given
-     * DELAY : format is <SCOPE>:VALUE. SCOPE are YEAR, MONTH, WEEK, DAY, HOUS, MN. Example: DAY:32. use MilkPlugInToolbox.getTimeFromDelay() to get the TimeStamp value 
+     * DELAY : format is <SCOPE>:VALUE. SCOPE are YEAR, MONTH, WEEK, DAY, HOUS, MN. Example: DAY:32. use MilkPlugInToolbox.getTimeFromDelay() to get the
+     * TimeStamp value
      * FILEREAD : the plug in access this parameters in READ ONLY. Administrator is suppose to give
      * the file then.
      * FILEWRITE: the plug in write the file. Administrator can download it only
      * FILEREADWRITE : plug in and administrator can read and write the file
      */
     public enum TypeParameter {
-        USERNAME, PROCESSNAME, ARRAYPROCESSNAME, STRING, TEXT, DELAY, JSON, LONG, OBJECT, ARRAY,  BOOLEAN, ARRAYMAP, BUTTONARGS, FILEREAD, FILEWRITE, FILEREADWRITE, LISTVALUES, SEPARATOR
+        USERNAME, PROCESSNAME, ARRAYPROCESSNAME, STRING, TEXT, DELAY, JSON, LONG, OBJECT, ARRAY, BOOLEAN, ARRAYMAP, BUTTONARGS, FILEREAD, FILEWRITE, FILEREADWRITE, LISTVALUES, SEPARATOR
     };
 
     public static class ColDefinition {
@@ -329,7 +327,7 @@ public abstract class MilkPlugIn {
             }
             if (MilkPlugIn.TypeParameter.LISTVALUES.equals(typeParameter)) {
                 map.put("listValues", Arrays.asList(listValues));
-                
+
             }
 
             if (MilkPlugIn.TypeParameter.BUTTONARGS.equals(typeParameter)) {
@@ -437,8 +435,8 @@ public abstract class MilkPlugIn {
         return (description == null ? this.getClass().getName() : description.name);
     }
 
-    public final static String CSTJSON_DISPLAYNAME="displayname";
-    
+    public final static String CSTJSON_DISPLAYNAME = "displayname";
+
     /**
      * describe the plug in
      * 
@@ -447,7 +445,7 @@ public abstract class MilkPlugIn {
     public Map<String, Object> getMap() {
         Map<String, Object> result = new HashMap<>();
         result.put("name", description == null ? null : description.name);
-        result.put( CSTJSON_DISPLAYNAME, description == null ? null : description.label);
+        result.put(CSTJSON_DISPLAYNAME, description == null ? null : description.label);
         result.put("description", description == null ? null : description.description);
         result.put("embeded", typePlugIn == TYPE_PLUGIN.EMBEDED);
         result.put("local", typePlugIn == TYPE_PLUGIN.LOCAL);
@@ -507,67 +505,7 @@ public abstract class MilkPlugIn {
         BADCONFIGURATION
     }
 
-    public static class PlugTourOutput {
-
-        public Date executionDate = new Date();
-        /**
-         * main result of the execution is a list of Events and the status.
-         * Null until a new execution is started
-         */
-        private List<BEvent> listEvents = new ArrayList<BEvent>();
-
-        // the listEvents is saved in the St
-        public String listEventsSt = "";
-        /**
-         * give a simple status execution.
-         */
-        public ExecutionStatus executionStatus = ExecutionStatus.NOEXECUTION;
-
-        /** save the time need to the execution */
-        public Long executionTimeInMs;
-
-        public MilkJob plugInTour;
-
-        public String explanation;
-
-        /**
-         * host name where execution was done
-         */
-        public String hostName;
-        /*
-         * return as information, how many item the plug in managed
-         */
-        public long nbItemsProcessed = 0;
-
-        // if you have a PlugInTourInput, create the object from this
-        public PlugTourOutput(MilkJob plugInTour) {
-            this.plugInTour = plugInTour;
-        }
-
-        public void addEvent(BEvent event) {
-            listEvents.add(event);
-        }
-
-        public void addEvents(List<BEvent> events) {
-            listEvents.addAll(events);
-        }
-
-        public List<BEvent> getListEvents() {
-            return listEvents;
-        }
-
-        public void setNbItemsProcessed( int nbItemsProcessed) {
-            this.nbItemsProcessed= nbItemsProcessed;
-        }
-        public void setParameterStream(PlugInParameter param, InputStream stream) {
-            if (param.typeParameter == TypeParameter.FILEWRITE || param.typeParameter == TypeParameter.FILEREADWRITE) {
-                // update the PLUGIN parameters
-                plugInTour.setParameterStream(param, stream);
-            } else {
-                logger.severe("setParameterStream not allowed on parameter[" + param.name + "] (plugin " + plugInTour.getName() + "]");
-            }
-        }
-    }
+    
 
     /* ******************************************************************************** */
     /*                                                                                  */
@@ -583,7 +521,7 @@ public abstract class MilkPlugIn {
      */
     public abstract PlugInDescription getDefinitionDescription();
 
-    public abstract PlugTourOutput execute(MilkJobExecution input, APIAccessor apiAccessor);
+    public abstract MilkJobOutput execute(MilkJobExecution input, APIAccessor apiAccessor);
 
     /**
      * this method can be override by the plug in if it create a button "BUTTONPARAMETERS"
@@ -594,10 +532,5 @@ public abstract class MilkPlugIn {
     public List<BEvent> buttonParameters(String buttonName, MilkJobExecution input, Map<String, Object> argsParameters, APIAccessor apiAccessor) {
         return new ArrayList<>();
     }
-
-   
-    
-    
-   
 
 }
