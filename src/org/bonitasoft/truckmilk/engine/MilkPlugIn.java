@@ -6,24 +6,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.swing.text.html.HTMLDocument.HTMLReader.ParagraphAction;
-
 import org.bonitasoft.engine.api.APIAccessor;
-import org.bonitasoft.engine.api.ProcessAPI;
-import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfo;
-import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfoSearchDescriptor;
-import org.bonitasoft.engine.exception.SearchException;
-import org.bonitasoft.engine.search.SearchOptionsBuilder;
-import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
-import org.bonitasoft.truckmilk.plugin.MilkPurgeArchive;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
-import org.bonitasoft.truckmilk.toolbox.TypesCast;
-import org.json.simple.JSONValue;
 
-import com.sun.xml.bind.v2.util.TypeCast;
+import lombok.Data;
 
 /* ******************************************************************************** */
 /*                                                                                  */
@@ -55,7 +45,7 @@ import com.sun.xml.bind.v2.util.TypeCast;
 
 public abstract class MilkPlugIn {
 
-    public static BEvent EVENT_UNKNOW_BUTTON = new BEvent(MilkPlugIn.class.getName(), 1,
+    public final static BEvent eventUnknowButton = new BEvent(MilkPlugIn.class.getName(), 1,
             Level.ERROR,
             "Unknow button", "A button is executed, but no action is known for this button", "No action executed.",
             "Check error");
@@ -64,14 +54,16 @@ public abstract class MilkPlugIn {
             "Error during plugin execution", "An error is detected", "No action executed.",
             "Check error");
 
-    public final static MilkLog logger = MilkLog.getLogger(MilkPlugIn.class.getName());
+    private final static MilkLog logger = MilkLog.getLogger(MilkPlugIn.class.getName());
+
+
 
     /**
      * the base keep the description available.
      * To be sure this is correclty initialised, the factoryPlugIn, who create object, call the
      * initialise after
      */
-    private PlugInDescription description;
+    private MilkPlugInDescription description;
 
     /* ******************************************************************************** */
     /*                                                                                  */
@@ -89,7 +81,7 @@ public abstract class MilkPlugIn {
 
     public enum TYPE_PLUGIN {
         EMBEDED, LOCAL, COMMAND
-    };
+    }
 
     private TYPE_PLUGIN typePlugIn;
 
@@ -101,7 +93,7 @@ public abstract class MilkPlugIn {
         this.typePlugIn = typePlugIn;
     }
 
-    public PlugInDescription getDescription() {
+    public MilkPlugInDescription getDescription() {
         return description;
     }
 
@@ -116,22 +108,20 @@ public abstract class MilkPlugIn {
     };
 
     /**
-     * check the PLUG IN environnement, not the MilkJob environement
+     * check the PLUG IN environment, not the MilkJob environment
+     * @param jobExecution 
      * 
-     * @param tenantid
-     * @param apiAccessor
      * @return
      */
-    public abstract List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor);
+    public abstract List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution);
 
     /**
      * check the JOB environnement, with the job parameters
      * 
      * @param jobExecution
-     * @param apiAccessor
      * @return
      */
-    public abstract List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor);
+    public abstract List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution);
 
     /**
      * Initialise. This method is call by the Factory, after the object is created.
@@ -168,7 +158,7 @@ public abstract class MilkPlugIn {
      */
     public enum TypeParameter {
         USERNAME, PROCESSNAME, ARRAYPROCESSNAME, STRING, TEXT, DELAY, JSON, LONG, OBJECT, ARRAY, BOOLEAN, ARRAYMAP, BUTTONARGS, FILEREAD, FILEWRITE, FILEREADWRITE, LISTVALUES, SEPARATOR
-    };
+    }
 
     public static class ColDefinition {
 
@@ -350,82 +340,26 @@ public abstract class MilkPlugIn {
         }
     }
 
-    public static class PlugInDescription {
-
+    public static @Data class PlugInMesure {
         public String name;
-        public String version;
         public String label;
-
-        public static enum CATEGORY {
-            TASKS, CASES, MONITOR, OTHER
-        };
-
-        public CATEGORY category = CATEGORY.OTHER;
-        /**
-         * description is give by the user, to override it
-         */
-        public String description;
-        /**
-         * explanatino is given by the plug in, user can't change it
-         */
         public String explanation;
-        public List<PlugInParameter> inputParameters = new ArrayList<>();
-        public List<PlugInParameter> analysisParameters = new ArrayList<>();
-
-        public String cronSt = "0 0/10 * 1/1 * ? *"; // every 10 mn
-
-        public void addParameter(PlugInParameter parameter) {
-            inputParameters.add(parameter);
+        
+        public static PlugInMesure createInstance(String name, String label, String explanation ) {
+            PlugInMesure plugInMesure = new PlugInMesure();
+            plugInMesure.name = name;
+            plugInMesure.label = label;
+            plugInMesure.explanation = explanation;
+            return plugInMesure;
         }
-
-        public void addAnalysisParameter(PlugInParameter parameter) {
-            analysisParameters.add(parameter);
+        public Map<String,Object> getMap() {
+            Map<String,Object> result = new HashMap<>();
+            result.put( MilkJob.CSTJSON_MESURE_PLUGIN_NAME, name);
+            result.put( MilkJob.CSTJSON_MESURE_PLUGIN_LABEL, label);
+            result.put( MilkJob.CSTJSON_MESURE_PLUGIN_EXPLANATION, explanation);
+            return result;
         }
-
-        /**
-         * Expected format :
-         * {"delayinmn":10, "delayinmn_label="Delai in minutes", "maxtentative":12,"processfilter":[{"name":"expens*","version":null}]})
-         * Note: the label has the same name as the key + "_label", or is the key
-         * 
-         * @param jsonSt
-         */
-        @SuppressWarnings("unchecked")
-        public void addParameterFromMapJson(String jsonSt) {
-            Map<String, Object> mapJson = (Map<String, Object>) JSONValue.parse(jsonSt);
-            for (String key : mapJson.keySet()) {
-                if (key.endsWith("_label"))
-                    continue;
-                Object label = mapJson.get(key + "_label");
-                if (label == null)
-                    label = key;
-                addParameter(PlugInParameter.createInstance(key, label.toString(), TypeParameter.STRING, mapJson.get(key), null));
-            }
-        }
-
-        public Map<String, Object> getParametersMap() {
-            Map<String, Object> map = new HashMap<>();
-            for (PlugInParameter plugInParameter : inputParameters) {
-                map.put(plugInParameter.name, plugInParameter.defaultValue);
-            }
-            return map;
-        }
-
-        /**
-         * return a parameter from it's name, null if not exist
-         * 
-         * @param paramName
-         * @return
-         */
-        public PlugInParameter getPlugInParameter(String paramName) {
-            for (PlugInParameter plugInParameter : inputParameters) {
-                if (plugInParameter.name.equals(paramName))
-                    return plugInParameter;
-            }
-            return null;
-        }
-
     }
-
     /**
      * get the name, should be unique in all plugin
      * 
@@ -437,6 +371,23 @@ public abstract class MilkPlugIn {
 
     public final static String CSTJSON_DISPLAYNAME = "displayname";
 
+    private int nbDefaultSavedExecution = 10;
+    private int nbDefaultHistoryMesures =  200;
+            
+    public int getDefaultNbSavedExecution() {
+        return nbDefaultSavedExecution;
+    }
+    public void setDefaultNbSavedExecution( int nbSavedExecution ) {
+        this.nbDefaultSavedExecution = nbSavedExecution;
+    }
+    public int getDefaultNbHistoryMesures() {
+        return nbDefaultHistoryMesures;
+    }
+    public void setDefaultNbHitoryMesures( int nbDefaultHistoryMesure ) {
+        this.nbDefaultHistoryMesures = nbDefaultHistoryMesure;
+    }
+    
+    
     /**
      * describe the plug in
      * 
@@ -457,54 +408,7 @@ public abstract class MilkPlugIn {
 
     }
 
-    public enum ExecutionStatus {
-        /**
-         * an execution is in progress.
-         * THis state is not used too much, because the enum is used to save the last execution status, not the current one
-         */
-        EXECUTING,
-        /**
-         * No execution is performing
-         */
-        NOEXECUTION,
-        /**
-         * One execution is done with success
-         */
-        SUCCESS,
-        /**
-         * One execution is done with success, but nothing was processed
-         */
-        SUCCESSNOTHING,
-        /**
-         * execution is done with success, but stop before the end (Job detect it has still something to do)
-         */
-        SUCCESSPARTIAL,
-        /**
-         * execution is done with success, but stop before the end (askStop)
-         */
-        SUCCESSABORT,
-        /**
-         * execution is done with success, but stop before the end (askStop)
-         */
-        KILL,
-        /**
-         * use Warning when needed. Not an error, but something not going good
-         */
-        WARNING,
-        /**
-         * Error arrived in the execution
-         */
-        ERROR,
-        /**
-         * The plug in does not respect the contract of execution
-         */
-        CONTRACTVIOLATION,
-        /**
-         * Something is wrong in the configuration, and the plugin can't run
-         */
-        BADCONFIGURATION
-    }
-
+   
     
 
     /* ******************************************************************************** */
@@ -519,9 +423,9 @@ public abstract class MilkPlugIn {
      * 
      * @return
      */
-    public abstract PlugInDescription getDefinitionDescription();
+    public abstract MilkPlugInDescription getDefinitionDescription();
 
-    public abstract MilkJobOutput execute(MilkJobExecution input, APIAccessor apiAccessor);
+    public abstract MilkJobOutput execute(MilkJobExecution input);
 
     /**
      * this method can be override by the plug in if it create a button "BUTTONPARAMETERS"

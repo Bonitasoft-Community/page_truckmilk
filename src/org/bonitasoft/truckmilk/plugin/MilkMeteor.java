@@ -4,8 +4,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
-import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.meteor.MeteorAPI.StatusParameters;
@@ -13,13 +13,18 @@ import org.bonitasoft.meteor.MeteorClientAPI;
 import org.bonitasoft.meteor.MeteorSimulation;
 import org.bonitasoft.meteor.cmd.CmdMeteor;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 
 public class MilkMeteor extends MilkPlugIn {
 
+    Logger logger = Logger.getLogger( MilkMeteor.class.getName() );
+    
     private static PlugInParameter cstParamScenarioName = PlugInParameter.createInstance("scenarioName", "Scenario name", TypeParameter.STRING, "", "Give the scenario name in Meteor");
-    private static PlugInParameter cstParamMaximumWait = PlugInParameter.createInstance("maximumWaitMn", "Maximum time wait (mn)", TypeParameter.LONG, 15, "Maximum wait for the scenario execution in mn");
 
     private static BEvent eventCantStartTest = new BEvent(MilkMeteor.class.getName(), 1, Level.APPLICATIONERROR,
             "Scenario can't start", "An error is detected at startup. The scenario may not exists","The startup failed", "Check the error reported" );
@@ -35,42 +40,40 @@ public class MilkMeteor extends MilkPlugIn {
     }
 
     @Override
-    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
     }
 
     @Override
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
     }
 
     @Override
-    public PlugInDescription getDefinitionDescription() {
-        PlugInDescription plugInDescription = new PlugInDescription();
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
 
-        plugInDescription.name = "Meteor";
-        plugInDescription.description = "Call a Meteor scenario";
-        plugInDescription.label = "Meteor";
+        plugInDescription.setName( "Meteor");
+        plugInDescription.setLabel( "Meteor");
+        plugInDescription.setDescription( "Call a Meteor scenario");
+        plugInDescription.setCategory( CATEGORY.OTHER);
+        plugInDescription.setStopJob( JOBSTOPPER.DELAYMAXIMUM );
         plugInDescription.addParameter(cstParamScenarioName);
-        plugInDescription.addParameter(cstParamMaximumWait);
+
         
         return plugInDescription;
     }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public MilkJobOutput execute(MilkJobExecution jobExecution) {
        
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         String scenarioName = jobExecution.getInputStringParameter(cstParamScenarioName.name, null);
-        long maximumWait = jobExecution.getInputLongParameter(cstParamMaximumWait);
-        
-        
-        jobExecution.setPleaseStopAfterTime(maximumWait, maximumWait);
-        
+
         MeteorClientAPI meteorClientAPI = new MeteorClientAPI();
         
-        Map<String, Object> resultCommand = meteorClientAPI.startFromScenarioName(scenarioName, apiAccessor.getProcessAPI(), apiAccessor.getCommandAPI(), jobExecution.tenantId);
+        Map<String, Object> resultCommand = meteorClientAPI.startFromScenarioName(scenarioName, jobExecution.getApiAccessor().getProcessAPI(), jobExecution.getApiAccessor().getCommandAPI(), jobExecution.getTenantId());
         
         logger.info("~~~~~~~~~~ MilkMeteor.startFromName() : END " + resultCommand);
     
@@ -91,7 +94,7 @@ public class MilkMeteor extends MilkPlugIn {
             StatusParameters statusParameters = new StatusParameters();
             statusParameters.simulationId = Long.valueOf(simulationId);
             
-            Map<String, Object> resultStatus = meteorClientAPI.getStatus(statusParameters, apiAccessor.getProcessAPI(),  apiAccessor.getCommandAPI(), jobExecution.tenantId);
+            Map<String, Object> resultStatus = meteorClientAPI.getStatus(statusParameters, jobExecution.getApiAccessor().getProcessAPI(),  jobExecution.getApiAccessor().getCommandAPI(), jobExecution.getTenantId());
             String statusSimulation = (String) resultStatus.get( MeteorSimulation.CSTJSON_STATUS);
             Integer percentAdvance = (Integer) resultStatus.get( MeteorSimulation.CSTJSON_PERCENTADVANCE );
             if (percentAdvance!=null)

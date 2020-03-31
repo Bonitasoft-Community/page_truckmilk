@@ -6,7 +6,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.IdentityAPI;
 import org.bonitasoft.engine.api.ProcessAPI;
 import org.bonitasoft.engine.api.ProfileAPI;
@@ -25,13 +24,16 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.SendMail;
 import org.bonitasoft.truckmilk.toolbox.SendMailEnvironment;
 import org.bonitasoft.truckmilk.toolbox.SendMailParameters;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 
 public class MilkEmailUsersTasks extends MilkPlugIn {
 
@@ -67,25 +69,26 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
     /**
      * check the plugin environment : for the milkEmailUsersTasks, we require to be able to send an email
      */
-    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
-        return SendMailEnvironment.checkEnvironment(tenantId, this);
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
+        return SendMailEnvironment.checkEnvironment(jobExecution, this);
     };
 
     /**
      * check the Job's environment
      */
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
         List<BEvent> listEvents = new ArrayList<>();
         return listEvents;
     };
 
     @Override
-    public PlugInDescription getDefinitionDescription() {
-        PlugInDescription plugInDescription = new PlugInDescription();
-        plugInDescription.name = "EmailUsersTasks";
-        plugInDescription.label = "Emails users tasks";
-        plugInDescription.category = CATEGORY.TASKS;
-        plugInDescription.description = "For all users part of the given profile(s), an email is send with a link on all pending tasks";
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
+        plugInDescription.setName( "EmailUsersTasks");
+        plugInDescription.setLabel( "Emails users tasks");
+        plugInDescription.setDescription( "For all users part of the given profile(s), an email is send with a link on all pending tasks");
+        plugInDescription.setCategory( CATEGORY.TASKS);
+        plugInDescription.setStopJob( JOBSTOPPER.BOTH );
         plugInDescription.addParameter(cstParamProfilesUser);
 
         try {
@@ -106,12 +109,12 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
 
     @SuppressWarnings("unchecked")
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public MilkJobOutput execute(MilkJobExecution jobExecution) {
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         // read profiles
         List<String> listProfilesName = (List<String>) jobExecution.getInputListParameter(cstParamProfilesUser);
-        if (listProfilesName.size() == 0) {
+        if (listProfilesName.isEmpty() ) {
             plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
             return plugTourOutput;
         }
@@ -121,12 +124,12 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
 
             // first 100 points here
             int baseAdvancement = 0;
-            ProfileAPI profileAPI = apiAccessor.getProfileAPI();
-            ProcessAPI processAPI = apiAccessor.getProcessAPI();
-            IdentityAPI identityAPI = apiAccessor.getIdentityAPI();
+            ProfileAPI profileAPI = jobExecution.getApiAccessor().getProfileAPI();
+            ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
+            IdentityAPI identityAPI = jobExecution.getApiAccessor().getIdentityAPI();
             // collect users in profiles
-            List<Long> userIdToSendEmail = new ArrayList<Long>();
-            List<Long> listProfileId = new ArrayList<Long>();
+            List<Long> userIdToSendEmail = new ArrayList<>();
+            List<Long> listProfileId = new ArrayList<>();
             for (int i = 0; i < listProfilesName.size(); i++) {
                 jobExecution.setAvancementTotalStep(baseAdvancement + (100 * i) / listProfilesName.size());
                 if (jobExecution.pleaseStop())
@@ -147,7 +150,7 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
             baseAdvancement = 100;
             jobExecution.setAvancementTotalStep(baseAdvancement);
 
-            if (listProfileId.size() == 0) {
+            if (listProfileId.isEmpty()) {
                 plugTourOutput.executionStatus = ExecutionStatus.WARNING;
                 return plugTourOutput;
             }
@@ -199,11 +202,11 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
             String bonitaHost = jobExecution.getInputStringParameter(cstParamBonitaHost);
             long bonitaPort = jobExecution.getInputLongParameter(cstParamBonitaPort);
             int numberOfEmailsSent = 0;
-            String messageOperation = "";
-            StringBuffer totalMessageOperation = new StringBuffer();
+            StringBuilder messageOperation = new StringBuilder();
+            StringBuilder totalMessageOperation = new StringBuilder();
             for (int i = 0; i < userIdToSendEmail.size(); i++) {
 
-                jobExecution.setAvancementTotalStep(baseAdvancement + (100 * i) / userIdToSendEmail.size());
+                jobExecution.setAvancementTotalStep(baseAdvancement + (100L * i) / userIdToSendEmail.size());
                 if (jobExecution.pleaseStop())
                     break;
 
@@ -234,20 +237,20 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
                 ContactData contactData = identityAPI.getUserContactData(userId, false);
                 // send email
                 if (contactData.getEmail() == null)
-                    messageOperation += "No email";
+                    messageOperation.append( "No email" );
                 else {
 
                     //ok, we have all we need
                     List<BEvent> listEvents = sendEmail(contactData.getEmail(), contentEmail, jobExecution);
                     if (BEventFactory.isError(listEvents))
-                        messageOperation += "Error emails " + BEventFactory.getHtml(listEvents);
+                        messageOperation.append( "Error emails " + BEventFactory.getHtml(listEvents));
                     else
                         numberOfEmailsSent++;
                 }
 
                 if (messageOperation.length() > 0) {
                     User user = identityAPI.getUser(userId);
-                    totalMessageOperation.append("User[" + user.getUserName() + "] : " + messageOperation);
+                    totalMessageOperation.append("User[" + user.getUserName() + "] : " + messageOperation.toString());
                 }
 
             }
@@ -286,7 +289,7 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
     static SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
 
     private String getHtmlListTasks(List<HumanTaskInstance> listHumanTasks, String bonitaHost, Long bonitaPort, ProcessAPI processAPI) {
-        StringBuffer content = new StringBuffer();
+        StringBuilder content = new StringBuilder();
         content.append("<table style=\"border-collapse: collapse;border-spacing: 0;padding: 8px;line-height: 1.42857143;vertical-align: top;border-top: 1px solid #ecf0f1;background-color: #d9edf7\">");
         content.append("<tr  style=\"background-color: #dd0033;color: white;font-size: small;border-bottom-color: #666;border-bottom: 2px solid #ecf0f1;font-family: 'Lato', 'Helvetica Neue', Helvetica, Arial, sans-serif;\">");
         content.append("<th>Case Id</th><th>Task</th><th>Due date</th></tr>");
@@ -323,7 +326,7 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
      */
     private List<BEvent> sendEmail(String emailTo, String textMessage, MilkJobExecution input) {
 
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+        List<BEvent> listEvents = new ArrayList<>();
         // Sender's email ID needs to be mentioned
         String emailFrom = input.getInputStringParameter(cstParamEmailFrom);
         SendMail sendMail = new SendMail(input);

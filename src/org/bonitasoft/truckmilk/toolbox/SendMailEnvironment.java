@@ -6,6 +6,7 @@ import java.util.List;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.job.MilkJobExecution;
 
 /**
  * the main error when we want to verify that the email is ready is the fact the activation Mail
@@ -30,15 +31,15 @@ public class SendMailEnvironment {
      * @param tenantId
      * @return
      */
-    public static List<BEvent> checkEnvironment(long tenantId, MilkPlugIn plugInRequester) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+    public static List<BEvent> checkEnvironment(MilkJobExecution jobExecution, MilkPlugIn plugInRequester) {
+        List<BEvent> listEvents = new ArrayList<>();
         // verify that 
         // check if the mail is deployed
         try {
             SendMail sendMail = new SendMail(null, null, null, null);
             listEvents.addAll(sendMail.verifyEmailDeployed(false));
         } catch (Error er) {
-            listEvents.add(new BEvent(EVENT_MAIL_NOTDEPLOYED, "PlugIn:" + plugInRequester.getDescription().label));
+            listEvents.add(new BEvent(EVENT_MAIL_NOTDEPLOYED, "PlugIn:" + plugInRequester.getDescription().getLabel()));
         }
         return listEvents;
 

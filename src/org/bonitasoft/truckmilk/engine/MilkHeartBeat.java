@@ -144,7 +144,7 @@ public class MilkHeartBeat {
             // check all the Job now
             for (MilkJob milkJob : milkJobFactory.getListJobs()) {
 
-                MilkExecuteJobThread milkExecuteJobThread = new MilkExecuteJobThread(milkJob);
+                MilkExecuteJobThread milkExecuteJobThread = new MilkExecuteJobThread(milkJob, milkCmdControl.getApiAccessor(), milkCmdControl.getTenantServiceAccessor());
 
                 executionDescription.append( milkExecuteJobThread.checkAndStart(currentDate));
             }

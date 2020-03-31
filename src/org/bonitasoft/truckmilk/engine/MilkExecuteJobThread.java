@@ -9,11 +9,13 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.connector.ConnectorAPIAccessorImpl;
+import org.bonitasoft.engine.service.TenantServiceAccessor;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory.MilkFactoryOp;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.ExecutionStatus;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
@@ -41,9 +43,13 @@ public class MilkExecuteJobThread extends Thread {
 
     private MilkJob milkJob;
     private Date tagTheDate;
-
-    protected MilkExecuteJobThread(MilkJob milkJob) {
+    private APIAccessor apiAccessor;
+    private TenantServiceAccessor tenantServiceAccessor;
+    
+    protected MilkExecuteJobThread(MilkJob milkJob, APIAccessor apiAccessor, TenantServiceAccessor tenantServiceAccessor) {
         this.milkJob = milkJob;
+        this.apiAccessor = apiAccessor;
+        this.tenantServiceAccessor = tenantServiceAccessor;
     }
 
     /**
@@ -148,7 +154,7 @@ public class MilkExecuteJobThread extends Thread {
 
         MilkJobFactory milkJobFactory = milkJob.milkJobFactory;
         MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
-        ConnectorAPIAccessorImpl connectorAccessorAPI = new ConnectorAPIAccessorImpl(milkJobFactory.getTenantId());
+        // ConnectorAPIAccessorImpl connectorAccessorAPI = new ConnectorAPIAccessorImpl( milkJobFactory.getTenantId());
         
         List<BEvent> listEvents = new ArrayList<>();
         MilkPlugIn plugIn = milkJob.getPlugIn();
@@ -162,7 +168,7 @@ public class MilkExecuteJobThread extends Thread {
                 logger.severe("MilkExecuteJobThread: can't get the ipAddress, synchronization on a cluster can't work");
             }
             // execute it!
-            MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob, milkJobFactory.getTenantId());
+            MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob, milkJobFactory.getTenantId(), apiAccessor, tenantServiceAccessor );
 
             // ----------------- Execution
             long timeBegin = System.currentTimeMillis();
@@ -175,7 +181,7 @@ public class MilkExecuteJobThread extends Thread {
                 // save the start Status (so general) and the track Status, plus askStop to false
                 listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceStartExecutionJob()));
 
-                output = plugIn.execute(milkJobExecution, connectorAccessorAPI);
+                output = plugIn.execute(milkJobExecution);
                 
                 output.hostName = hostName;
                 StringBuilder listEventsSt = new StringBuilder();
@@ -218,10 +224,10 @@ public class MilkExecuteJobThread extends Thread {
 
             output.executionTimeInMs = (timeEnd - timeBegin);
 
-            output.addPointOfInterest("timeexecution", output.executionTimeInMs);
-            output.addPointOfInterest("nbitems", output.nbItemsProcessed);
+            output.setMesure( MilkPlugInDescription.cstMesureTimeExecution, output.executionTimeInMs);
+            output.setMesure( MilkPlugInDescription.cstMesureNbItemProcessed, output.nbItemsProcessed);
             
-            milkJob.addPointsOfInterest( new Date(), output.getPointsOfInterest());
+            milkJob.addMesureValues( new Date(), output.getAllMesures());
             // executionDescription += "(" + output.executionStatus + ") " + output.nbItemsProcessed + " in " + output.executionTimeInMs + ";";
 
         } catch (Exception e) {

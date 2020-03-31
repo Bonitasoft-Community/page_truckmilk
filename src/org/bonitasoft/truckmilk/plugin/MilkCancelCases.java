@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.ProcessAPI;
 import org.bonitasoft.engine.bpm.flownode.FlowNodeInstance;
 import org.bonitasoft.engine.bpm.flownode.FlowNodeInstanceSearchDescriptor;
@@ -29,12 +28,15 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput.StartMarker;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.CSVOperation;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
@@ -82,10 +84,7 @@ public class MilkCancelCases extends MilkPlugIn {
     private static BEvent eventSearchFailed = new BEvent(MilkCancelCases.class.getName(), 7, Level.ERROR,
             "Search failed", "Search failed, no case/task can be retrieved", "Case in the scope can't be calculated", "Check exception");
 
-    private static PlugInParameter cstParamMaximumCancellationInCases = PlugInParameter.createInstance("maximumcancellationincases", "Maximum deletion in case", TypeParameter.LONG, 1000L, "Maximum case cancelled in one execution, to not overload the engine. Maximum of 5000 is hardcoded");
-    private static PlugInParameter cstParamMaximumCancellationInMinutes = PlugInParameter.createInstance("maximumcancellationinminutes", "Maximum time in Mn", TypeParameter.LONG, 3L, "Maximum time in minutes for the job. After this time, it will stop.");
-
-    private static PlugInParameter cstParamDelayInDay = PlugInParameter.createInstance("delayinday", "Delai in days", TypeParameter.DELAY, MilkPlugInToolbox.DELAYSCOPE.YEAR + ":1", "Only cases archived before this delay are in the perimeter");
+    private static PlugInParameter cstParamDelayInDay = PlugInParameter.createInstance("delayinday", "Delai", TypeParameter.DELAY, MilkPlugInToolbox.DELAYSCOPE.YEAR + ":1", "Only cases archived before this delay are in the perimeter");
 
     private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Filter on process", TypeParameter.ARRAYPROCESSNAME, null, "Job manage only process which mach the filter. If no filter is given, all processes are inspected");
 
@@ -114,37 +113,31 @@ public class MilkCancelCases extends MilkPlugIn {
     /**
      * check the environment : for the deleteCase, nothing is required
      */
-    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
     }
 
     @Override
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
         // is the command Exist ? 
         return new ArrayList<>();
     }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public MilkJobOutput execute(MilkJobExecution jobExecution) {
         MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
 
-        ProcessAPI processAPI = apiAccessor.getProcessAPI();
+        ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
         // get Input 
-        long maximumCancellationInCases = jobExecution.getInputLongParameter(cstParamMaximumCancellationInCases);
-        if (maximumCancellationInCases > 10000)
-            maximumCancellationInCases = 10000;
-
-        jobExecution.setPleaseStopAfterTime(maximumCancellationInCases, 24 * 60L);
-        jobExecution.setPleaseStopAfterManagedItems(jobExecution.getInputLongParameter(cstParamMaximumCancellationInMinutes), 5000L);
 
         String separatorCSV = jobExecution.getInputStringParameter(cstParamSeparatorCSV);
 
         try {
             // +1 so we can detect the SUCCESSPARTIAL
 
-            SearchOptionsBuilder searchBuilderCase = new SearchOptionsBuilder(0, (int) maximumCancellationInCases + 1);
+            SearchOptionsBuilder searchBuilderCase = new SearchOptionsBuilder(0, jobExecution.getMilkJob().getStopAfterNbItems() + 1);
 
-            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, searchBuilderCase, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, apiAccessor.getProcessAPI());
+            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, searchBuilderCase, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
 
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
@@ -315,14 +308,14 @@ public class MilkCancelCases extends MilkPlugIn {
     }
 
     @Override
-    public PlugInDescription getDefinitionDescription() {
-        PlugInDescription plugInDescription = new PlugInDescription();
-        plugInDescription.name = "CancelCase";
-        plugInDescription.label = "Cancel/Delete Active Cases (active)";
-        plugInDescription.description = "Cancel(or delete) all cases older than a delay, or inactive since a delay";
-        plugInDescription.category = CATEGORY.CASES;
-        plugInDescription.addParameter(cstParamMaximumCancellationInCases);
-        plugInDescription.addParameter(cstParamMaximumCancellationInMinutes);
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
+        plugInDescription.setName( "CancelCase");
+        plugInDescription.setLabel( "Cancel/Delete Active Cases (active)");
+        plugInDescription.setDescription( "Cancel(or delete) all cases older than a delay, or inactive since a delay");
+        plugInDescription.setCategory( CATEGORY.CASES);
+        plugInDescription.setStopJob( JOBSTOPPER.BOTH );
+        
         plugInDescription.addParameter(cstParamProcessFilter);
         plugInDescription.addParameter(cstParamDelayInDay);
 

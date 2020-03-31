@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.ProcessAPI;
 import org.bonitasoft.engine.bpm.process.ArchivedProcessInstance;
 import org.bonitasoft.engine.bpm.process.ArchivedProcessInstancesSearchDescriptor;
@@ -19,7 +18,9 @@ import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.CSVOperation;
@@ -27,7 +28,7 @@ import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
 import lombok.Data;
-
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 public class MilkPurgeArchivedListPurge extends MilkPlugIn {
 
     static MilkLog logger = MilkLog.getLogger(MilkPurgeArchivedListPurge.class.getName());
@@ -42,8 +43,6 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
     private static BEvent eventReportError = new BEvent(MilkPurgeArchivedListPurge.class.getName(), 3, Level.APPLICATIONERROR,
             "Error in source file", "The source file is not correct", "Check the source file, caseid is expected inside", "Check the error");
 
-    private static PlugInParameter cstParamMaximumDeletionInCase = PlugInParameter.createInstance("maximumdeletionincase", "Maximum deletion in case", TypeParameter.LONG, 1000L, "Maximum case deleted in one execution, to not overload the engine. Maximum of 5000 is hardcoded");
-    private static PlugInParameter cstParamMaximumDeletionInMinutes = PlugInParameter.createInstance("maximumdeletioninminutes", "Maximum time in Mn", TypeParameter.LONG, 3L, "Maximum time in minutes for the job. After this time, it will stop.");
     private static PlugInParameter cstParamSeparatorCSV = PlugInParameter.createInstance("separatorCSV", "Separator CSV", TypeParameter.STRING, ",", "CSV use a separator. May be ; or ,");
     private static PlugInParameter cstParamInputDocument = PlugInParameter.createInstanceFile("inputdocument", "Input List (CSV)", TypeParameter.FILEREAD, null, "List is a CSV containing caseid column and status column. When the status is 'DELETE', then the case is deleted\nExample: caseId;status\n342;DELETE\n345;DELETE", "ListToPurge.csv", "text/csv");
 
@@ -55,14 +54,14 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
      * check the environment : for the milkEmailUsersTasks, we require to be able to send an email
      */
     @Override
-    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
     }
 
     /**
      * check the Job's environment
      */
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
     }
 
@@ -82,13 +81,13 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
     }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public MilkJobOutput execute(MilkJobExecution jobExecution) {
 
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         long beginExecution = System.currentTimeMillis();
         
-        ProcessAPI processAPI = apiAccessor.getProcessAPI();
+        ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
         // get Input 
         long beginManipulateCsv = System.currentTimeMillis();
         
@@ -100,9 +99,7 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
         long endManipulateCsv = System.currentTimeMillis();
         statistic.sumTimeManipulateCsv = endManipulateCsv - beginManipulateCsv;
         
-        jobExecution.setPleaseStopAfterTime(jobExecution.getInputLongParameter(cstParamMaximumDeletionInMinutes), 24 * 60L);
-        jobExecution.setPleaseStopAfterManagedItems(jobExecution.getInputLongParameter(cstParamMaximumDeletionInCase), 5000L);
-        statistic.pleaseStopAfterManagedItems = jobExecution.getPleaseStopAfterManagerItems();
+        statistic.pleaseStopAfterManagedItems = jobExecution.getJobStopAfterMaxItems();
 
 
         List<Long> sourceProcessInstanceIds = new ArrayList<>();
@@ -221,14 +218,13 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
      * 
      */
     @Override
-    public PlugInDescription getDefinitionDescription() {
-        PlugInDescription plugInDescription = new PlugInDescription();
-        plugInDescription.name = "PurgeCaseFromList";
-        plugInDescription.label = "Purge Archived Cases: Purge from list";
-        plugInDescription.category = CATEGORY.CASES;
-        plugInDescription.description = "Get a CSV File as input. Then, delete all case in the list where the column status ewuals DELETED";
-        plugInDescription.addParameter(cstParamMaximumDeletionInCase);
-        plugInDescription.addParameter(cstParamMaximumDeletionInMinutes);
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
+        plugInDescription.setName( "PurgeCaseFromList");
+        plugInDescription.setLabel( "Purge Archived Cases: Purge from list");
+        plugInDescription.setDescription( "Get a CSV File as input. Then, delete all case in the list where the column status ewuals DELETED");
+        plugInDescription.setCategory( CATEGORY.CASES );
+        plugInDescription.setStopJob( JOBSTOPPER.BOTH );
         plugInDescription.addParameter(cstParamSeparatorCSV);
         plugInDescription.addParameter(cstParamInputDocument);
         /*

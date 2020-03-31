@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.ProcessAPI;
 import org.bonitasoft.engine.bpm.comment.Comment;
 import org.bonitasoft.engine.bpm.comment.SearchCommentsDescriptor;
@@ -25,39 +24,29 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkCmdControl;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.ExecutionStatus;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 
 public class MilkReplayFailedTask extends MilkPlugIn {
 
     static MilkLog logger = MilkLog.getLogger(MilkReplayFailedTask.class.getName());
 
-    private static BEvent eventNoProcessMatchFilter = new BEvent(MilkCmdControl.class.getName(), 1,
-            Level.APPLICATIONERROR,
-            "No process match filter", "No process is found with the given filter", "This filter does not apply.",
-            "Check the process name");
-
-    private static BEvent eventNoProcessForFilter = new BEvent(MilkCmdControl.class.getName(), 2,
-            Level.APPLICATIONERROR,
-            "Filter is not active", "No processes was found for all the filter, search will not run",
-            "No filter at all apply, assuming configuration want to apply only on some process",
-            "Check the process name");
-
-    private static BEvent eventRetryFailed = new BEvent(MilkCmdControl.class.getName(), 3, Level.APPLICATIONERROR,
+    private static BEvent eventRetryFailed = new BEvent(MilkCmdControl.class.getName(), 1, Level.APPLICATIONERROR,
             "Retry failed", "Some retry failed", "Some task retry failed", "Check the log");
 
-    private static BEvent eventRetrySuccess = new BEvent(MilkCmdControl.class.getName(), 4, Level.SUCCESS,
+    private static BEvent eventRetrySuccess = new BEvent(MilkCmdControl.class.getName(), 2, Level.SUCCESS,
             "Retry success", "All retry was done with success");
 
-    private static BEvent eventRetrySuccessButSkip = new BEvent(MilkCmdControl.class.getName(), 5, Level.SUCCESS,
+    private static BEvent eventRetrySuccessButSkip = new BEvent(MilkCmdControl.class.getName(), 3, Level.SUCCESS,
             "Retry success, but some tasks were skipped", "All retry was done with success, some task were skipped due to the maxtentative retry");
 
-    private static BEvent eventSearchFailed = new BEvent(MilkCmdControl.class.getName(), 6, Level.ERROR,
+    private static BEvent eventSearchFailed = new BEvent(MilkCmdControl.class.getName(), 4, Level.ERROR,
             "Search failed", "Search failed task return an error", "No retry can be performed", "Check the error");
 
     private static PlugInParameter cstParamDelay = PlugInParameter.createInstance("delay", "Delay", TypeParameter.DELAY, MilkPlugInToolbox.DELAYSCOPE.MN + ":5", "Delay before asking to replay a failed task");
@@ -74,59 +63,51 @@ public class MilkReplayFailedTask extends MilkPlugIn {
     /**
      * check the environment : for the milkEmailUsersTasks, we require to be able to send an email
      */
-    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
     }
 
     /**
      * check the Job's environment
      */
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
     }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        ProcessAPI processAPI = apiAccessor.getProcessAPI();
+    public MilkJobOutput execute(MilkJobExecution jobExecution) {
+        ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         // get Input 
         @SuppressWarnings("unchecked")
-        
 
-     
-       
-       
-        
-        
         Long maxTentatives = jobExecution.getInputLongParameter(cstParamMaximumTentatives);
         long retryFailed = 0;
         long retrySuccess = 0;
         long retrySkip = 0;
         Long numberOfTasks = jobExecution.getInputLongParameter(cstParamNumberOfTasks);
-        Boolean onlyDetection = jobExecution.getInputBooleanParameter( cstParamOnlyDetection );
-        Boolean tasksInReport = jobExecution.getInputBooleanParameter( cstParamTasksInReport);
+        Boolean onlyDetection = jobExecution.getInputBooleanParameter(cstParamOnlyDetection);
+        Boolean tasksInReport = jobExecution.getInputBooleanParameter(cstParamTasksInReport);
 
-        
-        
         try {
 
             List<Long> listProcessDefinitionId = new ArrayList<>();
 
             // Filter on process?
-            SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, numberOfTasks==null ? 1000 : numberOfTasks.intValue());
+            SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, numberOfTasks == null ? 1000 : numberOfTasks.intValue());
 
-            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, true, searchActBuilder, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, apiAccessor.getProcessAPI());
+            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, true, searchActBuilder, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, jobExecution.getApiAccessor().getProcessAPI());
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
                 plugTourOutput.addEvents(listProcessResult.listEvents);
                 plugTourOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
                 return plugTourOutput;
             }
-            
+
             DelayResult delayResult = MilkPlugInToolbox.getTimeFromDelay(jobExecution, cstParamDelay, new Date(), false);
-            if (BEventFactory.isError( delayResult.listEvents)) {
-                plugTourOutput.addEvents( delayResult.listEvents );
+            if (BEventFactory.isError(delayResult.listEvents)) {
+                plugTourOutput.addEvents(delayResult.listEvents);
                 plugTourOutput.executionStatus = ExecutionStatus.ERROR;
                 return plugTourOutput;
             }
@@ -160,11 +141,11 @@ public class MilkReplayFailedTask extends MilkPlugIn {
                     if (numberReexecution > maxTentatives) {
                         retrySkip++;
                     } else {
-                        if ((onlyDetection!=null) && Boolean.FALSE.equals(onlyDetection)) {
+                        if ((onlyDetection != null) && Boolean.FALSE.equals(onlyDetection)) {
                             // add the comment
                             processAPI.addProcessComment(activityInstance.getRootContainerId(), commentString);
                             processAPI.retryTask(activityInstance.getId());
-                            listTasksCases.append( activityInstance.getId()+"/"+activityInstance.getRootContainerId()+", ");
+                            listTasksCases.append(activityInstance.getId() + "/" + activityInstance.getRootContainerId() + ", ");
                             retrySuccess++;
                         }
                     }
@@ -178,14 +159,14 @@ public class MilkReplayFailedTask extends MilkPlugIn {
             if (retryFailed > 0) {
                 plugTourOutput.addEvent(new BEvent(eventRetryFailed,
                         collectFirstException,
-                        "Failed retry/total " + retryFailed + ":" + (retryFailed + retrySuccess) + " (skip after " + maxTentatives + ": " + retrySkip + ")" + (Boolean.TRUE.equals(tasksInReport)? listTasksCases.toString():"")));
+                        "Failed retry/total " + retryFailed + ":" + (retryFailed + retrySuccess) + " (skip after " + maxTentatives + ": " + retrySkip + ")" + (Boolean.TRUE.equals(tasksInReport) ? listTasksCases.toString() : "")));
                 plugTourOutput.executionStatus = ExecutionStatus.ERROR;
             } else if (retrySkip > 0) {
-                plugTourOutput.addEvent(new BEvent(eventRetrySuccessButSkip, "Retry " + retrySuccess + " (skip after " + maxTentatives + ": " + retrySkip + ")"+(Boolean.TRUE.equals(tasksInReport)? listTasksCases.toString():"")));
+                plugTourOutput.addEvent(new BEvent(eventRetrySuccessButSkip, "Retry " + retrySuccess + " (skip after " + maxTentatives + ": " + retrySkip + ")" + (Boolean.TRUE.equals(tasksInReport) ? listTasksCases.toString() : "")));
                 plugTourOutput.executionStatus = ExecutionStatus.WARNING;
 
             } else {
-                plugTourOutput.addEvent(new BEvent(eventRetrySuccess, "Retry " + retrySuccess + " (skip after " + maxTentatives + ": " + retrySkip + ")"+(Boolean.TRUE.equals(tasksInReport)? listTasksCases.toString():"")));
+                plugTourOutput.addEvent(new BEvent(eventRetrySuccess, "Retry " + retrySuccess + " (skip after " + maxTentatives + ": " + retrySkip + ")" + (Boolean.TRUE.equals(tasksInReport) ? listTasksCases.toString() : "")));
                 plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
             }
         } catch (SearchException e1) {
@@ -197,18 +178,18 @@ public class MilkReplayFailedTask extends MilkPlugIn {
     }
 
     @Override
-    public PlugInDescription getDefinitionDescription() {
-        PlugInDescription plugInDescription = new PlugInDescription();
-        plugInDescription.name = "ReplayFailedTask";
-        plugInDescription.label = "Replay Failed Task";
-        plugInDescription.category = CATEGORY.TASKS;
-        plugInDescription.description = "Monitor all failed tasks. Then after a delay, replay them, if the number of tentative is not reach";
-        plugInDescription.addParameter( cstParamDelay);
-        plugInDescription.addParameter( cstParamMaximumTentatives);
-        plugInDescription.addParameter( cstParamProcessFilter);
-        plugInDescription.addParameter( cstParamNumberOfTasks );
-        plugInDescription.addParameter( cstParamOnlyDetection );
-        plugInDescription.addParameter( cstParamTasksInReport );
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
+        plugInDescription.setName( "ReplayFailedTask");
+        plugInDescription.setLabel( "Replay Failed Task");
+        plugInDescription.setDescription( "Monitor all failed tasks. Then after a delay, replay them, if the number of tentative is not reach");
+        plugInDescription.setCategory( CATEGORY.TASKS);
+        plugInDescription.addParameter(cstParamDelay);
+        plugInDescription.addParameter(cstParamMaximumTentatives);
+        plugInDescription.addParameter(cstParamProcessFilter);
+        plugInDescription.addParameter(cstParamNumberOfTasks);
+        plugInDescription.addParameter(cstParamOnlyDetection);
+        plugInDescription.addParameter(cstParamTasksInReport);
         return plugInDescription;
     }
 

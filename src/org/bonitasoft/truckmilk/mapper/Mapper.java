@@ -16,9 +16,9 @@ import org.bonitasoft.engine.bpm.process.ProcessExecutionException;
 import org.bonitasoft.engine.bpm.process.ProcessInstance;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.PlaceHolder;
 import org.json.simple.JSONValue;
@@ -115,7 +115,7 @@ public class Mapper {
         this.policy = policy;
     }
 
-    public void addPlugInParameter(PlugInDescription plugInDescription) {
+    public void addPlugInParameter(MilkPlugInDescription plugInDescription) {
         // identify the object to create / apply
         if (policy == MAPPER_POLICY.CASECREATION) {
             plugInDescription.addParameter(cstParamProcessName);

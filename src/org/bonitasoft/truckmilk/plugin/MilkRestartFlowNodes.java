@@ -5,24 +5,25 @@ import java.util.List;
 import java.util.Map;
 
 import org.bonitasoft.deepmonitoring.radar.RadarFactory;
+import org.bonitasoft.deepmonitoring.radar.connector.RadarTimeTrackerConnector;
 import org.bonitasoft.deepmonitoring.radar.workers.RadarWorkers;
-import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.ProcessAPI;
 import org.bonitasoft.engine.bpm.flownode.FlowNodeExecutionException;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
-
+import org.hibernate.internal.jaxb.mapping.orm.JaxbInheritanceType;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 public class MilkRestartFlowNodes  extends MilkPlugIn {
 
-    public MilkRestartFlowNodes() {
-        super(TYPE_PLUGIN.EMBEDED);
-    }
-
+    private final static String RADAR_NAME_WORKER = "workers";
+    
     static MilkLog logger = MilkLog.getLogger(MilkRestartFlowNodes.class.getName());
 
     private final static BEvent eventErrorExecuteFlownode = new BEvent(MilkRestartFlowNodes.class.getName(), 1,
@@ -35,39 +36,48 @@ public class MilkRestartFlowNodes  extends MilkPlugIn {
             "No radar Worker found", "A radar definition is missing", "Flow nodes to restart can't be detected",
             "Check exception");
     private static PlugInParameter cstParamNumberOfFlowNodesToRestart = PlugInParameter.createInstance("NumberOfFlowNodesToRestart", "Number Of Flow Nodes to restart", TypeParameter.LONG, 5000, "The x oldest flow nodes are restarted");
-    
+
+    public MilkRestartFlowNodes() {
+        super(TYPE_PLUGIN.EMBEDED);
+    }
+
+
     @Override
-    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
     }
 
     @Override
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
     }
 
     @Override
-    public PlugInDescription getDefinitionDescription() {
-        PlugInDescription plugInDescription = new PlugInDescription();
-        plugInDescription.name = "ReplayFlowNodes";
-        plugInDescription.label = "Replay (Stuck) Flow Nodes";
-        plugInDescription.category = CATEGORY.TASKS;
-        plugInDescription.description = "Check all flow nodes in the database, and if this number is over the number of Pending flownodes, restart them";
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
+        plugInDescription.setName( "ReplayFlowNodes");
+        plugInDescription.setLabel( "Replay (Stuck) Flow Nodes");
+        plugInDescription.setDescription( "Check all flow nodes in the database, and if this number is over the number of Pending flownodes, restart them");
+        plugInDescription.setCategory( CATEGORY.TASKS );
+
         plugInDescription.addParameter(cstParamNumberOfFlowNodesToRestart);
         return plugInDescription;
         }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public MilkJobOutput execute(MilkJobExecution jobExecution) {
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
         
-        ProcessAPI processAPI = apiAccessor.getProcessAPI();
+        ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
         
         // How many flownode do we have to re-execute?
         RadarFactory radarFactory = RadarFactory.getInstance();
-        radarFactory.initialisation(jobExecution.tenantId, apiAccessor);
+        radarFactory.initialisation(jobExecution.getTenantId(), jobExecution.getApiAccessor());
         
-        RadarWorkers radarWorkers = (RadarWorkers) radarFactory.getRadars(RadarWorkers.CLASS_RADAR_NAME);
+
+        RadarWorkers radarWorkers = (RadarWorkers) radarFactory.getInstance(RADAR_NAME_WORKER, RadarWorkers.CLASS_RADAR_NAME, jobExecution.getTenantId(), jobExecution.getApiAccessor());
+
+        
         if (radarWorkers==null)
         {
             plugTourOutput.addEvent(new BEvent(eventErrorNoRadarWorker, "Radar Worker["+RadarWorkers.CLASS_RADAR_NAME+"] not found"));
@@ -82,7 +92,7 @@ FROM flownode_instance AS f
 WHERE (f.state_Executing = 1 OR f.stable = 0 OR f.terminal = 1 OR f.stateCategory = 'ABORTING' OR f.stateCategory = 'CANCELLING') 
 ORDER BY id;
          */
-        List<Map<String,Object>> listFlowNodes = radarWorkers.getOldestFlowNodesWaitingForExecution(jobExecution.tenantId, 1+ jobExecution.getInputLongParameter(cstParamNumberOfFlowNodesToRestart));
+        List<Map<String,Object>> listFlowNodes = radarWorkers.getOldestFlowNodesWaitingForExecution(jobExecution.getTenantId(), 1+ jobExecution.getInputLongParameter(cstParamNumberOfFlowNodesToRestart));
         if (listFlowNodes.isEmpty())
         {
             plugTourOutput.executionStatus =ExecutionStatus.SUCCESSNOTHING;

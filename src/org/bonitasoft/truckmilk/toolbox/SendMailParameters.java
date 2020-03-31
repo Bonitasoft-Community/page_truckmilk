@@ -4,9 +4,9 @@ import java.util.Arrays;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 
 /**
@@ -78,7 +78,7 @@ public class SendMailParameters {
         props.put("mail.smtp.auth", smtpUser != null ? "true" : "false");
     }
 
-    public static void addPlugInParameter(MAIL_DIRECTION mailDirection, PlugInDescription plugInDescription) {
+    public static void addPlugInParameter(MAIL_DIRECTION mailDirection, MilkPlugInDescription plugInDescription) {
         // in all case, the Stmp Parameters is required
         plugInDescription.addParameter(cstParamSeparatorSmtp);
         plugInDescription.addParameter(cstParamSmtpParameters);
@@ -86,7 +86,7 @@ public class SendMailParameters {
         // according what we want, then add different parameters
     }
 
-    public static void addPlugInAnalysis(MAIL_DIRECTION mailDirection, PlugInDescription plugInDescription) {
+    public static void addPlugInAnalysis(MAIL_DIRECTION mailDirection, MilkPlugInDescription plugInDescription) {
 
         // Nota : the code of the TestButton must be included in the MilkPlugIn 
         plugInDescription.addAnalysisParameter(cstParamTestSendMail);

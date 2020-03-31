@@ -5,11 +5,14 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import org.bonitasoft.engine.api.APIAccessor;
+import org.bonitasoft.engine.service.TenantServiceAccessor;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
+import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
+import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
-import org.bonitasoft.truckmilk.engine.MilkJobOutput;
-import org.bonitasoft.truckmilk.plugin.MilkSLA;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
@@ -26,26 +29,39 @@ public class MilkJobExecution {
 
     public String tourName;
     // this parameters is initialised with the value in the PlugTour, and may change after
-    private Map<String, Object> tourParameters;
+    private Map<String, Object> jobParameters;
 
     private MilkJob milkJob;
 
     /**
      * tenant where the job is running
      */
-    public long tenantId;
-
-    public MilkJobExecution(MilkJob milkJob, long tenantId) {
+    private long tenantId;
+    private APIAccessor apiAccessor;
+    private TenantServiceAccessor tenantServiceAccessor;
+    
+    public MilkJobExecution(MilkJob milkJob, long tenantId, APIAccessor apiAccessor, TenantServiceAccessor tenantServiceAccessor) {
         this.milkJob = milkJob;
-        this.tourParameters = milkJob.getTourParameters();
+        this.jobParameters = milkJob.getJobParameters();
         tourName = milkJob.getName();
         this.tenantId = tenantId;
+        this.apiAccessor = apiAccessor;
+        this.tenantServiceAccessor = tenantServiceAccessor;
+ 
+        if ( milkJob.getPlugIn().getDescription().isJobCanBeStopByDelay())
+            setJobStopAfterTime(milkJob.getStopAfterNbMinutes(), MilkJob.CSTDEFAULT_STOPAFTER_NBMINUTES);
+        if ( milkJob.getPlugIn().getDescription().isJobCanBeStopByItemsMaximum())
+            setJobStopAfterMaxItems(milkJob.getStopAfterNbItems(), MilkJob.CSTDEFAULT_STOPAFTER_NBITEMS);
     }
 
     public MilkJobOutput getMilkJobOutput() {
         return new MilkJobOutput(milkJob);
     }
 
+    
+    public MilkJob getMilkJob() {
+        return milkJob;
+    }
     /**
      * Boolean
      * 
@@ -57,7 +73,7 @@ public class MilkJobExecution {
     }
 
     public Boolean getInputBooleanParameter(String name, Boolean defaultValue) {
-        return TypesCast.getBoolean(tourParameters.get(name).toString(), defaultValue);
+        return TypesCast.getBoolean(jobParameters.get(name).toString(), defaultValue);
 
     }
 
@@ -72,7 +88,7 @@ public class MilkJobExecution {
     }
 
     public Long getInputLongParameter(String name, Long defaultValue) {
-        return TypesCast.getLong(tourParameters.get(name), defaultValue);
+        return TypesCast.getLong(jobParameters.get(name), defaultValue);
     }
 
     public String getInputStringParameter(PlugInParameter parameter) {
@@ -80,11 +96,17 @@ public class MilkJobExecution {
     }
 
     public String getInputStringParameter(String name, String defaultValue) {
-        return TypesCast.getString(tourParameters.get(name), defaultValue);
+        return TypesCast.getString(jobParameters.get(name), defaultValue);
     }
 
+    public DelayResult getInputDelayParameter(PlugInParameter parameter, Date baseDate, boolean advance) {
+        return MilkPlugInToolbox.getTimeFromDelay(this, parameter, baseDate, advance);
+    }
+    
+    
+    @SuppressWarnings("unchecked")
     public Map<String,Object> getInputMapParameter(PlugInParameter parameter) {
-        return (Map<String,Object>) tourParameters.get(parameter.name);
+        return (Map<String,Object>) jobParameters.get(parameter.name);
 
     }
 
@@ -105,7 +127,7 @@ public class MilkJobExecution {
 
     public List<?> getInputListParameter(String name, List<?> defaultValue) {
         try {
-            return (List<?>) tourParameters.get(name);
+            return (List<?>) jobParameters.get(name);
         } catch (Exception e) {
             return defaultValue;
         }
@@ -119,19 +141,25 @@ public class MilkJobExecution {
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getInputListMapParameter(String name, List<Map<String, Object>> defaultValue) {
         try {
-            return (List<Map<String, Object>>) tourParameters.get(name);
+            return (List<Map<String, Object>>) jobParameters.get(name);
         } catch (Exception e) {
             return defaultValue;
         }
     }
 
     /**
-     * get the tenantid
+     * getter 
      * 
-     * @return
      */
     public long getTenantId() {
         return tenantId;
+    }
+    public APIAccessor getApiAccessor() {
+        return apiAccessor;
+    }
+    
+    public TenantServiceAccessor getTenantServiceAccessor() {
+        return tenantServiceAccessor;
     }
 
     /* ******************************************************************************** */
@@ -145,16 +173,20 @@ public class MilkJobExecution {
      * /*
      */
     /* ******************************************************************************** */
-    private Long pleaseStopInMinutes = null;
-    private Long pleaseStopInManagedItems = null;
-    private long nbManagedItems = 0;
-    private long nbPrepareditems = 0;
+    private Integer pleaseStopInMinutes = null;
+    private Integer pleaseStopInManagedItems = null;
+    private int nbManagedItems = 0;
+    private int nbPrepareditems = 0;
 
-    public void setPleaseStopAfterTime(long timeInMinutes, Long defaultValue) {
+    public void setJobStopAfterTime(int timeInMinutes, Integer defaultValue) {
         this.pleaseStopInMinutes = timeInMinutes == 0 ? defaultValue : timeInMinutes;
+        if (milkJob.getPlugIn().getDescription().getStopAfterMaxItems() !=null 
+                && timeInMinutes > milkJob.getPlugIn().getDescription().getStopAfterMaxTime() )
+            pleaseStopInManagedItems = milkJob.getPlugIn().getDescription().getStopAfterMaxTime(); 
+
     }
 
-    public Long getPleaseStopAfterManagerTime() {
+    public Integer getJobStopAfterTime() {
         return pleaseStopInMinutes;
     }
 
@@ -168,11 +200,14 @@ public class MilkJobExecution {
      * @param nbStepManagedItem
      */
 
-    public void setPleaseStopAfterManagedItems(Long nbManagedItems, Long defaultValue) {
+    public void setJobStopAfterMaxItems(Integer nbManagedItems, Integer defaultValue) {
         pleaseStopInManagedItems = nbManagedItems == null || nbManagedItems == 0 ? defaultValue : nbManagedItems;
+        if (milkJob.getPlugIn().getDescription().getStopAfterMaxItems() !=null
+                && nbManagedItems > milkJob.getPlugIn().getDescription().getStopAfterMaxItems())
+            pleaseStopInManagedItems = milkJob.getPlugIn().getDescription().getStopAfterMaxItems(); 
     }
 
-    public Long getPleaseStopAfterManagerItems() {
+    public Integer getJobStopAfterMaxItems() {
         return pleaseStopInManagedItems;
     }
 
@@ -189,7 +224,7 @@ public class MilkJobExecution {
      * 
      * @param itemInPreparation : Number of Item in preparation
      */
-    public void setNumberItemInPreparation(long nbPrepareditems) {
+    public void setNumberItemInPreparation(int nbPrepareditems) {
         this.nbPrepareditems = nbPrepareditems;
     }
 
@@ -209,7 +244,7 @@ public class MilkJobExecution {
             return true;
         if (milkJob.isAskedForStop())
             return true;
-        if (pleaseStopInMinutes != null) {
+        if (pleaseStopInMinutes != null ) {
             long currentTime = System.currentTimeMillis();
             long timeInMn = (currentTime - startTimeMs) / 1000 / 60;
             if (timeInMn > pleaseStopInMinutes) {

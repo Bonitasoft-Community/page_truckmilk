@@ -147,10 +147,14 @@ public class MilkPlugInToolbox {
     public enum DELAYSCOPE { YEAR, MONTH, WEEK, DAY, HOUR, MN }
     public static class DelayResult {
         public List<BEvent> listEvents= new ArrayList<>();
-        public DELAYSCOPE scope;
-        public int delay;
+        public DELAYSCOPE scopeInput;
+        public int delayInput;
         public Date originDate;
         public Date delayDate;
+        /**
+         * positif if advance = true, negatif else (if delay is in the past)
+         */
+        public long delayInMs;
     }
     public static DelayResult getTimeFromDelay(MilkJobExecution jobExecution, PlugInParameter parameter,Date currentDate, boolean advance) {
         return getTimeFromDelay(jobExecution.getInputMapParameter(parameter), TypesCast.getString( parameter.defaultValue, "" ), currentDate, advance);
@@ -164,40 +168,41 @@ public class MilkPlugInToolbox {
         try
         {
             if (mapScope != null) {
-                delayResult.scope = DELAYSCOPE.valueOf( mapScope.get( MilkJob.CSTJSON_PARAMETER_DELAY_SCOPE).toString());
-                delayResult.delay = Integer.parseInt(mapScope.get( MilkJob.CSTJSON_PARAMETER_DELAY_VALUE).toString());
+                delayResult.scopeInput = DELAYSCOPE.valueOf( mapScope.get( MilkJob.CSTJSON_PARAMETER_DELAY_SCOPE).toString());
+                delayResult.delayInput = Integer.parseInt(mapScope.get( MilkJob.CSTJSON_PARAMETER_DELAY_VALUE).toString());
             } else {
                 StringTokenizer st = new StringTokenizer(defaultValue, ":");
-                delayResult.scope = DELAYSCOPE.valueOf( st.nextToken());
-                delayResult.delay = Integer.parseInt( st.nextToken());
+                delayResult.scopeInput = DELAYSCOPE.valueOf( st.nextToken());
+                delayResult.delayInput = Integer.parseInt( st.nextToken());
             }
             if (! advance)
-                delayResult.delay = - delayResult.delay;
+                delayResult.delayInput = - delayResult.delayInput;
         }
         catch( Exception e)
         {
-            if (delayResult.scope == null)
-                delayResult.scope=DELAYSCOPE.YEAR;
+            if (delayResult.scopeInput == null)
+                delayResult.scopeInput=DELAYSCOPE.YEAR;
             delayResult.listEvents.add( new BEvent(eventIncorrectDelayStructure, "Value:["+defaultValue+"]"));
             return delayResult;
         }
         
         Calendar c = Calendar.getInstance();
         c.setTime(currentDate);
-        if (delayResult.scope == DELAYSCOPE.YEAR)
-            c.add(Calendar.YEAR, delayResult.delay);
-        else if (delayResult.scope == DELAYSCOPE.MONTH)
-            c.add(Calendar.MONTH, delayResult.delay);
-        else if (delayResult.scope == DELAYSCOPE.WEEK)
-            c.add(Calendar.WEEK_OF_YEAR, delayResult.delay);
-        else if (delayResult.scope == DELAYSCOPE.DAY)
-            c.add(Calendar.DAY_OF_YEAR, delayResult.delay);
-        else if (delayResult.scope == DELAYSCOPE.HOUR)
-            c.add(Calendar.HOUR_OF_DAY, delayResult.delay);
-        else if (delayResult.scope == DELAYSCOPE.MN)
-            c.add(Calendar.MINUTE, delayResult.delay);
+        if (delayResult.scopeInput == DELAYSCOPE.YEAR)
+            c.add(Calendar.YEAR, delayResult.delayInput);
+        else if (delayResult.scopeInput == DELAYSCOPE.MONTH)
+            c.add(Calendar.MONTH, delayResult.delayInput);
+        else if (delayResult.scopeInput == DELAYSCOPE.WEEK)
+            c.add(Calendar.WEEK_OF_YEAR, delayResult.delayInput);
+        else if (delayResult.scopeInput == DELAYSCOPE.DAY)
+            c.add(Calendar.DAY_OF_YEAR, delayResult.delayInput);
+        else if (delayResult.scopeInput == DELAYSCOPE.HOUR)
+            c.add(Calendar.HOUR_OF_DAY, delayResult.delayInput);
+        else if (delayResult.scopeInput == DELAYSCOPE.MN)
+            c.add(Calendar.MINUTE, delayResult.delayInput);
         
         delayResult.delayDate = c.getTime();
+        delayResult.delayInMs = c.getTimeInMillis() - delayResult.originDate.getTime();
         return delayResult;
     }
     

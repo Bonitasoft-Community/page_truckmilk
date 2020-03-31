@@ -6,16 +6,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.mapper.Mapper;
 import org.bonitasoft.truckmilk.mapper.Mapper.MAPPER_POLICY;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 
 public class MilkDirectory extends MilkPlugIn {
 
@@ -44,16 +45,16 @@ public class MilkDirectory extends MilkPlugIn {
     /**
      * check the environment : for the deleteCase, nothing is required
      */
-    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
-        return new ArrayList<BEvent>();
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
+        return new ArrayList<>();
     };
 
     /**
      * check the environment : for the milkDirectory,
      * The path to check depends on the tour, so the only environment needed is to access a disk ?
      */
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
+        List<BEvent> listEvents = new ArrayList<>();
         File fileDirectoy = new File(jobExecution.getInputStringParameter(cstParamDirectory));
         if (!fileDirectoy.isDirectory())
             listEvents.add(new BEvent(EVENT_DIRECTORY_NOT_EXIST, jobExecution.getInputStringParameter(cstParamDirectory)));
@@ -61,12 +62,12 @@ public class MilkDirectory extends MilkPlugIn {
     };
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public MilkJobOutput execute(MilkJobExecution jobExecution) {
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
         try {
             String csvPolicy = jobExecution.getInputStringParameter(cstParamCsvFilePolicy);
             String csvSeparator = jobExecution.getInputStringParameter(cstParamCsvSeparator);
-            List<BEvent> listEvents = mapper.initialisation(jobExecution, apiAccessor);
+            List<BEvent> listEvents = mapper.initialisation(jobExecution, jobExecution.getApiAccessor());
             if (BEventFactory.isError(listEvents)) {
                 plugTourOutput.addEvents(listEvents);
                 plugTourOutput.executionStatus = ExecutionStatus.ERROR;
@@ -92,7 +93,7 @@ public class MilkDirectory extends MilkPlugIn {
                     // open the CSV
                 } else {
                     // one case per file
-                    mapper.createCase(jobExecution, parameters, fileAttachement, apiAccessor);
+                    mapper.createCase(jobExecution, parameters, fileAttachement, jobExecution.getApiAccessor());
                 }
             }
         } catch (Exception e) {
@@ -102,12 +103,12 @@ public class MilkDirectory extends MilkPlugIn {
     }
 
     @Override
-    public PlugInDescription getDefinitionDescription() {
-        PlugInDescription plugInDescription = new PlugInDescription();
-        plugInDescription.name = "MonitorDirectory";
-        plugInDescription.label = "Monitor Directory";
-        plugInDescription.description = "Monitor a directory. When a file arrive in this directory, a new case is created";
-        plugInDescription.category = CATEGORY.MONITOR;
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
+        plugInDescription.setName( "MonitorDirectory");
+        plugInDescription.setLabel( "Monitor Directory");
+        plugInDescription.setDescription( "Monitor a directory. When a file arrive in this directory, a new case is created");
+        plugInDescription.setCategory( CATEGORY.MONITOR);
 
         return plugInDescription;
     }

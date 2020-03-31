@@ -12,7 +12,10 @@ import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.CommandAPI;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 
 /* ******************************************************************************** */
@@ -41,7 +44,7 @@ public class MilkCommand extends MilkPlugIn {
      * @return a list of Events.
      */
     @Override
-    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
     }
 
@@ -49,7 +52,7 @@ public class MilkCommand extends MilkPlugIn {
      * check the environment of the job: is the command exist?
      */
     @Override
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
         // is the command Exist ? 
         return new ArrayList<>();
     }
@@ -58,12 +61,13 @@ public class MilkCommand extends MilkPlugIn {
      * return the description of job
      */
     @Override
-    public PlugInDescription getDefinitionDescription() {
-        PlugInDescription plugInDescription = new PlugInDescription();
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
 
-        plugInDescription.name = "Ping";
-        plugInDescription.description = "Just do a ping";
-        plugInDescription.label = "Ping job";
+        plugInDescription.setName( "Ping");
+        plugInDescription.setLabel( "Ping job");
+        plugInDescription.setDescription( "Just do a ping");
+        plugInDescription.setCategory(CATEGORY.OTHER);
         plugInDescription.addParameter(cstParamCommandName);
         plugInDescription.addParameter(cstParamCommandParameters);
         return plugInDescription;
@@ -73,7 +77,7 @@ public class MilkCommand extends MilkPlugIn {
      * execution of the job. Just calculated the result according the parameters, and return it.
      */
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public MilkJobOutput execute(MilkJobExecution jobExecution) {
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         // if the date has to be added in the result ?

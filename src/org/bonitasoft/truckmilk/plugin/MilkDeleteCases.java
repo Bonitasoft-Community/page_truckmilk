@@ -3,7 +3,6 @@ package org.bonitasoft.truckmilk.plugin;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.ProcessAPI;
 import org.bonitasoft.engine.bpm.process.ArchivedProcessInstance;
 import org.bonitasoft.engine.bpm.process.ArchivedProcessInstancesSearchDescriptor;
@@ -17,10 +16,12 @@ import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 
 /**
  * Delete all cases in a process
@@ -61,21 +62,21 @@ public class MilkDeleteCases extends MilkPlugIn {
     /**
      * check the environment : for the deleteCase, nothing is required
      */
-    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
     };
 
     @Override
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
         // is the command Exist ? 
         return new ArrayList<>();
     }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution input, APIAccessor apiAccessor) {
+    public MilkJobOutput execute(MilkJobExecution input) {
         MilkJobOutput plugTourOutput = input.getMilkJobOutput();
 
-        ProcessAPI processAPI = apiAccessor.getProcessAPI();
+        ProcessAPI processAPI = input.getApiAccessor().getProcessAPI();
         // get Input 
         @SuppressWarnings("unchecked")
         List<String> listProcessName = (List<String>) input.getInputListParameter(cstParamProcessFilter);
@@ -84,9 +85,9 @@ public class MilkDeleteCases extends MilkPlugIn {
             maximumArchiveDeletionPerRound = 10000L;
         try {
 
-            List<Long> listProcessDefinitionId = new ArrayList<Long>();
+            List<Long> listProcessDefinitionId = new ArrayList<>();
 
-            if (listProcessName != null && listProcessName.size() > 0) {
+            if (listProcessName != null && ! listProcessName.isEmpty()) {
 
                 for (String processName : listProcessName) {
                     SearchOptionsBuilder searchOptionBuilder = new SearchOptionsBuilder(0, 1000);
@@ -103,7 +104,7 @@ public class MilkDeleteCases extends MilkPlugIn {
                 }
             }
 
-            if (listProcessDefinitionId.size() == 0) {
+            if ( listProcessDefinitionId.isEmpty()) {
                 // filter given, no process found : stop now
                 plugTourOutput.addEvent(eventNoProcessForFilter);
                 plugTourOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
@@ -163,12 +164,12 @@ public class MilkDeleteCases extends MilkPlugIn {
     }
 
     @Override
-    public PlugInDescription getDefinitionDescription() {
-        PlugInDescription plugInDescription = new PlugInDescription();
-        plugInDescription.name = "DeleteCases";
-        plugInDescription.category = CATEGORY.CASES;
-        plugInDescription.label = "Delete Cases (active and archived)";
-        plugInDescription.description = "Delete all cases in the given process, by a limitation given in parameters";
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
+        plugInDescription.setName( "DeleteCases");
+        plugInDescription.setLabel( "Delete Cases (active and archived)");
+        plugInDescription.setDescription( "Delete all cases in the given process, by a limitation given in parameters");
+        plugInDescription.setCategory( CATEGORY.CASES);
         plugInDescription.addParameter(cstParamMaximumDeletion);
         plugInDescription.addParameter(cstParamProcessFilter);
 

@@ -10,29 +10,24 @@ import java.util.Map.Entry;
 import java.util.StringTokenizer;
 import java.util.logging.Logger;
 
-import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.bpm.flownode.HumanTaskInstance;
 import org.bonitasoft.engine.bpm.flownode.HumanTaskInstanceSearchDescriptor;
-import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfo;
 import org.bonitasoft.engine.exception.SearchException;
 import org.bonitasoft.engine.exception.UpdateException;
 import org.bonitasoft.engine.identity.User;
 import org.bonitasoft.engine.identity.UserNotFoundException;
 import org.bonitasoft.engine.search.SearchOptionsBuilder;
-import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
-import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.log.event.BEventFactory;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
-import org.bonitasoft.truckmilk.engine.MilkJobOutput;
-import org.bonitasoft.truckmilk.job.MilkJobExecution;
-
-import groovy.time.TimeCategory;
-import groovy.time.TimeDuration;
-
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 /* ******************************************************************************** */
 /*                                                                                  */
 /* MilkUnassignTasks */
@@ -40,6 +35,10 @@ import groovy.time.TimeDuration;
 /* Unassign tasks */
 /*                                                                                  */
 /* ******************************************************************************** */
+import org.bonitasoft.truckmilk.job.MilkJobExecution;
+
+import groovy.time.TimeCategory;
+import groovy.time.TimeDuration;
 
 public class MilkUnassignTasks extends MilkPlugIn {
 
@@ -56,15 +55,6 @@ public class MilkUnassignTasks extends MilkPlugIn {
     private static BEvent userIdNotFound = new BEvent(MilkUnassignTasks.class.getName(), 3, Level.ERROR,
             "AssigneeID Not found", "Could not locate the AssigneeID via IdentityAPI");
 
-    private static BEvent eventNoprocessFilter = new BEvent(MilkUnassignTasks.class.getName(), 4,
-            Level.APPLICATIONERROR,
-            "No process filter", "The process filter is empty", "SLA can't run.",
-            "Give a process name");
-
-    private static BEvent eventNoprocessMatchFilter = new BEvent(MilkUnassignTasks.class.getName(), 5,
-            Level.APPLICATIONERROR,
-            "No process found", "No process is found with the given filter", "This filter does not apply.",
-            "Check the process name (you must give as minimum one process)");
 
     SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
@@ -79,29 +69,29 @@ public class MilkUnassignTasks extends MilkPlugIn {
      * @return a list of Events.
      */
     @Override
-    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
     }
 
     /**
      * check the Job's environment
      */
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
-
-    };
+    }
 
     /**
      * return the description of ping job
      */
     @Override
-    public PlugInDescription getDefinitionDescription() {
-        PlugInDescription plugInDescription = new PlugInDescription();
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
 
-        plugInDescription.name = "Unassign Tasks";
-        plugInDescription.category = CATEGORY.TASKS;
-        plugInDescription.description = "Unassign tasks if not resolved after a specified time.";
-        plugInDescription.label = "Unassign Tasks";
+        plugInDescription.setName( "Unassign Tasks" );
+        plugInDescription.setCategory( CATEGORY.TASKS );
+        plugInDescription.setDescription( "Unassign tasks if not resolved after a specified time." );
+        plugInDescription.setLabel( "Unassign Tasks" );
+        plugInDescription.setStopJob( JOBSTOPPER.BOTH );
         plugInDescription.addParameter(cstParamProcessName);
         plugInDescription.addParameter(cstParamTaskName);
         plugInDescription.addParameter(cstParamCheckoutTime);
@@ -112,7 +102,7 @@ public class MilkUnassignTasks extends MilkPlugIn {
      * execution of the job. Just calculated the result according the parameters, and return it.
      */
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public MilkJobOutput execute(MilkJobExecution jobExecution) {
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         // task name is required
@@ -123,7 +113,7 @@ public class MilkUnassignTasks extends MilkPlugIn {
         try {
             // one process name is required
             SearchOptionsBuilder searchTasks = new SearchOptionsBuilder(0, 10000);
-            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessName, false, searchTasks, HumanTaskInstanceSearchDescriptor.PROCESS_DEFINITION_ID, apiAccessor.getProcessAPI());
+            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessName, false, searchTasks, HumanTaskInstanceSearchDescriptor.PROCESS_DEFINITION_ID, jobExecution.getApiAccessor().getProcessAPI());
 
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 plugTourOutput.addEvents(listProcessResult.listEvents);
@@ -147,7 +137,7 @@ public class MilkUnassignTasks extends MilkPlugIn {
                 listProcessResult.sob.rightParenthesis();
             }
 
-            List<HumanTaskInstance> tasks = apiAccessor.getProcessAPI().searchHumanTaskInstances(listProcessResult.sob.done()).getResult();
+            List<HumanTaskInstance> tasks = jobExecution.getApiAccessor().getProcessAPI().searchHumanTaskInstances(listProcessResult.sob.done()).getResult();
             jobExecution.setAvancementTotalStep((long) tasks.size());
             logger.info("MilkUnassignTasks: unassign Task Count: " + tasks.size());
 
@@ -166,8 +156,8 @@ public class MilkUnassignTasks extends MilkPlugIn {
                 if (duration.getMinutes() >= checkoutTime) {
                     logger.fine("Unassigning task id: " + task.getId());
                     try {
-                        User assigneeUser = apiAccessor.getIdentityAPI().getUser(task.getAssigneeId());
-                        apiAccessor.getProcessAPI().assignUserTask(task.getId(), 0);
+                        User assigneeUser = jobExecution.getApiAccessor().getIdentityAPI().getUser(task.getAssigneeId());
+                        jobExecution.getApiAccessor().getProcessAPI().assignUserTask(task.getId(), 0);
                         String userKey = assigneeUser.getFirstName() + " " + assigneeUser.getLastName();
                         String taskReporting = listUnassignTasks.get(userKey);
                         taskReporting = (taskReporting == null ? "" : taskReporting + ", ") + task.getName() + "[" + task.getId() + "]";

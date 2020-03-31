@@ -16,6 +16,7 @@ import org.bonitasoft.truckmilk.plugin.MilkPing;
 import org.bonitasoft.truckmilk.plugin.MilkPurgeArchive;
 import org.bonitasoft.truckmilk.plugin.MilkPurgeArchivedListGetList;
 import org.bonitasoft.truckmilk.plugin.MilkPurgeArchivedListPurge;
+import org.bonitasoft.truckmilk.plugin.MilkRadarBonitaEngine;
 import org.bonitasoft.truckmilk.plugin.MilkReplayFailedTask;
 import org.bonitasoft.truckmilk.plugin.MilkRestartFlowNodes;
 import org.bonitasoft.truckmilk.plugin.MilkSLA;
@@ -89,6 +90,7 @@ public class MilkPlugInFactory {
         listPlugIns.add(new MilkRestartFlowNodes() );
         listPlugIns.add(new MilkGrumman() );
         listPlugIns.add(new MilkCancelCases() );
+        listPlugIns.add(new MilkRadarBonitaEngine() );
     }
 
     public MilkPlugIn getPluginFromName(String name) {

@@ -46,8 +46,9 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
@@ -57,7 +58,7 @@ import org.bonitasoft.truckmilk.toolbox.SendMailEnvironment;
 import org.bonitasoft.truckmilk.toolbox.SendMailParameters;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 import org.json.simple.JSONValue;
-
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 public class MilkSLA extends MilkPlugIn {
 
     static MilkLog logger = MilkLog.getLogger(MilkSLA.class.getName());
@@ -212,7 +213,7 @@ public class MilkSLA extends MilkPlugIn {
      * 
      * 
      */
-    public static enum ACTION {
+    public enum ACTION {
         EMAILUSER, EMAILCANDIDATES, EMAILACTOR, ASSIGNUSER, ASSIGNSUPERVISOR, STARTPROCESS, SENDMESSAGE
     }
 
@@ -304,7 +305,7 @@ public class MilkSLA extends MilkPlugIn {
      */
     public boolean isEmbeded() {
         return true;
-    };
+    }
 
     /* ******************************************************************************** */
     /*                                                                                  */
@@ -316,14 +317,14 @@ public class MilkSLA extends MilkPlugIn {
     /**
      * check the environment : for the milkEmailUsersTasks, we require to be able to send an email
      */
-    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
-        return SendMailEnvironment.checkEnvironment(tenantId, this);
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
+        return SendMailEnvironment.checkEnvironment(jobExecution, this);
     };
 
     /**
      * check the Job's environment
      */
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
     };
 
@@ -335,48 +336,50 @@ public class MilkSLA extends MilkPlugIn {
     /* ******************************************************************************** */
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution input, APIAccessor apiAccessor) {
+    public MilkJobOutput execute(MilkJobExecution milkJobExecution) {
 
-        MilkJobOutput plugTourOutput = executeSLA(input, null, apiAccessor);
+        MilkJobOutput plugTourOutput = executeSLA(milkJobExecution, null, milkJobExecution.getApiAccessor());
         plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
         return plugTourOutput;
     }
 
     @Override
-    public PlugInDescription getDefinitionDescription() {
-        PlugInDescription plugInDescription = new PlugInDescription();
-        plugInDescription.name = "SLA";
-        plugInDescription.label = "SLA";
-        plugInDescription.category = CATEGORY.TASKS;
-        plugInDescription.explanation = "Verify the SLA on human task, then notify if we reach some level like 75% of the task duration, of 100%. Can re-affect the task to a different user if needed.<br>";
-        plugInDescription.explanation += " <i>ProcessName</i> : if empty, then rule apply for all processes<br>";
-        plugInDescription.explanation += " <i>Rule SLA</i><br> ";
-        plugInDescription.explanation += " * TASKNAME is the task where the rule apply (empty means all human task of the process)<br>";
-        plugInDescription.explanation += " * PERCENT: 0 means the begining of the task. Else, calculation is perform between the start (0%) to the Due Date (100%). Over 100% is acceptable.<br>";
-        plugInDescription.explanation += " * ACTION: (email use professionnal email)<br>";
-        plugInDescription.explanation += " <ul>";
-        plugInDescription.explanation += " <li> " + ACTION.EMAILUSER.name() + ":<userName></li>";
-        plugInDescription.explanation += " <li> " + ACTION.EMAILACTOR.name() + ":<actor></li>";
-        plugInDescription.explanation += " <li> " + ACTION.EMAILCANDIDATES.name() + "</li>";
-        plugInDescription.explanation += " <li> " + ACTION.ASSIGNUSER.name() + ":<userName> directly assign the task to a user. </li>";
-        plugInDescription.explanation += " <li> " + ACTION.ASSIGNSUPERVISOR.name() + ":[1] assign to supervisor (1) or supervisor of supervisor(2) - stop if no supervisor.";
-        plugInDescription.explanation += " <li> " + ACTION.STARTPROCESS.name() + ":<processName>;<processVersion>;<JSONinput>. JSONInput to match the input contract to start the process .<br>";
-        plugInDescription.explanation += " <li> " + ACTION.SENDMESSAGE.name() + ":<messageName>;<targetProcess>;targetFlowNode;<JSONMessageContent>;<JSONMessageCorrelation>";
-        plugInDescription.explanation += " </ul><br>";
-        plugInDescription.explanation += "<i>Place Holder Variable</i><br>";
-        plugInDescription.explanation += "When a JSON is required, theses place holder are available:<br>";
-        plugInDescription.explanation += "<ul> <li>{{processName}} <NAME> name of the process</li>";
-        plugInDescription.explanation += " <li>{{processVersion}} <STRING> version</li> ";
-        plugInDescription.explanation += "<li>{{processId}}: <LONG> Process's ID</li> ";
-        plugInDescription.explanation += "<li>{{caseId}}: <LONG> Case's ID</li> ";
-        plugInDescription.explanation += "<li>{{taskId}}: <LONG> Task's ID</li> ";
-        plugInDescription.explanation += "<li>{{taskName}}: <STRING> TaskName</li>";
-        plugInDescription.explanation += "<li>{{percentThreashold}}: <LONG> percent of SLA</li> ";
-        plugInDescription.explanation += "<li>{{dueDate}} : <LOCALDATETIME> Due date</li></ul>";
-        plugInDescription.explanation += "(example {'proc': '{{processname}}', 'taskId':{{taskId}}, 'SLA':'Level2' })";
-        plugInDescription.explanation += "<i>Registration</i><br>";
-        plugInDescription.explanation += "To avoid to send twice a SLA email, you can setup a variable in the process. Job will register that it already sent the '60% milestone' email. Else, give a delay in minutes: if the milstone was between [CurrentTime - Delay, CurrentTime], then it is not resend";
-
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
+        plugInDescription.setName("SLA"); 
+        plugInDescription.setLabel( "SLA" );
+        plugInDescription.setCategory(CATEGORY.TASKS);
+        StringBuilder explanation= new StringBuilder();
+        explanation.append( "Verify the SLA on human task, then notify if we reach some level like 75% of the task duration, of 100%. Can re-affect the task to a different user if needed.<br>");
+        explanation.append(  " <i>ProcessName</i> : if empty, then rule apply for all processes<br>");
+        explanation.append(  " <i>Rule SLA</i><br> ");
+        explanation.append(  " * TASKNAME is the task where the rule apply (empty means all human task of the process)<br>");
+        explanation.append(  " * PERCENT: 0 means the begining of the task. Else, calculation is perform between the start (0%) to the Due Date (100%). Over 100% is acceptable.<br>");
+        explanation.append(  " * ACTION: (email use professionnal email)<br>");
+        explanation.append(  " <ul>");
+        explanation.append(  " <li> " + ACTION.EMAILUSER.name() + ":<userName></li>");
+        explanation.append(  " <li> " + ACTION.EMAILACTOR.name() + ":<actor></li>");
+        explanation.append(  " <li> " + ACTION.EMAILCANDIDATES.name() + "</li>");
+        explanation.append(  " <li> " + ACTION.ASSIGNUSER.name() + ":<userName> directly assign the task to a user. </li>");
+        explanation.append(  " <li> " + ACTION.ASSIGNSUPERVISOR.name() + ":[1] assign to supervisor (1) or supervisor of supervisor(2) - stop if no supervisor.");
+        explanation.append(  " <li> " + ACTION.STARTPROCESS.name() + ":<processName>;<processVersion>;<JSONinput>. JSONInput to match the input contract to start the process .<br>");
+        explanation.append(  " <li> " + ACTION.SENDMESSAGE.name() + ":<messageName>;<targetProcess>;targetFlowNode;<JSONMessageContent>;<JSONMessageCorrelation>");
+        explanation.append(  " </ul><br>");
+        explanation.append(  "<i>Place Holder Variable</i><br>");
+        explanation.append(  "When a JSON is required, theses place holder are available:<br>");
+        explanation.append(  "<ul> <li>{{processName}} <NAME> name of the process</li>");
+        explanation.append(  " <li>{{processVersion}} <STRING> version</li> ");
+        explanation.append(  "<li>{{processId}}: <LONG> Process's ID</li> ");
+        explanation.append(  "<li>{{caseId}}: <LONG> Case's ID</li> ");
+        explanation.append(  "<li>{{taskId}}: <LONG> Task's ID</li> ");
+        explanation.append(  "<li>{{taskName}}: <STRING> TaskName</li>");
+        explanation.append(  "<li>{{percentThreashold}}: <LONG> percent of SLA</li> ");
+        explanation.append(  "<li>{{dueDate}} : <LOCALDATETIME> Due date</li></ul>");
+        explanation.append(  "(example {'proc': '{{processname}}', 'taskId':{{taskId}}, 'SLA':'Level2' })");
+        explanation.append(  "<i>Registration</i><br>");
+        explanation.append(  "To avoid to send twice a SLA email, you can setup a variable in the process. Job will register that it already sent the '60% milestone' email. Else, give a delay in minutes: if the milstone was between [CurrentTime - Delay, CurrentTime], then it is not resend");
+        plugInDescription.setExplanation( explanation.toString() );
+        
         plugInDescription.addParameter(cstParamProcessName);
         plugInDescription.addParameter(cstParamRuleSLA);
         plugInDescription.addParameter(cstParamMaximumTask);
@@ -433,7 +436,7 @@ public class MilkSLA extends MilkPlugIn {
         }
         // unkonw test
         List<BEvent> listEvents = new ArrayList<BEvent>();
-        listEvents.add(new BEvent(MilkPlugIn.EVENT_UNKNOW_BUTTON, "Button [" + buttonName + "]"));
+        listEvents.add(new BEvent(MilkPlugIn.eventUnknowButton, "Button [" + buttonName + "]"));
         return new ArrayList<BEvent>();
     }
 
@@ -806,7 +809,7 @@ public class MilkSLA extends MilkPlugIn {
             else if (rule.getAction() == ACTION.ASSIGNSUPERVISOR) {
                 Integer level = TypesCast.getInteger(rule.getActionParameters(), 1);
                 List<User> listUsers = processAPI.getPossibleUsersOfPendingHumanTask(humanTask.getId(), 0, 10000);
-                User user = listUsers.size() > 0 ? listUsers.get(0) : null;
+                User user = ! listUsers.isEmpty() ? listUsers.get(0) : null;
                 if (user == null)
                     listEvents.add(new BEvent(eventNoUser, "Task [" + humanTask.getName() + "] Id[" + humanTask.getId() + "]"));
                 else {

@@ -14,12 +14,12 @@
 	// --------------------------------------------------------------------------
 
 	// Ping the server
-	appCommand.controller('TruckMilkControler', function($http, $scope, $sce, $timeout, $upload) {
+	appCommand.controller('TruckMilkControler', function($http, $scope, $sce, $timeout, $upload, $filter) {
 
 		this.showhistory = function(show) {
 			this.isshowhistory = show;
 		}
-		this.navbaractiv='Jobs';
+		this.navbaractiv='Reports';
 		
 		this.getNavClass = function( tabtodisplay )
 		{
@@ -38,6 +38,16 @@
 		
 		this.inprogress = false;
 
+		// return the class used for the label
+		this.getClassExecution =  function( status ) {
+			if (status && status.toUpperCase() === 'SUCCESS' || status.toUpperCase() ==='SUCCESSPARTIAL')
+				return "label label-success btn-xs";
+			if (status && status.toUpperCase() === 'ERROR' || status.toUpperCase()=== 'BADCONFIGURATION')
+				return "label label-danger btn-xs";
+			return "label label-default";
+		}
+		
+		
 		this.listplugtour =[];
 		this.listplugtourSimul = [ {
 			'name' : 'Replay process Free',
@@ -68,19 +78,47 @@
 			{"value": "HOUR", "label":"Hour"},
 			{"value": "MN", "label":"Minutes"} ];
 		
-		// a new listPlugTour is receive : refresh all what we need in the
+		// a new Jobs is receive : refresh all what we need in the
 		// interface
-		this.afterRefreshListPlugTour = function() {
-			console.log("afterRefreshListPlugTour:Start");
+		this.refreshListJobs = function() {
+			console.log("refreshListJobs:Start");
 			for ( var i in this.listplugtour) {
 				var plugtourindex = this.listplugtour[i];
 				this.preparePlugTourParameter(plugtourindex);
 			}
+			
 			// calculate a uniq time stamp, to avoid the infinit loop when
 			// calculate the downloadParameterFile
 			this.refreshDate = new Date();
 			
 			this.calculateParameterUpload();
+		}
+
+		// No new jobs, just refresh the status. So, refresh all savecexectution 
+		// interface
+		this.refreshListReportExecution = function() {
+			// collect all trackedsaveexecution
+			console.log("refreshListReportExecution:Build list reportExecution");
+			this.listreportsexecution=[];
+			for ( var i in this.listplugtour) {
+				var jobindex = this.listplugtour[i];
+				// console.log("  JobIndex "+angular.toJson(jobindex));
+				if (jobindex.savedExecution) {
+					for (var j in jobindex.savedExecution) {
+						
+						// console.log('savedExecution[j] '+ angular.toJson(jobindex.savedExecution[ j ]));
+						var reportExecution = angular.fromJson( angular.toJson(jobindex.savedExecution[ j ]));
+
+						reportExecution.pluginname	= jobindex.pluginname;
+						reportExecution.name		= jobindex.name;
+						this.listreportsexecution.push( reportExecution );
+					}
+				}
+			}
+			// newest in first
+			this.listreportsexecution= $filter('orderBy')(this.listreportsexecution, 'execDate',true);
+			console.log('refreshListReportExecution.order='+angular.toJson(this.listreportsexecution));
+			
 		}
 
 		
@@ -142,7 +180,8 @@
 				
 				console.log("loadInit start initialisation");
 				// prepare defaut value
-				self.afterRefreshListPlugTour();
+				self.refreshListJobs();
+				self.refreshListReportExecution();
 
 				self.inprogress = false;
 				console.log("loadinit.end inprogress<=false");
@@ -228,7 +267,7 @@
 			});
 
 		}
-		// bob
+		// 
 		this.refreshPlugTourFromServer = function( completeStatus, self, jsonResult ) {
 			console.log("refreshPlugTour - complete="+completeStatus);
 		
@@ -237,8 +276,9 @@
 				console.log("refreshPlugTour True, update all"); 
 	
 				self.listplugtour 	= jsonResult.listplugtour;
-				self.afterRefreshListPlugTour();
-				
+				self.refreshListJobs();
+				self.refreshListReportExecution();
+		
 				self.scheduler 		= jsonResult.scheduler;
 				// console.log("Scheduler="+angular.toJson( self.scheduler));
 	
@@ -281,6 +321,8 @@
 						// self.listplugtour.push(serverPlugTour );
 					}
 				}						
+				self.refreshListReportExecution();
+
 			}
 		}
 		
@@ -321,7 +363,7 @@
 			this.operationJob('abortJob', param, plugtour, false);
 		}
 
-		<!-- Activate / Deactivate -->
+		// Activate / Deactivate
 		this.activateJob = function(plugtour) {
 			console.log("startJob:Start");
 			var param = {
@@ -426,7 +468,9 @@
 				{
 					// todo keep the one open
 					self.listplugtour = jsonResult.listplugtour;
-					self.afterRefreshListPlugTour();
+					self.refreshListJobs();
+					self.refreshListReportExecution();
+
 					self.refreshParam=true; // force it to true
 				}
 				if (jsonResult.enable != undefined && self.currentplugtour != undefined)
@@ -448,7 +492,9 @@
 					
 					console.log("operationtour.Refresh them");
 					// prepare defaut value
-					self.afterRefreshListPlugTour();
+					self.refreshListJobs();
+					self.refreshListReportExecution();
+					
 				}
 		}).error(function(jsonResult, statusHttp, headers, config) {
 			console.log("operatinoJob.error HTTP statusHttp="+statusHttp);
@@ -477,7 +523,7 @@
 			
 			for ( var key in plugtour.parameters) {
 				plugtour.parametersvalue[key] = JSON.parse( JSON.stringify( plugtour.parameters[key]) );
-				console.log("Parameter[" + key + "] value[" + angular.toJson(plugtour.parameters[key]) + "] ="+angular.toJson(plugtour.parametersvalue,true ));
+				// console.log("Parameter[" + key + "] value[" + angular.toJson(plugtour.parameters[key]) + "] ="+angular.toJson(plugtour.parametersvalue,true ));
 			}
 			// prepare all test button
 			for (var key in plugtour.parametersdef)
@@ -615,7 +661,8 @@
 				'parameters' : false,
 				'report' : false,
 				'analysis' : false,
-				'hostrestriction':false
+				'hostrestriction':false,
+				'dashboard':false
 			};
 		}
 
@@ -640,6 +687,11 @@
 			// console.log("showreport:Start");
 			this.hideall(plugtour);
 			plugtour.show.report = true;
+		}
+		this.showdashboard = function(plugtour) {
+			// console.log("showreport:Start");
+			this.hideall(plugtour);
+			plugtour.show.dashboard = true;
 		}
 		this.showanalysis = function(plugtour) {
 			// console.log("showreport:Start");
@@ -1028,6 +1080,73 @@
 			if (this.scheduler)
 				return this.scheduler.listtypeschedulers;
 			return [];
+		}
+		
+		// -----------------------------------------------------------------------------------------
+		// Chart
+		// -----------------------------------------------------------------------------------------
+		this.getDashboardData = function() {
+			var result=[ ["0", 51], ["1", 15], ["2", 7] ];
+			return result;
+		}
+		this.getDashboardColumn = function() {
+			return ["whattime", "value"];
+		}
+		// https://www.tutorialspoint.com/angular_googlecharts/angular_googlecharts_column_basic.htm
+		this.getDashboardChart = function( mesure ) {
+			var result1= {
+				  "type": "ColumnChart",
+				  "displayed": true,
+				  "data": {
+				    "cols": [
+				      {
+				        "type": "string",
+				        "id": "whattime",
+				        "label": "whattime"
+				      },
+				      {
+				        "type": "number",
+				        "id": "value",
+				        "label": "Occurence"
+				      }
+				    ],
+				    "rows": [
+				      { "c": [ { "v": "00:00"}, { "v": 0 }] },
+				      { "c": [ { "v": "00:10"}, { "v": 12 }]},
+				      { "c": [ { "v": "00:20"}, { "v": 7 }]}
+				  ]
+				  }
+			}
+			var result= {
+					  "type": "ColumnChart",
+					  "displayed": true,
+					  "columnNames": ["whattime", "value"],
+					  "data": [ ["0", 5],
+						  		["1", 15],
+						  		["2", 7] ],
+						"width":550,
+						"height" : 400
+				}
+			
+			return angular.fromJson( angular.toJson( result ));
+			
+			
+			/*
+			var data = new google.visualization.DataTable();
+		    data.addColumn('string', 'Year');
+		    data.addColumn('number', 'Score');
+		    data.addRows([
+		      ['2005',3.6],
+		      ['2006',4.1],
+		      ['2007',3.8],
+		      ['2008',3.9],
+		      ['2009',4.6]
+		    ]);
+
+		    barsVisualization = new google.visualization.ColumnChart(document.getElementById('mouseoverdiv'));
+		    barsVisualization.draw(data, null);
+		    */
+			// return resultCopy;
 		}
 		
 		// -----------------------------------------------------------------------------------------

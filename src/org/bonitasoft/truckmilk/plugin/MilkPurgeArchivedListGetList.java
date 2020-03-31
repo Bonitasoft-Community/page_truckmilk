@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.ProcessAPI;
 import org.bonitasoft.engine.bpm.process.ArchivedProcessInstance;
 import org.bonitasoft.engine.bpm.process.ArchivedProcessInstancesSearchDescriptor;
@@ -25,14 +24,16 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
-
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 /**
  * this job calculate the list of case to purge, and save the list in a the FileParameters
  */
@@ -51,8 +52,6 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
             "Report Synthesis", "Result of search", "", "");
 
     private static PlugInParameter cstParamDelayInDay = PlugInParameter.createInstance("delayinday", "Delay", TypeParameter.DELAY, MilkPlugInToolbox.DELAYSCOPE.YEAR + ":1", "Only cases archived before this delay are in the perimeter");
-    private static PlugInParameter cstParamMaximumInReport = PlugInParameter.createInstance("maximuminreport", "Maximum in report", TypeParameter.LONG, 10000L, "Job stops when then number of case to delete reach this limit, in order to not create a very huge file");
-    private static PlugInParameter cstParamMaximumInMinutes = PlugInParameter.createInstance("maximuminminutes", "Maximum in minutes", TypeParameter.LONG, 3L, "Job stops when the execution reach this limit, in order to not overload the server.");
     private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Process filter", TypeParameter.ARRAYPROCESSNAME, null, "Only processes in the list will be in the perimeter. No filter means all processes will be in the perimeter. Tips: give 'processName;version' to specify a special version of the process, else all versions of the process are processed");
     private static PlugInParameter cstParamSeparatorCSV = PlugInParameter.createInstance("separatorCSV", "Separator CSV", TypeParameter.STRING, ",", "CSV use a separator. May be ; or ,");
     private static PlugInParameter cstParamReport = PlugInParameter.createInstanceFile("report", "List of cases", TypeParameter.FILEWRITE, null, "List is calculated and saved in this parameter", "ListToPurge.csv", "application/CSV");
@@ -67,39 +66,50 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
     /**
      * check the environment : for the milkEmailUsersTasks, we require to be able to send an email
      */
-    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
     }
 
     /**
      * check the Job's environment
      */
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
 
     }
-
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
+        plugInDescription.setName( "ListPurgeCase");
+        plugInDescription.setLabel( "Purge Archived Cases: get List (no purge)");
+        plugInDescription.setDescription( "Calculate the list of case to be purge, and update the report with the list (CSV Format).");
+        plugInDescription.setCategory( CATEGORY.CASES);
+        plugInDescription.setStopJob( JOBSTOPPER.BOTH );
+        plugInDescription.addParameter(cstParamDelayInDay);
+        plugInDescription.addParameter(cstParamProcessFilter);
+        plugInDescription.addParameter(cstParamSeparatorCSV);
+
+        plugInDescription.addParameter(cstParamReport);
+        return plugInDescription;
+    }
+    @Override
+    public MilkJobOutput execute(MilkJobExecution jobExecution) {
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
-        ProcessAPI processAPI = apiAccessor.getProcessAPI();
-        // get Input 
+        ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
 
+        // get Input 
         String separatorCSV = jobExecution.getInputStringParameter(cstParamSeparatorCSV);
 
-        long maximumInReport = jobExecution.getInputLongParameter(cstParamMaximumInReport);
-        jobExecution.setPleaseStopAfterManagedItems(maximumInReport, 1000000L);
-        jobExecution.setPleaseStopAfterTime(jobExecution.getInputLongParameter(cstParamMaximumInMinutes), 24 * 60L);
 
         // 20 for the preparation, 100 to collect cases
         // Time to run the query take time, and we don't want to show 0% for a long time
         jobExecution.setAvancementTotalStep(120);
         try {
 
-            SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, (int) maximumInReport);
+            SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, jobExecution.getMilkJob().getStopAfterNbItems()+1);
 
-            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, searchActBuilder, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, apiAccessor.getProcessAPI());
+            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, searchActBuilder, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
 
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
@@ -191,20 +201,5 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
         return plugTourOutput;
     }
 
-    @Override
-    public PlugInDescription getDefinitionDescription() {
-        PlugInDescription plugInDescription = new PlugInDescription();
-        plugInDescription.name = "ListPurgeCase";
-        plugInDescription.label = "Purge Archived Cases: get List (no purge)";
-        plugInDescription.category = CATEGORY.CASES;
-        plugInDescription.description = "Calculate the list of case to be purge, and update the report with the list (CSV Format).";
-        plugInDescription.addParameter(cstParamDelayInDay);
-        plugInDescription.addParameter(cstParamMaximumInReport);
-        plugInDescription.addParameter(cstParamMaximumInMinutes);
-        plugInDescription.addParameter(cstParamProcessFilter);
-        plugInDescription.addParameter(cstParamSeparatorCSV);
-
-        plugInDescription.addParameter(cstParamReport);
-        return plugInDescription;
-    }
+   
 }

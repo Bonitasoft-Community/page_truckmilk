@@ -3,9 +3,10 @@ package org.bonitasoft.truckmilk.plugin;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.SendMailEnvironment;
@@ -19,31 +20,31 @@ public class MilkMail extends MilkPlugIn {
     /**
      * check the environment : for the milkEmailUsersTasks, we require to be able to send an email
      */
-    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
-        return SendMailEnvironment.checkEnvironment(tenantId, this);
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
+        return SendMailEnvironment.checkEnvironment(jobExecution, this);
     };
 
     /**
      * check the Job's environment
      */
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
-        return listEvents;
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
+        return new ArrayList<>();
+
     };
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution input, APIAccessor apiAccessor) {
-        MilkJobOutput plugTourOutput = input.getMilkJobOutput();
-        return plugTourOutput;
+    public MilkJobOutput execute(MilkJobExecution input) {
+        return input.getMilkJobOutput();
+        
     }
 
     @Override
-    public PlugInDescription getDefinitionDescription() {
-        PlugInDescription plugInDescription = new PlugInDescription();
-        plugInDescription.name = "MonitorMail";
-        plugInDescription.label = "Monitor Email";
-        plugInDescription.description = "Monitor a email adress. When a email arrive on the mail, if it match the properties, a new case is created or a new task is executed";
-
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
+        plugInDescription.setName( "MonitorMail");
+        plugInDescription.setLabel( "Monitor Email");
+        plugInDescription.setDescription( "Monitor a email adress. When a email arrive on the mail, if it match the properties, a new case is created or a new task is executed");
+        plugInDescription.setCategory( CATEGORY.CASES );
         return plugInDescription;
     }
 }

@@ -84,7 +84,7 @@
 					<div style="font-style: italic;">
 					The <span style="color: red;font-weight: bold;">B</span>onita <span style="color: red;font-weight: bold;">SC</span>heduler&nbsp;
 					</div>
-					<a href="" ng-click="ctrl.showhistory( ! ctrl.isshowhistory )">V2.3.6</a>
+					<a href="" ng-click="ctrl.showhistory( ! ctrl.isshowhistory )">V2.4</a>
 				</center>
 			</td></tr>
 			<tr><td>
@@ -95,7 +95,8 @@
 					2.1 2019 Aug<br>		
 					2.1.3 2019 Sept<br>
 					2.2 2019 Dec<br>
-					2.3 2020 March
+					2.3 2020 March<br>
+					2.4
 				</div>
 			</td></tr>
 		</table>
@@ -104,6 +105,9 @@
 
 	
 		<ul class="nav nav-tabs"  ng-class="{'nav-stacked': vertical, 'nav-justified': justified}" style="border-bottom: 1px solid #c2c2c2;">
+			<li ng-class="{active: active, disabled: false}" id="form-tab" heading="All" active="true" title="Jobs" select="ctrl.navbaractiv == 'Reports'" class="{{ctrl.getNavClass('Reports')}}" style="{{ctrl.getNavStyle('Reports')}}">
+				  <a ng-click="ctrl.navbaractiv = 'Reports';"   class="ng-binding">Reports</a>
+			</li>
 			<li ng-class="{active: active, disabled: false}" id="form-tab" heading="All" active="true" title="Jobs" select="ctrl.navbaractiv == 'Jobs'" class="{{ctrl.getNavClass('Jobs')}}" style="{{ctrl.getNavStyle('Jobs')}}">
 				  <a ng-click="ctrl.navbaractiv = 'Jobs';"   class="ng-binding">Jobs</a>
 			</li>
@@ -122,17 +126,17 @@
 		<!-- Keep it ng-show, else the file drop will not work ! -->	
 		<div class="col-lg-12" ng-show="ctrl.navbaractiv == 'Jobs'">
 		<table width="100%"><tr style="height:25px">
-			<td style="width: 150px;">
-				<input ng-model="ctrl.autorefresh" type="checkbox">Automatic refresh
+			<td style="width: 20px;">
+				<input ng-model="ctrl.autorefresh" type="checkbox" title="Automatic refresh">
+			<td  style="width: 50px;">
+				<button ng-click="ctrl.refresh( false )" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress">Refresh</button>		
+			</td>
 			</td> <td  style="width: 50px;">
 				&nbsp;&nbsp;&nbsp;
 			</td><td  style="width: 250px;">
 				<div ng-if="ctrl.inprogress">
 					<span class="Loading">.</span>Please wait, work in progress
 				</div>
-			</td>
-			<td  style="width: 50px;">
-				<button ng-click="ctrl.refresh( false )" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress">Refresh</button>		
 			</td>
 			<td style="text-align:right">
 				<button ng-click="ctrl.schedulerMaintenance('heartbeat')" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress" title="Force a HeartBeat">
@@ -213,22 +217,12 @@
 							
 						<!--  last execution information -->
 						</td><td style="{{ctrl.getJobStyle(plugtour)}}">
-
-							<div ng-if="plugtour.trackExecution.lastexecutionstatus == 'success' || plugtour.trackExecution.lastexecutionstatus=='successpartial'">
-								<label class="label label-success btn-xs" >
+							<div>
+								<label class="{{ctrl.getClassExecution(plugtour.trackExecution.lastexecutionstatus)}}" >
 									{{plugtour.trackExecution.lastexecutionstatus}}
 								</label>
 							</div>
-							<div ng-if="plugtour.trackExecution.lastexecutionstatus == 'error' || plugtour.trackExecution.lastexecutionstatus == 'badconfiguration'">
-								<label class="label label-danger btn-xs" >
-									{{plugtour.trackExecution.lastexecutionstatus}}
-								</label>
-							</div>
-							<div ng-if=" ! (plugtour.trackExecution.lastexecutionstatus == 'success' || plugtour.trackExecution.lastexecutionstatus=='successpartial' || plugtour.trackExecution.lastexecutionstatus == 'error' || plugtour.trackExecution.lastexecutionstatus == 'badconfiguration')">
-								<label class="label label-default btn-xs" >
-									{{plugtour.trackExecution.lastexecutionstatus}}
-								</label>
-							</div>
+							
 							{{plugtour.trackExecution.lastexecutionst}}
 							
 						</td><td style="{{ctrl.getJobStyle(plugtour)}}">
@@ -255,6 +249,13 @@
 									</div>
 								</div>				
 							</td>
+							
+							<td style="vertical-align:top;padding: 0px 5px;">
+								<a ng-click="ctrl.showdashboard( plugtour )" tutle="Show dashoard">
+									<span class="glyphicon glyphicon-dashboard"></span>
+								</a>
+							</td>
+							
 							</tr></table>
 								
 						<!--  Next Execution : Cron + Next Exectution -->
@@ -293,12 +294,14 @@
 						<!-- ALL actions on the jobs --> 
 						</td><td style="{{ctrl.getJobStyle(plugtour)}}">	
 							
-							<table><tr><td style="vertical-align:top;padding: 0px 10px;">													
+							<table><tr>
+								<!-- <td style="vertical-align:top;padding: 0px 10px;">													
 								<a  ng-click="ctrl.showHostRestriction( plugtour )">
 									<span class="glyphicon glyphicon-lock" title="Show the host restriction (which host the jobs must be executed)"></span>
 								</a>
 								&nbsp;
 								{{plugtour.hostsrestriction}}
+								 -->
 							</td><td style="vertical-align:top;padding: 0px 10px;">
 								<div ng-if="plugtour.enable">							
 									<button ng-click="ctrl.deactivateJob( plugtour )" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress">
@@ -341,7 +344,10 @@
 					</td></tr>
 					 -->
 					 
-					<!--  SECOND LINE : parameters -->
+				 	<!--                                                      	-->
+					<!--  SECOND LINE : parameters 								-->
+					<!--                                                      	-->
+					<!--                                                      	-->
 					<tr ng-if="plugtour.show.schedule">
 						<td ></td>
 						<td colspan="7">
@@ -381,7 +387,7 @@
 						<td style="{{ctrl.getJobStyle(plugtour)}}"></td>
 						
 					</tr>
-					
+					<!-- This does not work with Bonita 
 					<tr ng-if="plugtour.show.hostrestriction">
 						<td style="{{ctrl.getJobStyle(plugtour)}}"></td>
 						<td colspan="7" style="{{ctrl.getJobStyle(plugtour)}}">
@@ -415,15 +421,13 @@
 											</td>
 											</tr>
 										</table>
-									</div> <!-- panel body -->
-								</div> <!--  panel info -->
-							</div> <!--  shadow -->
+									</div> -- panel body --
+								</div> --  panel info --
+							</div> --  shadow --
 						</td>
 						<td style="{{ctrl.getJobStyle(plugtour)}}"></td>
-							
-								
-
-					</tr>
+					</tr>  -->
+					
 					<tr ng-if="plugtour.show.parameters">
 						<td style="{{ctrl.getJobStyle(plugtour)}}"></td>
 						<td colspan="7" style="{{ctrl.getJobStyle(plugtour)}}">
@@ -469,6 +473,80 @@
 													</div>
 												</td>
 											</tr>
+											<tr>
+												<td colspan="2">
+ 													<table  style="width:100%">
+													<tr>
+													<td  style="padding: 30px">
+													<div class="panel panel-info">
+														<div class="panel-heading">History</div>
+														<div class="panel-body">
+															<table>
+																<tr>
+																	<td style="padding: 15px" >Number of saved execution</td>
+																	<td>
+																		<input ng-model="plugtour.nbSavedExecution" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >												
+																		<div ng-if="plugtour.show.parametersexpl" class="well">
+																			Each execution is saved. Specify the number of execution to saved.
+																		</div>
+																	</td>
+																</tr>
+																<tr ng-if="plugtour.hasMesure">
+																	<td style="padding: 15px" >Number of saved Mesures History</td>
+																	<td>
+																		<input ng-model="plugtour.nbHistoryMesures" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >
+																		<div ng-if="plugtour.show.parametersexpl" class="well">
+																			The jobs generated Mesures. Specify the number of history to saved.
+																		</div>
+																	</td>
+																</tr>
+															</table>
+														</div>
+													</div>
+													</td><td  style="padding: 30px">										
+													<div class="panel panel-info" ng-if="plugtour.jobCanBeStoppedItems || plugtour.jobCanBeStoppedDelay">
+														<div class="panel-heading">Limitation</div>
+														<div class="panel-body">
+															<table>
+																<tr ng-if="plugtour.jobCanBeStoppedItems">
+																	<td style="padding: 15px" >Stop after x items processed</td>
+																	<td>
+																		<input ng-model="plugtour.stopafterNbItems" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >												
+																		<div ng-if="plugtour.show.parametersexpl" class="well">
+																			Stop after number of item processed
+																		</div>
+																	</td>
+																</tr>
+																<tr  ng-if="plugtour.jobCanBeStoppedDelay">
+																	<td style="padding: 15px" >Stop after x minutes</td>
+																	<td>
+																	<input ng-model="plugtour.stopafterNbMinutes" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >
+																		<div ng-if="plugtour.show.parametersexpl" class="well">
+																			Stop after the delay
+																		</div>
+																	</td>
+																</tr>
+															</table>
+														
+														</div>
+													</div>
+													</td><td  style="padding: 30px" ng-if="false">
+													<div class="panel panel-info">
+														<div class="panel-heading">Notification</div>
+														<div class="panel-body">
+														 
+														</div>
+													</div>
+													</td></tr>
+													</table>
+													<!--
+												 -->
+												</td>
+											</tr>
+											
+											
+											
+											
 											<!--  ----------------------------- Parameters Tour ---------------------------------- -->
 											<!-- <td colspan="2">Parameters value = {{plugtour.parametersdef}}</td> -->
 											<tr ng-repeat="parameterdef in plugtour.parametersdef">
@@ -920,6 +998,7 @@
 												</a>
 										</div>
 									</div>
+									<!--  Panel SHOW REPORT -->
 									<div class="panel-body">	
 									
 										<table style="border-spacing: 10px 0px;border-collapse: separate;">
@@ -960,7 +1039,68 @@
 												<td><div ng-bind-html="ctrl.getHtml( savedExec.listevents, 'saveExecListEvents plugtour='+plugtour.id+'savedExec.execDateSt='+savedExec.execDateSt )"></div></td>
 											</tr>
 										</table>
-									</div> <!-- panel body -->
+									</div> <!-- panel SHOW REPORT -->
+								</div> <!--  panel info -->
+							</div> <!--  shadow -->
+						</td>
+						<td style="{{ctrl.getJobStyle(plugtour)}}"></td>										
+
+					</tr>
+					<tr ng-if="plugtour.show.dashboard">
+						<td style="{{ctrl.getJobStyle(plugtour)}}"></td>
+						<td colspan="7" style="{{ctrl.getJobStyle(plugtour)}}">
+							<div  style="box-shadow: 1px 1px 12px #555;">
+								<div class="panel panel-info">
+									<div class="panel-heading">
+										<h5 class="panel-title">Mesures</h5>
+										<div style="position: relative; top: -25px; right: 0px; font-size: 18px; float:right">
+												<a  ng-click="ctrl.hideall( plugtour )" >
+												<span class="glyphicon glyphicon-remove" ></span>
+												</a>
+										</div>
+									</div>
+									<!--  Panel SHOW DASHBOARD -->
+									<div class="panel-body">	
+									
+										
+										 
+										<div>
+											Pre chart:
+										<google-chart 
+   													title="title"
+   													type="ColumnChart"
+   													data="{{ctrl.getDashboardData()}}"
+   													columnNames="{{ctrl.getDashboardColumn()}}"
+   										></google-chart>
+										fin prechart<p>
+											<div class="col-xs-4" ng-repeat="mesure in plugtour.mesures.def">
+											<div >
+												{{mesure.name}}
+												<div  google-chart chart="ctrl.getDashboardChart( mesure )" style="height: 100px; width: 100%; position: relative; "></div>
+												<p>
+												{{mesure.label}}
+												<div class="alert alert-info">Chart={{ctrl.getDashboardChart( mesure )}}</div>
+											</div>
+										 
+										</div>
+										 <table class="table table-striped table-hover table-condensed" >
+											<tr>
+												<th>Date</th>
+												<th ng-repeat="mesure in plugtour.mesures.def">{{mesure.label}}</th>
+											</tr>
+											<tbody ng-repeat="mesure in plugtour.mesures.history">												
+											<tr>
+												<td>{{mesure.datest}}</td>
+												<!--  track by index is mandatory when value have multiple 0 -->
+												<td ng-repeat="value in mesure.valuelist track by $index" style="text-align:right">{{value}}</td>
+											</tr>
+											</tbody>
+										</table>
+										
+										
+										
+										
+									</div> <!-- panel SHOW DASHBOARD -->
 								</div> <!--  panel info -->
 							</div> <!--  shadow -->
 						</td>
@@ -1016,7 +1156,60 @@
 			</div>
 				
 		</div>
-		
+		<!--  ************************************************************  -->	
+		<!--  Tab Report		 										-->
+		<!--  ************************************************************  -->		
+		<!-- Keep it ng-show, else the file drop will not work ! -->	
+		<div class="col-lg-12" ng-show="ctrl.navbaractiv == 'Reports'">
+		<table width="100%"><tr style="height:25px">
+			<td style="width: 20px;">
+				<input ng-model="ctrl.autorefresh" type="checkbox" title="Automatic refresh">
+			<td  style="width: 50px;">
+				<button ng-click="ctrl.refresh( false )" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress">Refresh</button>		
+			</td>
+			</td> <td  style="width: 50px;">
+				&nbsp;&nbsp;&nbsp;
+			</td><td  style="width: 250px;">
+				<div ng-if="ctrl.inprogress">
+					<span class="Loading">.</span>Please wait, work in progress
+				</div>
+			</td>
+			<td style="text-align:right">
+				<button ng-click="ctrl.schedulerMaintenance('heartbeat')" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress" title="Force a HeartBeat">
+						<span class="glyphicon glyphicon-heart"></span>
+				</button>
+		</tr>		
+		</table> 
+				<!--  Panel SHOW REPORT -->
+					<input ng-model="ctrl.reports.showhost" type="checkbox" title="Show host colum">Show Host&nbsp;&nbsp;&nbsp;
+					<input ng-model="ctrl.reports.showdetail" type="checkbox" title="Show host colum">Show Details
+					
+					<table class="table table-striped table-hover table-condensed" >
+						<tr>
+							<th>Job</th>
+							<th>Plug in</th>
+							<th>Date</th>
+							<th>Status</th>
+							<th ng-if="ctrl.reports.showhost">Host</th>
+							<th>Item processed</th>
+							<th>Execution time</th>
+							<th ng-if="ctrl.reports.showdetail">Details</th>
+							
+						<tr ng-repeat="savedExec in ctrl.listreportsexecution" >
+							<td>{{savedExec.name}}</td>
+							<td style="font-style: italic;">{{savedExec.pluginname}}</td>
+							<td>{{savedExec.execDatest}}</td>
+							<td> <label class="{{ctrl.getClassExecution(savedExec.status)}}" >{{savedExec.status}}</label></td>
+							
+							<td  ng-if="ctrl.reports.showhost">{{savedExec.hostname}}</td>
+							<td style="text-align:right">{{savedExec.itemprocessed}}</td>
+							<td style="text-align:right">{{savedExec.timeinmsst}}<br>
+								<span style="font-size:small">({{savedExec.timeinms}} ms)</span></td>
+							<td ng-if="ctrl.reports.showdetail"><div ng-bind-html="ctrl.getHtml( savedExec.listevents, 'saveExecListEvents plugtour='+plugtour.id+'savedExec.execDateSt='+savedExec.execDateSt )"></div></td>
+						</tr>
+					</table>
+				
+			</div><!-- tab SHOW REPORT -->
 		<!--  ************************************************************  -->	
 		<!--  Tab Register		 										-->
 		<!--  ************************************************************  -->			

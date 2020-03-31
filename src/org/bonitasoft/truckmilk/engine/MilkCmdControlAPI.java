@@ -99,16 +99,23 @@ public class MilkCmdControlAPI {
         BonitaCommandDescription commandDescription = new BonitaCommandDescription(MilkCmdControl.cstCommandName, pageDirectory);
         commandDescription.forceDeploy = false;
         commandDescription.mainCommandClassName = MilkCmdControl.class.getName();
-        commandDescription.mainJarFile = "TruckMilk-2.3-Page.jar";
+        commandDescription.mainJarFile = "TruckMilk-2.4-Page.jar";
         commandDescription.commandDescription = MilkCmdControl.cstCommandDescription;
 
 
 
-        commandDescription.addJarDependencyLastVersion("bonita-event", "1.8.0", "bonita-event-1.8.0.jar");
-        commandDescription.addJarDependencyLastVersion("bonita-properties", "2.1.1", "bonita-properties-2.1.1.jar");
         CommandJarDependency cmdDependency;
-        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-worker", "1.4.0", "CustomPageWorker-1.4.0.jar");
+        
+        cmdDependency=commandDescription.addJarDependencyLastVersion(BonitaCommandDeployment.NAME, BonitaCommandDeployment.VERSION, BonitaCommandDeployment.JAR_NAME);
         cmdDependency.setForceDeploy( true );
+        
+            
+        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-event", "1.8.0", "bonita-event-1.8.0.jar");
+        commandDescription.addJarDependencyLastVersion("bonita-properties", "2.1.1", "bonita-properties-2.1.1.jar");
+        commandDescription.addJarDependencyLastVersion("mail", "1.5.0", "mail-1.5.0-b01.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-worker", "1.5.0", "CustomPageWorker-1.5.0.jar");
+        cmdDependency.setForceDeploy( true );
+        
         cmdDependency= commandDescription.addJarDependencyLastVersion("custompage-grumman", "1.1.0", "CustomPageGrumman-1.0.0.jar");
         cmdDependency.setForceDeploy( true );
 

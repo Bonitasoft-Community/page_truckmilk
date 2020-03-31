@@ -7,8 +7,6 @@ import java.util.List;
 
 import java.util.logging.Logger;
 
-import org.bonitasoft.engine.api.APIAccessor;
-
 import org.bonitasoft.grumman.GrummanAPI;
 import org.bonitasoft.grumman.GrummanAPI.MessagesList;
 import org.bonitasoft.grumman.message.MessagesFactory.SynthesisOnMessage;
@@ -20,9 +18,12 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 
 public class MilkGrumman extends MilkPlugIn {
 
@@ -54,14 +55,14 @@ public class MilkGrumman extends MilkPlugIn {
      * @return a list of Events.
      */
     @Override
-    public List<BEvent> checkPluginEnvironment(long tenantId, APIAccessor apiAccessor) {
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
     }
 
     /**
      * check the Job's environment
      */
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
 
     }
@@ -70,13 +71,14 @@ public class MilkGrumman extends MilkPlugIn {
      * return the description of ping job
      */
     @Override
-    public PlugInDescription getDefinitionDescription() {
-        PlugInDescription plugInDescription = new PlugInDescription();
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
 
-        plugInDescription.name = "Grumman";
-        plugInDescription.description = "Execute the Grumman correction on message. See the Grumman page on Community for details.";
-        plugInDescription.label = "Grumman Message correction";
-        plugInDescription.category = CATEGORY.MONITOR;
+        plugInDescription.setName( "Grumman");
+        plugInDescription.setLabel( "Grumman Message correction");
+        plugInDescription.setDescription( "Execute the Grumman correction on message. See the Grumman page on Community for details.");
+        plugInDescription.setCategory( CATEGORY.MONITOR);
+
         plugInDescription.addParameter(cstParamOnlyDetection);
         plugInDescription.addParameter(cstParamReconciliationNumberOfMessages);
         plugInDescription.addParameter(cstParamReconciliationIncomplete);
@@ -88,7 +90,7 @@ public class MilkGrumman extends MilkPlugIn {
      * execution of the job. Just calculated the result according the parameters, and return it.
      */
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
+    public MilkJobOutput execute(MilkJobExecution jobExecution) {
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
         
         // task name is required
@@ -100,7 +102,7 @@ public class MilkGrumman extends MilkPlugIn {
         logger.fine("MilkGrumman: onlyDetection:["+onlyDetection+"] reconciliationIncomplete:["+reconciliationIncomplete+"] reconciliationComplete:["+reconciliationComplete+"]");
         
         try {
-            GrummanAPI grummanAPI = new GrummanAPI(apiAccessor.getProcessAPI());
+            GrummanAPI grummanAPI = new GrummanAPI( jobExecution.getApiAccessor().getProcessAPI());
 
             SynthesisOnMessage synthesis = grummanAPI.getSynthesisMessage();
              StringBuilder synthesisSt = new StringBuilder();
@@ -112,7 +114,7 @@ public class MilkGrumman extends MilkPlugIn {
              // detection             
              ReconcialiationFilter reconciliationFilter = new ReconcialiationFilter( TYPEFILTER.MAXMESSAGES);
              reconciliationFilter.numberOfMessages = (int) numberOfMessages;
-             ResultMessageOperation resultMessageOperation= grummanAPI.getIncompleteReconciliationMessage(reconciliationFilter, apiAccessor.getProcessAPI());
+             ResultMessageOperation resultMessageOperation= grummanAPI.getIncompleteReconciliationMessage(reconciliationFilter, jobExecution.getApiAccessor().getProcessAPI());
              
              StringBuilder resultSynthesisSt = new StringBuilder();
              resultSynthesisSt.append( "Nb of messages detected: "+resultMessageOperation.getListMessages().size()+", ");
@@ -135,7 +137,7 @@ public class MilkGrumman extends MilkPlugIn {
              messagesList.setSendincomplete( reconciliationIncomplete );
              messagesList.setExecutecomplete( reconciliationComplete );
 
-             ResultExecution resultExecution = grummanAPI.executeReconcialiationMessage( messagesList, apiAccessor.getProcessAPI());
+             ResultExecution resultExecution = grummanAPI.executeReconcialiationMessage( messagesList, jobExecution.getApiAccessor().getProcessAPI());
              StringBuilder resultExecutionSt = new StringBuilder();
              resultSynthesisSt.append( "Nb Messages corrected: "+resultExecution.getNbMessagesCorrects()+", ");
              if (resultExecution.getNbMessagesErrors()>0)

@@ -6,15 +6,21 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import org.bonitasoft.log.event.BEvent;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.ExecutionStatus;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
+import org.bonitasoft.truckmilk.plugin.MilkPing;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMesure;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
 public class MilkJobOutput {
+
+    private final static String LOGGER_LABEL = "MilkPing";
+    private final static Logger logger = Logger.getLogger(MilkJobOutput.class.getName());
 
     public Date executionDate = new Date();
     /**
@@ -72,7 +78,7 @@ public class MilkJobOutput {
             // update the PLUGIN parameters
             milkJob.setParameterStream(param, stream);
         } else {
-            MilkPlugIn.logger.severe("setParameterStream not allowed on parameter[" + param.name + "] (plugin " + milkJob.getName() + "]");
+            logger.severe("setParameterStream not allowed on parameter[" + param.name + "] (plugin " + milkJob.getName() + "]");
         }
     }
     
@@ -128,18 +134,23 @@ public class MilkJobOutput {
     /*                                                                                  */
     /* Register a Statistics Information                                                */
     /* THis number is collected, and use to build a graph.
-     * PointOfInterest sould be describe in the PlugInDescrition
+     * PointOfInterest should be describe in the PlugInDescrition
      */
     /*                                                                                  */
     /*                                                                                  */
     /* ******************************************************************************** */
-    private Map<String,Double> pointsOfInterest = new HashMap<>();
-    public void addPointOfInterest(String name, double value) {
-        pointsOfInterest.put(name, value);
+    private Map<PlugInMesure,Double> mesures = new HashMap<>();
+    public void setMesure( PlugInMesure poi, double value) {
+        if (milkJob.getPlugIn().getDescription().containsMesure( poi ))
+            mesures.put(poi, value);
+         
+    }
+    public double getMesure(PlugInMesure poi) {
+        return mesures.get(poi);
     }
     
-    public Map<String,Double> getPointsOfInterest() {
-        return pointsOfInterest;
+    public Map<PlugInMesure,Double> getAllMesures() {
+        return mesures;
     }
     
 }
