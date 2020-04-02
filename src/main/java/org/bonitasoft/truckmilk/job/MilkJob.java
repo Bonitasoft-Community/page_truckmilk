@@ -425,7 +425,7 @@ public @Data class MilkJob {
      * 
      * @param enable
      */
-    public List<BEvent> setEnable(boolean enable) {
+    public List<BEvent> setEnable(boolean enable, MilkJobExecution milkJobExecution) {
         List<BEvent> listEvents = new ArrayList<>();
         if (enable) {
             // recalculate only if it wasn't enable before
@@ -434,6 +434,11 @@ public @Data class MilkJob {
         } else
             trackExecution.nextExecutionDate = null;
 
+        if (enable)
+            getPlugIn().notifyActivateAJob(this, milkJobExecution);
+        else
+            getPlugIn().notifyUnactivateAJob(this, milkJobExecution);
+        
         isEnable = enable;
         return listEvents;
     }
@@ -597,6 +602,8 @@ public @Data class MilkJob {
         this.parameters = parameters == null ? new HashMap<>() : parameters;
     }
 
+
+ 
     /**
      * set a Stream parameters
      * 
@@ -732,6 +739,33 @@ public @Data class MilkJob {
         return listEvents;
     }
 
+    /*
+     * ******************************************************************************** *
+     * Notification
+     * ********************************************************************************
+     */
+    
+    /**
+     * A change is made in parameters (cron, parametres...) : notify the job
+     * @param milkJobExecution
+     */
+    public List<BEvent> notifyAChangeInJob( MilkJobExecution milkJobExecution ) {
+        return getPlugIn().notifyUpdateParameters(this, milkJobExecution);
+    }
+    
+    
+    /*
+     * ******************************************************************************** *
+     * Serialization (JSON)
+     * We need to saved different properties, to ensure to not saved everything when needed.
+     * Jobs has different component
+     * - prefixPropertiesBase ==> getMap()
+     * - prefixPropertiesAskStop => direct askStop()
+     * - prefixPropertiesSavedExecution ==>
+     * - prefixPropertiesTrackExecution ==>
+     * ********************************************************************************
+     */
+
     public final static String CSTJSON_CRON = "cron";
     public final static String CSTJSON_NB_SAVEDEXECUTION = "nbSavedExecution";
 
@@ -747,18 +781,6 @@ public @Data class MilkJob {
     public final static String CSTJSON_HOSTSRESTRICTION = "hostsrestriction";
 
     private final static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-    /*
-     * ******************************************************************************** *
-     * Serialization (JSON)
-     * We need to saved different properties, to ensure to not saved everything when needed.
-     * Jobs has different component
-     * - prefixPropertiesBase ==> getMap()
-     * - prefixPropertiesAskStop => direct askStop()
-     * - prefixPropertiesSavedExecution ==>
-     * - prefixPropertiesTrackExecution ==>
-     * ********************************************************************************
-     */
 
     /**
      * describe the plug tour

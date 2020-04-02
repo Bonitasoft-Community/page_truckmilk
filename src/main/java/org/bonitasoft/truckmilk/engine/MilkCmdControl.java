@@ -169,7 +169,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
     
     public final static MilkHeartBeat milkHeartBeat = new MilkHeartBeat();
 
-    // let's return a singleton
+    // let's return a singleton to simply the implementation
     @Override
     public BonitaCommandApiAccessor getInstance() {
         return milkCmdControl;
@@ -196,7 +196,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
      * @return
      */
     @Override
-    public ExecuteAnswer afterDeployment(ExecuteParameters executeParameters, APIAccessor apiAccessor) {
+    public ExecuteAnswer afterDeployment(ExecuteParameters executeParameters, APIAccessor apiAccessor, TenantServiceAccessor tenantServiceAccessor) {
         ExecuteAnswer executeAnswer = new ExecuteAnswer();
         executeAnswer.listEvents = checkAndUpdateEnvironment(executeParameters.tenantId);
         executeAnswer.result.put(cstJsonSchedulerStatus, BEventFactory.isError(executeAnswer.listEvents) ? "FAIL" : "OK");
@@ -210,7 +210,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
      * @return
      */
     @Override
-    public ExecuteAnswer afterRestart(ExecuteParameters executeParameters, APIAccessor apiAccessor) {
+    public ExecuteAnswer afterRestart(ExecuteParameters executeParameters, APIAccessor apiAccessor, TenantServiceAccessor tenantServiceAccessor) {
         ExecuteAnswer executeAnswer = new ExecuteAnswer();
         MilkPlugInFactory milkPlugInFactory = null;
         MilkJobFactory milkJobFactory = null;
@@ -259,7 +259,8 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
      * @throws SCommandParameterizationException
      * @throws SCommandExecutionException
      */
-    public ExecuteAnswer executeCommandApiAccessor(ExecuteParameters executeParameters, APIAccessor apiAccessor) {
+    @Override
+    public ExecuteAnswer executeCommandApiAccessor(ExecuteParameters executeParameters, APIAccessor apiAccessor, TenantServiceAccessor tenantServiceAccessor) {
 
         long currentTime = System.currentTimeMillis();
         ExecuteAnswer executeAnswer = new ExecuteAnswer();
@@ -353,7 +354,9 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 String jobName = executeParameters.getParametersString("name");
                 logger.info("Add jobName[" + jobName + "] PlugIn[" + executeParameters.getParametersString("plugin") + "]");
 
-                CreateJobStatus createJobStatus = milkJobFactory.createMilkJob(jobName, plugIn);
+                MilkJobExecution milkJobExecution = new MilkJobExecution( executeParameters.tenantId, apiAccessor, tenantServiceAccessor);
+
+                CreateJobStatus createJobStatus = milkJobFactory.createMilkJob(jobName, plugIn, milkJobExecution);
                 executeAnswer.listEvents.addAll(createJobStatus.listEvents);
                 if (!BEventFactory.isError(executeAnswer.listEvents)) {
                     executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(createJobStatus.job, SerializationJobParameters.getInstanceAllInformations()));
@@ -365,8 +368,10 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
 
             } else if (VERBE.REMOVEJOB.equals(verbEnum)) {
 
+
                 Long idJob = executeParameters.getParametersLong("id");
                 MilkJob milkJob = idJob == null ? null : milkJobFactory.getJobById(idJob);
+                MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob, executeParameters.tenantId, apiAccessor, tenantServiceAccessor);
 
                 if (idJob == null) {
                     executeAnswer.listEvents.add(eventMissingID);
@@ -375,7 +380,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 } else {
                     detailsLogInfo.append( "Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
 
-                    executeAnswer.listEvents.addAll(removeJob(idJob, executeParameters.tenantId, milkJobFactory));
+                    executeAnswer.listEvents.addAll(removeJob(milkJob, milkJobExecution));
 
                     if (!BEventFactory.isError(executeAnswer.listEvents)) {
                         executeAnswer.listEvents.add(new BEvent(eventJobRemoved, "Job removed[" + milkJob.getName() + "]"));
@@ -403,8 +408,9 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     if (cronSt != null)
                         milkJob.setCron(cronSt);
 
+                    MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob, executeParameters.tenantId, apiAccessor, tenantServiceAccessor);
                     // enable=true will recalculate the nextExecution date : collect error
-                    executeAnswer.listEvents.addAll( milkJob.setEnable(VERBE.ACTIVATEJOB.equals(verbEnum)) );
+                    executeAnswer.listEvents.addAll( milkJob.setEnable(VERBE.ACTIVATEJOB.equals(verbEnum), milkJobExecution) );
                     
                     executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getBaseInformations()));
                     if (VERBE.ACTIVATEJOB.equals(verbEnum))
@@ -461,6 +467,8 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                         milkJob.setName(newName);
                         saveJobParameters.trackExecution = true; // we may change the CronSt
                     }
+                    MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob, executeParameters.tenantId, apiAccessor, tenantServiceAccessor);
+                    executeAnswer.listEvents.addAll( milkJob.notifyAChangeInJob( milkJobExecution ) );
                     executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, saveJobParameters));
                     
                     executeAnswer.listEvents.add(new BEvent(eventJobUpdated, "Job updated[" + milkJob.getName() + "]"));
@@ -539,7 +547,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     Map<String, Object> argsParameters = executeParameters.getParametersMap("args");
 
                     // execute it!
-                    MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob, executeParameters.tenantId, apiAccessor, getTenantServiceAccessor());
+                    MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob, executeParameters.tenantId, apiAccessor, tenantServiceAccessor);
 
                     MySimpleTestThread buttonThread = new MySimpleTestThread(buttonName, milkJob, milkJobExecution, argsParameters);
 
@@ -692,16 +700,14 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 List<MilkPlugIn> list = milkPlugInFactory.getListPlugIn();
 
                 for (MilkPlugIn plugIn : list) {
-                    MilkJobExecution milkJobExecution = new MilkJobExecution(null, milkJobFactory.getTenantId(),  apiAccessor, getTenantServiceAccessor());
-                    
-
+                    MilkJobExecution milkJobExecution = new MilkJobExecution( milkJobFactory.getTenantId(),  apiAccessor, tenantServiceAccessor);
                     listEvents.addAll(plugIn.checkPluginEnvironment(milkJobExecution));
                 }
 
                 // Job environment
                 Collection<MilkJob> listJobs = milkJobFactory.getListJobs();
                 for (MilkJob milkJob : listJobs) {
-                    MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob, milkJobFactory.getTenantId(), apiAccessor, getTenantServiceAccessor());
+                    MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob, milkJobFactory.getTenantId(), apiAccessor, tenantServiceAccessor);
 
                     listEvents.addAll(milkJob.getPlugIn().checkJobEnvironment(milkJobExecution));
                 }
@@ -873,12 +879,12 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
         return listJobMap;
     }
 
-    public List<BEvent> removeJob(long idJob, long tenantId, MilkJobFactory milkJobFactory) {
-        return milkJobFactory.removeJob(idJob, tenantId);
+    public List<BEvent> removeJob(MilkJob milkJob, MilkJobExecution jobExecution) {
+        return milkJob.getMilkJobFactory().removeJob(milkJob,jobExecution);
     }
 
-    public synchronized List<BEvent> registerAJob(MilkJob milkJob, MilkJobFactory milkJobFactory) {
-        return milkJobFactory.registerAJob(milkJob);
+    public synchronized List<BEvent> registerAJob(MilkJob milkJob, MilkJobExecution milkJobExecution) {
+        return milkJob.getMilkJobFactory().registerAJob(milkJob, milkJobExecution);
     }
 
     /* ******************************************************************************** */

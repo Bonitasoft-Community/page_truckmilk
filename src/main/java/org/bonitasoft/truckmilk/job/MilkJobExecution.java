@@ -27,7 +27,6 @@ public class MilkJobExecution {
 
     static MilkLog logger = MilkLog.getLogger(MilkJobExecution.class.getName());
 
-    public String tourName;
     // this parameters is initialised with the value in the PlugTour, and may change after
     private Map<String, Object> jobParameters;
 
@@ -39,11 +38,19 @@ public class MilkJobExecution {
     private long tenantId;
     private APIAccessor apiAccessor;
     private TenantServiceAccessor tenantServiceAccessor;
-    
+
+    public MilkJobExecution(long tenantId, APIAccessor apiAccessor, TenantServiceAccessor tenantServiceAccessor) {
+        this.milkJob = null;
+        this.jobParameters = null;
+        this.tenantId = tenantId;
+        this.apiAccessor = apiAccessor;
+        this.tenantServiceAccessor = tenantServiceAccessor;
+    }
+
     public MilkJobExecution(MilkJob milkJob, long tenantId, APIAccessor apiAccessor, TenantServiceAccessor tenantServiceAccessor) {
         this.milkJob = milkJob;
         this.jobParameters = milkJob.getJobParameters();
-        tourName = milkJob.getName();
+
         this.tenantId = tenantId;
         this.apiAccessor = apiAccessor;
         this.tenantServiceAccessor = tenantServiceAccessor;

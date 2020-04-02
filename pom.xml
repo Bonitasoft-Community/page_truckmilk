@@ -7,7 +7,7 @@
 	<!-- * MilkScheduleQuartz (File fileQuartzJar = new File(pageDirectory.getAbsolutePath() + "/lib/TruckMilk-2.1-Quartzjob.jar") -->
 	<version>2.4</version>
 	<properties>
-		<bonita.version>7.9.4</bonita.version>
+		<bonita.version>7.8.4</bonita.version>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<sonar.sources>pom.xml,src</sonar.sources>

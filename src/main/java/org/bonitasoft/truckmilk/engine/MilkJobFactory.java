@@ -10,6 +10,7 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
+import org.bonitasoft.truckmilk.job.MilkJobExecution;
 
 public class MilkJobFactory {
 
@@ -117,20 +118,23 @@ public class MilkJobFactory {
      * @param tenantId
      * @return
      */
-    public List<BEvent> removeJob(long idTour, long tenantId) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
-        if (!listJobsId.containsKey(idTour)) {
-            listEvents.add(new BEvent(EVENT_JOB_NOT_FOUND, "Tour[" + idTour + "]"));
+    public List<BEvent> removeJob(MilkJob milkJob, MilkJobExecution jobExecution) {
+        List<BEvent> listEvents = new ArrayList<>();
+        if (!listJobsId.containsKey(milkJob.getId())) {
+            listEvents.add(new BEvent(EVENT_JOB_NOT_FOUND, "Job[" + milkJob.getId() + "]"));
             return listEvents;
         }
 
-        listEvents.addAll(dbRemoveJob(listJobsId.get(idTour)));
-        listJobsId.remove(idTour);
+        
+        milkJob.getPlugIn().notifyUnregisterAJob(milkJob, jobExecution);
+        
+        listEvents.addAll(dbRemoveJob(listJobsId.get( milkJob.getId())));
+        listJobsId.remove( milkJob.getId());
         return listEvents;
     }
 
-    public synchronized List<BEvent> registerAJob(MilkJob milkJob) {
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+    public synchronized List<BEvent> registerAJob(MilkJob milkJob, MilkJobExecution milkJobExecution) {
+        List<BEvent> listEvents = new ArrayList<>();
         // name must exist
         if (milkJob.getName() == null || milkJob.getName().trim().length() == 0) {
             listEvents.add(EVENT_JOB_WITHOUT_NAME);
@@ -143,6 +147,7 @@ public class MilkJobFactory {
                 return listEvents;
             }
         }
+        milkJob.getPlugIn().notifyRegisterAJob(milkJob, milkJobExecution);
         listJobsId.put(milkJob.getId(), milkJob);
         return listEvents;
     }
@@ -173,11 +178,11 @@ public class MilkJobFactory {
      * @param plugIn
      * @return
      */
-    public CreateJobStatus createMilkJob(String tourName, MilkPlugIn plugIn) {
+    public CreateJobStatus createMilkJob(String jobName, MilkPlugIn plugIn, MilkJobExecution milkJobExecution) {
         CreateJobStatus createJobStatus = new CreateJobStatus();
 
-        createJobStatus.job = MilkJob.getInstanceFromPlugin(tourName, plugIn, this);
-        createJobStatus.listEvents = registerAJob(createJobStatus.job);
+        createJobStatus.job = MilkJob.getInstanceFromPlugin(jobName, plugIn, this);
+        createJobStatus.listEvents = registerAJob(createJobStatus.job, milkJobExecution);
 
         return createJobStatus;
     }

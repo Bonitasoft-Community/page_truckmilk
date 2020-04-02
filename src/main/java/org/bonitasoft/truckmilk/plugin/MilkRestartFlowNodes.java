@@ -72,7 +72,7 @@ public class MilkRestartFlowNodes  extends MilkPlugIn {
         
         // How many flownode do we have to re-execute?
         RadarFactory radarFactory = RadarFactory.getInstance();
-        radarFactory.initialisation(jobExecution.getTenantId(), jobExecution.getApiAccessor());
+        
         
 
         RadarWorkers radarWorkers = (RadarWorkers) radarFactory.getInstance(RADAR_NAME_WORKER, RadarWorkers.CLASS_RADAR_NAME, jobExecution.getTenantId(), jobExecution.getApiAccessor());

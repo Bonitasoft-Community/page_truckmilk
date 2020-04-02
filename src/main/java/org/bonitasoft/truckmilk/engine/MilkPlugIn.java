@@ -340,6 +340,13 @@ public abstract class MilkPlugIn {
         }
     }
 
+    /* ******************************************************************************** */
+    /*                                                                                  */
+    /* Mesure */
+    /*                                                                                  */
+    /*                                                                                  */
+    /* ******************************************************************************** */
+
     public static @Data class PlugInMesure {
         public String name;
         public String label;
@@ -406,6 +413,31 @@ public abstract class MilkPlugIn {
 
         return result;
 
+    }
+
+    /* ******************************************************************************** */
+    /*                                                                                  */
+    /* Notification                                                                     */
+    /*                                                                                  */
+    /* some plugIn may need to adjust external component. Then, at each change, a       */
+    /* notification is sent                                                             */
+    /*                                                                                  */
+    /* ******************************************************************************** */
+    public List<BEvent> notifyRegisterAJob( MilkJob milkJob,MilkJobExecution jobExecution ) {
+        return new ArrayList<> ();
+    }
+    public List<BEvent> notifyUnregisterAJob( MilkJob milkJob,MilkJobExecution jobExecution ) {
+        return new ArrayList<> ();
+    }
+    public List<BEvent> notifyUpdateParameters( MilkJob milkJob,MilkJobExecution jobExecution ) {
+        return new ArrayList<> ();
+    }
+
+    public List<BEvent> notifyActivateAJob( MilkJob milkJob,MilkJobExecution jobExecution ) {
+        return new ArrayList<> ();
+    }
+    public List<BEvent> notifyUnactivateAJob( MilkJob milkJob,MilkJobExecution jobExecution ) {
+        return new ArrayList<> ();
     }
 
    

@@ -40,9 +40,12 @@
 
 		// return the class used for the label
 		this.getClassExecution =  function( status ) {
-			if (status && status.toUpperCase() === 'SUCCESS' || status.toUpperCase() ==='SUCCESSPARTIAL')
+			if (! status)
+				return "";
+			
+			if (status.toUpperCase() === 'SUCCESS' || status.toUpperCase() ==='SUCCESSPARTIAL')
 				return "label label-success btn-xs";
-			if (status && status.toUpperCase() === 'ERROR' || status.toUpperCase()=== 'BADCONFIGURATION')
+			if (status.toUpperCase() === 'ERROR' || status.toUpperCase()=== 'BADCONFIGURATION')
 				return "label label-danger btn-xs";
 			return "label label-default";
 		}
@@ -68,7 +71,7 @@
 		this.listplugin = [];
 		this.newtourname = '';
 		this.refreshDate= new Date();
-		this.scheduler={ 'enable': false, listtypeschedulers:[]};
+	
 		
 		
 		this.delayListScope= [ {"value": "YEAR", "label":"Year"},
@@ -169,7 +172,7 @@
 					window.location.reload();
 				}
 
-				console.log("loadinit.receiveData HTTP");
+				console.log("loadinit.receiveData (scheduler)");
 				
 				self.listplugtour 	= jsonResult.listplugtour;
 				self.listplugin 	= jsonResult.listplugin;
@@ -273,7 +276,7 @@
 		
 			if (completeStatus)
 			{
-				console.log("refreshPlugTour True, update all"); 
+				console.log("refreshPlugTour True, update all  (scheduler)"+angular.toJson( self.scheduler)); 
 	
 				self.listplugtour 	= jsonResult.listplugtour;
 				self.refreshListJobs();
@@ -993,7 +996,7 @@
 		// -----------------------------------------------------------------------------------------
 		// Scheduler
 		// -----------------------------------------------------------------------------------------
-		this.scheduler = { 'schedulerlistevents' : '', 'lastheartbeat':[] };
+		this.scheduler = { 'schedulerlistevents' : '', 'lastheartbeat':[], 'type':'', 'enable': false, listtypeschedulers:[]};
 		
 		
 		this.schedulerOperation = function(action) {
@@ -1036,13 +1039,13 @@
 			self.listevents='';
 
 			console.log("SchedulerMaintenance v2, Inprogress<=true operation=["+operation+"]");
-			var param= {
-					'operation' : operation,
-					'newscheduler':this.scheduler.type,
-					'reset' : true,
-					'logheartbeat' : this.scheduler.logheartbeat,
-					'nbsavedheartbeat':this.scheduler.nbsavedheartbeat} ;
 			
+			var param= {'operation' : operation,'reset' : true };
+			if (this.scheduler) {
+					param.newscheduler= this.scheduler.type;
+					param.logheartbeat = this.scheduler.logheartbeat;
+					param.nbsavedheartbeat = this.scheduler.nbsavedheartbeat;
+		}
 					
 			var json = encodeURIComponent(angular.toJson(param, true));
 			self.scheduler.schedulerlistevents= '';
@@ -1057,7 +1060,7 @@
 				}
 				self.inprogress = false;
 				
-				console.log("schedulerMaintenance.receiveData HTTP Finish inprogress<=false"+ angular.toJson(jsonResult,false));
+				console.log("schedulerMaintenance.receiveData (scheduler)"+ angular.toJson(jsonResult,false));
 
 				self.scheduler	= jsonResult.scheduler;
 				self.scheduler.schedulerlistevents = jsonResult.listevents;
