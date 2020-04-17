@@ -18,6 +18,8 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJob;
@@ -33,11 +35,13 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
     private static BEvent eventErrorNoRadarTrackerConnector = new BEvent(MilkRadarBonitaEngine.class.getName(), 1, Level.ERROR,
             "Tracker Connector radar not found", "The Radar Tracker Connector is not found", "Connector Too Long can't be calculated", "Check library and dependency");
     private static BEvent eventConnectorTooLongStatus = new BEvent(MilkRadarBonitaEngine.class.getName(), 2, Level.INFO,
-            "Connector too long status", "Status on the connector too long radar" );
+            "Connector", "Status on the connector too long radar" );
 
     private static PlugInParameter cstParamMonitorConnector = PlugInParameter.createInstance("Connector", "Connector Too Long", TypeParameter.BOOLEAN, true, "Monitor connector execution. When an execution is too long, return it");
     private static PlugInParameter cstParamConnectorDurationInSecond = PlugInParameter.createInstance("Connectorduration", "Connector Limit Duration (seconds)", TypeParameter.LONG, 50L, "Report all connector execution longer than this value");
     private static PlugInParameter cstParamConnectorFrame = PlugInParameter.createInstance("Connectframe", "Connector Frame (in minutes)", TypeParameter.DELAY, MilkPlugInToolbox.DELAYSCOPE.HOUR + ":12", "Search in all connector execution between now and now - frame");
+
+    private static PlugInParameter cstParamMonitorWorker = PlugInParameter.createInstance("Worker", "Workers", TypeParameter.BOOLEAN, true, "Monitor workers. Return number of workers running, waiting");
 
     private final static PlugInMesure cstMesureConnectorConnectorCall = PlugInMesure.createInstance(RadarTimeTrackerConnector.CSTPHOTO_CONNECTORSCALL, "Number of connector called", "Give the number of connector called in the period");
     private final static PlugInMesure cstMesureConnectorConnectorOverloaded = PlugInMesure.createInstance(RadarTimeTrackerConnector.CSTPHOTO_CONNECTORSOVERLOADED, "Number of connector with a long execution", "Number of connectors with a long execution");
@@ -51,12 +55,18 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
         plugInDescription.setName("RadarBonitaEngine");
         plugInDescription.setLabel("Radar Bonita Engine");
-        plugInDescription.setDescription("Monitor different indicator");
+        plugInDescription.setExplanation("Monitor different indicators");
         plugInDescription.setCategory(CATEGORY.MONITOR);
+        
+        
+        plugInDescription.addParameterSeparator("Radar Connector", "Monitor the connector activity");
         plugInDescription.addParameter(cstParamMonitorConnector);
         plugInDescription.addParameter(cstParamConnectorDurationInSecond);
         plugInDescription.addParameter(cstParamConnectorFrame);
 
+        plugInDescription.addParameterSeparator("Radar Worker", "Workers activity");
+        plugInDescription.addParameter(cstParamMonitorWorker);
+        
         plugInDescription.addMesure(cstMesureConnectorConnectorCall);
         plugInDescription.addMesure(cstMesureConnectorConnectorOverloaded);
         return plugInDescription;
@@ -82,6 +92,9 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
 
         plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
 
+        // we return a SUCCESSNOTHING is nothing is visible on radars
+        boolean everythingIsCalm=true;
+        
         // How many flownode do we have to re-execute?
         RadarFactory radarFactory = RadarFactory.getInstance();
         List<RadarPhoto> listPhoto = new ArrayList<>();
@@ -113,7 +126,10 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
 
                 // take a photo now
                 if (isActivated) {
+                    
+                    // Take the photo
                     RadarPhotoResult radarPhotoResult = radarTimeTrackerConnector.takePhoto(null);
+                    
                     listPhoto.addAll(radarPhotoResult.listPhotos);
                     plugTourOutput.addEvents(radarPhotoResult.listEvents);
 
@@ -122,12 +138,29 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
                     int connectorCall = (int) addMesureFromIndicator(cstMesureConnectorConnectorCall, radarPhotoResult, plugTourOutput);
                     int connectorOverload = (int) addMesureFromIndicator(cstMesureConnectorConnectorOverloaded, radarPhotoResult, plugTourOutput);
                     
-                    plugTourOutput.addEvent( new BEvent( eventConnectorTooLongStatus, "Connectors called["+connectorCall+"] Overload["+connectorOverload
-                            +"] - Thresold["+jobExecution.getInputLongParameter(cstParamConnectorDurationInSecond)+" s]"
-                            + radarTimeTrackerConnector.getTrackerStatus()));
+                    if (connectorCall>0 || connectorOverload>0)
+                        everythingIsCalm=false;
+                    
+                    List<IndicatorPhoto> list = radarPhotoResult.getIndicators(cstMesureConnectorConnectorOverloaded.name);
+
+
+                    plugTourOutput.addReportTable(new String[] { "Connectors Radar", "Details"});
+                    
+                    plugTourOutput.addReportLine(new Object[] { "Connector call", connectorCall });
+                    plugTourOutput.addReportLine(new Object[] { "connectorOverload", connectorOverload });
+                    plugTourOutput.addReportLine(new Object[] { "Threshold (in sec)", jobExecution.getInputLongParameter(cstParamConnectorDurationInSecond) });
+                    
+                    for (IndicatorPhoto indicator : list )
+                        plugTourOutput.addReportLine(new String[] { indicator.getName(), indicator.details });
+                    
+                    plugTourOutput.addReportEndTable();
+                    
+                    plugTourOutput.addEvent( new BEvent( eventConnectorTooLongStatus, "Connectors called["+connectorCall+"] Overload["+connectorOverload+"]" ));
 
                 }
             }
+            if (everythingIsCalm && plugTourOutput.executionStatus == ExecutionStatus.SUCCESS)
+                plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
         }
 
         return plugTourOutput;

@@ -86,7 +86,7 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
         plugInDescription.setName( "EmailUsersTasks");
         plugInDescription.setLabel( "Emails users tasks");
-        plugInDescription.setDescription( "For all users part of the given profile(s), an email is send with a link on all pending tasks");
+        plugInDescription.setExplanation( "For all users part of the given profile(s), an email is send with a link on all pending tasks");
         plugInDescription.setCategory( CATEGORY.TASKS);
         plugInDescription.setStopJob( JOBSTOPPER.BOTH );
         plugInDescription.addParameter(cstParamProfilesUser);

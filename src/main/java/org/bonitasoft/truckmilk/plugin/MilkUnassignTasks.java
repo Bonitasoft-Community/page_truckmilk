@@ -89,7 +89,7 @@ public class MilkUnassignTasks extends MilkPlugIn {
 
         plugInDescription.setName( "Unassign Tasks" );
         plugInDescription.setCategory( CATEGORY.TASKS );
-        plugInDescription.setDescription( "Unassign tasks if not resolved after a specified time." );
+        plugInDescription.setExplanation( "Unassign tasks if not resolved after a specified time." );
         plugInDescription.setLabel( "Unassign Tasks" );
         plugInDescription.setStopJob( JOBSTOPPER.BOTH );
         plugInDescription.addParameter(cstParamProcessName);

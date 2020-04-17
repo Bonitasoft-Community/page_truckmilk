@@ -76,7 +76,7 @@ public class MilkGrumman extends MilkPlugIn {
 
         plugInDescription.setName( "Grumman");
         plugInDescription.setLabel( "Grumman Message correction");
-        plugInDescription.setDescription( "Execute the Grumman correction on message. See the Grumman page on Community for details.");
+        plugInDescription.setExplanation( "Execute the Grumman correction on message. See the Grumman page on Community for details.");
         plugInDescription.setCategory( CATEGORY.MONITOR);
 
         plugInDescription.addParameter(cstParamOnlyDetection);

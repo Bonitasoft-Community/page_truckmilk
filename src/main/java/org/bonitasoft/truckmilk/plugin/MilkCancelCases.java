@@ -122,7 +122,30 @@ public class MilkCancelCases extends MilkPlugIn {
         // is the command Exist ? 
         return new ArrayList<>();
     }
+    @Override
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
+        plugInDescription.setName( "CancelCase");
+        plugInDescription.setLabel( "Cancel/Delete Active Cases (active)");
+        plugInDescription.setExplanation( "Cancel(or delete) all cases older than a delay, or inactive since a delay");
+        plugInDescription.setWarning("A case Cancelled can't be put alive again. A case Deleted can't be retrieved. Operation is final. Use with caution.");
+        plugInDescription.setCategory( CATEGORY.CASES);
+        
+        plugInDescription.setStopJob( JOBSTOPPER.BOTH );
+        
+        plugInDescription.addParameter(cstParamProcessFilter);
+        plugInDescription.addParameter(cstParamDelayInDay);
 
+        plugInDescription.addParameter(cstParamOperation);
+        plugInDescription.addParameter(cstParamTriggerOnCases);
+        plugInDescription.addParameter(cstParamActionOnCases);
+
+        plugInDescription.addParameter(cstParamSeparatorCSV);
+        plugInDescription.addParameter(cstParamReport);
+
+        plugInDescription.addParameter(cstParamInputDocument);
+        return plugInDescription;
+    }
     @Override
     public MilkJobOutput execute(MilkJobExecution jobExecution) {
         MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
@@ -135,7 +158,7 @@ public class MilkCancelCases extends MilkPlugIn {
         try {
             // +1 so we can detect the SUCCESSPARTIAL
 
-            SearchOptionsBuilder searchBuilderCase = new SearchOptionsBuilder(0, jobExecution.getMilkJob().getStopAfterNbItems() + 1);
+            SearchOptionsBuilder searchBuilderCase = new SearchOptionsBuilder(0, jobExecution.getJobStopAfterMaxItems() + 1);
 
             ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, searchBuilderCase, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
 
@@ -289,7 +312,7 @@ public class MilkCancelCases extends MilkPlugIn {
                 eventStatus = eventDeletionSuccess;
             }
 
-            milkJobOutput.addEvent(new BEvent(eventStatus, "Treated:" + totalNumberCase + " in " + (endTime - beginTime) + " ms " + milkJobOutput.collectResult(false)));
+            milkJobOutput.addEvent(new BEvent(eventStatus, "Treated:" + totalNumberCase + " in " + (endTime - beginTime) + " ms " + milkJobOutput.collectPerformanceSynthesis(false)));
             milkJobOutput.setParameterStream(cstParamReport, new ByteArrayInputStream(arrayOutputStream.toByteArray()));
             milkJobOutput.nbItemsProcessed = totalNumberCase;
             if (totalNumberCase == 0)
@@ -307,29 +330,7 @@ public class MilkCancelCases extends MilkPlugIn {
         return milkJobOutput;
     }
 
-    @Override
-    public MilkPlugInDescription getDefinitionDescription() {
-        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
-        plugInDescription.setName( "CancelCase");
-        plugInDescription.setLabel( "Cancel/Delete Active Cases (active)");
-        plugInDescription.setDescription( "Cancel(or delete) all cases older than a delay, or inactive since a delay");
-        plugInDescription.setCategory( CATEGORY.CASES);
-        plugInDescription.setStopJob( JOBSTOPPER.BOTH );
-        
-        plugInDescription.addParameter(cstParamProcessFilter);
-        plugInDescription.addParameter(cstParamDelayInDay);
-
-        plugInDescription.addParameter(cstParamOperation);
-        plugInDescription.addParameter(cstParamTriggerOnCases);
-        plugInDescription.addParameter(cstParamActionOnCases);
-
-        plugInDescription.addParameter(cstParamSeparatorCSV);
-        plugInDescription.addParameter(cstParamReport);
-
-        plugInDescription.addParameter(cstParamInputDocument);
-
-        return plugInDescription;
-    }
+   
 
     /********************************************************************************** */
     /*                                                                                  */

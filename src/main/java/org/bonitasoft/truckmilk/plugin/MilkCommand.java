@@ -64,9 +64,9 @@ public class MilkCommand extends MilkPlugIn {
     public MilkPlugInDescription getDefinitionDescription() {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
 
-        plugInDescription.setName( "Ping");
-        plugInDescription.setLabel( "Ping job");
-        plugInDescription.setDescription( "Just do a ping");
+        plugInDescription.setName( "Command");
+        plugInDescription.setLabel( "Command call");
+        plugInDescription.setExplanation( "Call a Bonita command, with parameters");
         plugInDescription.setCategory(CATEGORY.OTHER);
         plugInDescription.addParameter(cstParamCommandName);
         plugInDescription.addParameter(cstParamCommandParameters);

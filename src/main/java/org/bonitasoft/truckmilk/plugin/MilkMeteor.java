@@ -55,9 +55,9 @@ public class MilkMeteor extends MilkPlugIn {
 
         plugInDescription.setName( "Meteor");
         plugInDescription.setLabel( "Meteor");
-        plugInDescription.setDescription( "Call a Meteor scenario");
+        plugInDescription.setExplanation( "Call a Meteor scenario");
         plugInDescription.setCategory( CATEGORY.OTHER);
-        plugInDescription.setStopJob( JOBSTOPPER.DELAYMAXIMUM );
+        plugInDescription.setStopJob( JOBSTOPPER.MAXMINUTES );
         plugInDescription.addParameter(cstParamScenarioName);
 
         

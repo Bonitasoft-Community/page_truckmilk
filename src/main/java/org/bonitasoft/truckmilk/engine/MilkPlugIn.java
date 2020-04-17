@@ -197,7 +197,9 @@ public abstract class MilkPlugIn {
         public Object defaultValue;
         public String explanation;
         public TypeParameter typeParameter;
-
+        public boolean isMandatory= false;
+        public String visibleCondition=null;
+        
         // a button have args : give it the number of args 
         public String buttonDescription;
         public List<String> argsName;
@@ -211,9 +213,25 @@ public abstract class MilkPlugIn {
         public List<ColDefinition> arrayMapDescription;
 
         public static PlugInParameter createInstance(String name, String label, TypeParameter typeParameter, Object defaultValue, String explanation) {
+           return createInstance(name, label, typeParameter, defaultValue, explanation, false);
+        }
+        /**
+         * 
+         * @param name
+         * @param label
+         * @param typeParameter
+         * @param defaultValue
+         * @param explanation
+         * @param isMandatory
+         * @param visibleCondition use a condition. To check with the value of other parameters, use "milkJob.parametersvalue[ <nameOfParameter> ]". Example "milkJob.parametersvalue[ 'operation' ] != 'GetFromList'"
+         * @return
+         */
+        public static PlugInParameter createInstance(String name, String label, TypeParameter typeParameter, Object defaultValue, String explanation, boolean isMandatory, String visibleCondition) {
             PlugInParameter plugInParameter = new PlugInParameter();
             plugInParameter.name = name;
             plugInParameter.label = label;
+            plugInParameter.isMandatory = isMandatory;
+            plugInParameter.visibleCondition =  visibleCondition;
             plugInParameter.typeParameter = typeParameter;
             plugInParameter.defaultValue = defaultValue;
             plugInParameter.explanation = explanation;
@@ -223,7 +241,10 @@ public abstract class MilkPlugIn {
 
             return plugInParameter;
         }
-
+        public static PlugInParameter createInstance(String name, String label, TypeParameter typeParameter, Object defaultValue, String explanation, boolean isMandatory) {
+            
+            return createInstance(name, label, typeParameter,defaultValue,explanation,isMandatory,null);
+        }
         public static PlugInParameter createInstanceArrayMap(String name, String label, List<ColDefinition> arrayMapDefinition, Object defaultValue, String explanation) {
             PlugInParameter plugInParameter = new PlugInParameter();
             plugInParameter.name = name;
@@ -263,6 +284,9 @@ public abstract class MilkPlugIn {
         }
 
         public static PlugInParameter createInstanceFile(String name, String label, TypeParameter typeParameter, Object defaultValue, String explanation, String fileName, String contentType) {
+            return createInstanceFile(name, label, typeParameter, defaultValue, explanation, fileName,contentType, false, null);
+        }
+        public static PlugInParameter createInstanceFile(String name, String label, TypeParameter typeParameter, Object defaultValue, String explanation, String fileName, String contentType, boolean isMandatory,  String visibleCondition) {
             PlugInParameter plugInParameter = new PlugInParameter();
             plugInParameter.name = name;
             plugInParameter.label = label;
@@ -271,6 +295,8 @@ public abstract class MilkPlugIn {
             plugInParameter.explanation = explanation;
             plugInParameter.fileName = fileName;
             plugInParameter.contentType = contentType;
+            plugInParameter.isMandatory = isMandatory;
+            plugInParameter.visibleCondition= visibleCondition;
 
             // set an empty value then
             if (typeParameter == TypeParameter.ARRAY && defaultValue == null)
@@ -294,9 +320,6 @@ public abstract class MilkPlugIn {
             return plugInParameter;
         }
 
-        public final static String CSTJSON_PARAMETERNAME = "name";
-        public final static String CSTJSON_PARAMETERLABEL = "label";
-
         /**
          * here the JSON returned to the HTML to build the parameters display
          * 
@@ -304,9 +327,11 @@ public abstract class MilkPlugIn {
          */
         public Map<String, Object> getMap() {
             Map<String, Object> map = new HashMap<>();
-            map.put(CSTJSON_PARAMETERNAME, name);
-            map.put(CSTJSON_PARAMETERLABEL, label);
-
+            map.put(MilkConstantJson.CSTJSON_PLUGIN_PARAMETERNAME, name);
+            map.put(MilkConstantJson.CSTJSON_PLUGIN_PARAMETERLABEL, label);
+            map.put(MilkConstantJson.CSTJSON_PLUGIN_PARAMETERMANDATORY, isMandatory);
+            map.put(MilkConstantJson.CSTJSON_PLUGIN_PARAMETERVISIBLECONDITION, visibleCondition);
+            
             map.put("type", typeParameter.toString());
             if (arrayMapDescription != null) {
                 List<Map<String, Object>> listDescription = new ArrayList<>();
@@ -361,9 +386,9 @@ public abstract class MilkPlugIn {
         }
         public Map<String,Object> getMap() {
             Map<String,Object> result = new HashMap<>();
-            result.put( MilkJob.CSTJSON_MESURE_PLUGIN_NAME, name);
-            result.put( MilkJob.CSTJSON_MESURE_PLUGIN_LABEL, label);
-            result.put( MilkJob.CSTJSON_MESURE_PLUGIN_EXPLANATION, explanation);
+            result.put( MilkConstantJson.CSTJSON_MEASUREMENT_PLUGIN_NAME, name);
+            result.put( MilkConstantJson.CSTJSON_MEASUREMENT_PLUGIN_LABEL, label);
+            result.put( MilkConstantJson.CSTJSON_MEASUREMENT_PLUGIN_EXPLANATION, explanation);
             return result;
         }
     }
@@ -375,8 +400,6 @@ public abstract class MilkPlugIn {
     public String getName() {
         return (description == null ? this.getClass().getName() : description.name);
     }
-
-    public final static String CSTJSON_DISPLAYNAME = "displayname";
 
     private int nbDefaultSavedExecution = 10;
     private int nbDefaultHistoryMesures =  200;
@@ -403,13 +426,13 @@ public abstract class MilkPlugIn {
     public Map<String, Object> getMap() {
         Map<String, Object> result = new HashMap<>();
         result.put("name", description == null ? null : description.name);
-        result.put(CSTJSON_DISPLAYNAME, description == null ? null : description.label);
-        result.put("description", description == null ? null : description.description);
-        result.put("embeded", typePlugIn == TYPE_PLUGIN.EMBEDED);
-        result.put("local", typePlugIn == TYPE_PLUGIN.LOCAL);
-        result.put("cmd", typePlugIn == TYPE_PLUGIN.COMMAND);
-        result.put("category", description == null ? null : description.category.toString());
-        result.put("type", typePlugIn.toString());
+        result.put( MilkConstantJson.CSTJSON_PLUGIN_DISPLAYNAME, description == null ? null : description.label);
+        result.put( MilkConstantJson.CSTJSON_PLUGIN_EXPLANATION, description == null ? null : description.getExplanation());
+        result.put( MilkConstantJson.CSTJSON_PLUGIN_EMBEDED, typePlugIn == TYPE_PLUGIN.EMBEDED);
+        result.put( MilkConstantJson.CSTJSON_PLUGIN_LOCAL, typePlugIn == TYPE_PLUGIN.LOCAL);
+        result.put( MilkConstantJson.CSTJSON_PLUGIN_CMD, typePlugIn == TYPE_PLUGIN.COMMAND);
+        result.put( MilkConstantJson.CSTJSON_PLUGIN_CATEGORY, description == null ? null : description.category.toString());
+        result.put( MilkConstantJson.CSTJSON_PLUGIN_TYPE, typePlugIn.toString());
 
         return result;
 

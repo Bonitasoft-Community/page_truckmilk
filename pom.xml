@@ -58,13 +58,13 @@
 		<dependency>
 			<groupId>org.bonitasoft.command</groupId>
 			<artifactId>bonita-commanddeployment</artifactId>
-			<version>1.7</version>
+			<version>1.8.0</version>
 		</dependency>
-		<!-- Change here ? report the modification in MilCommandControlAPI.getMilkCommandDescription() -->
+		<!-- Change here ? report the modification in MilkCmdControlAPI.getMilkCommandDescription() -->
 		<dependency>
 			<groupId>org.bonitasoft.properties</groupId>
 			<artifactId>bonita-properties</artifactId>
-			<version>2.1.1</version>
+			<version>2.2.0</version>
 		</dependency>
 		<dependency>
 			<groupId>com.googlecode.json-simple</groupId>
@@ -82,6 +82,12 @@
 			<groupId>javax.mail</groupId>
 			<artifactId>mail</artifactId>
 			<version>1.5.0-b01</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/javax.activation/activation -->
+		<dependency>
+		    <groupId>javax.activation</groupId>
+		    <artifactId>activation</artifactId>
+		    <version>1.1.1</version>
 		</dependency>
 
 

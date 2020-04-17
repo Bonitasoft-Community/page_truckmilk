@@ -158,7 +158,7 @@ public class MilkExecuteJobThread extends Thread {
         
         List<BEvent> listEvents = new ArrayList<>();
         MilkPlugIn plugIn = milkJob.getPlugIn();
-        MilkJobOutput output = null;
+        MilkJobOutput milkJobOutput = null;
         try {
             String hostName = "";
             try {
@@ -181,9 +181,29 @@ public class MilkExecuteJobThread extends Thread {
                 // save the start Status (so general) and the track Status, plus askStop to false
                 listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceStartExecutionJob()));
 
-                output = plugIn.execute(milkJobExecution);
+                milkJobOutput = plugIn.execute(milkJobExecution);
                 
-                output.hostName = hostName;
+                if (milkJobOutput.getReportInHtml().length()==0) {
+                    // no report, then build one from the list of event
+                    milkJobOutput.addReportTable( null);
+                    for (BEvent event : milkJobOutput.getListEvents()) {
+                        String title;
+                        
+                        if (event.getLevel() == Level.CRITICAL || event.getLevel() == Level.ERROR) {
+                            title="<div class=\"label label-danger\" style=\"color:white;\">"+event.getTitle()+"</div>";
+                        } else if (event.getLevel() == Level.APPLICATIONERROR) {
+                            title="<div class=\"label label-warning\" style=\"color:white;\" >"+event.getTitle()+"</div>";
+                        } else if (event.getLevel() == Level.SUCCESS) {
+                            title="<div class=\"label label-success\" style=\"color:white;\" >"+event.getTitle()+"</div>";
+                        } else {
+                            title="<div class=\"label label-info\" style=\"color:white;\" >"+event.getTitle()+"</div>";
+                        }                        
+                        milkJobOutput.addReportLine( new String[] { title,event.getParameters()});
+                    }
+                    milkJobOutput.addReportEndTable();
+                    
+                }
+                milkJobOutput.hostName = hostName;
                 StringBuilder listEventsSt = new StringBuilder();
                 for (final BEvent event : listEvents) {
                     listEventsSt.append( event.toString() + " <~> ");
@@ -191,63 +211,63 @@ public class MilkExecuteJobThread extends Thread {
                 logger.info("End Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")" + listEventsSt.toString());
 
                 // force the status ABORD status
-                if (milkJobExecution.pleaseStop() && (output.executionStatus == ExecutionStatus.SUCCESS))
-                    output.executionStatus = ExecutionStatus.SUCCESSABORT;
+                if (milkJobExecution.pleaseStop() && (milkJobOutput.executionStatus == ExecutionStatus.SUCCESS))
+                    milkJobOutput.executionStatus = ExecutionStatus.SUCCESSABORT;
                 // if the user ask to stop, then this is a successabort if this is correct (do not change a ERROR)
-                if (milkJob.isAskForStop() && (output.executionStatus == ExecutionStatus.SUCCESS || output.executionStatus == ExecutionStatus.SUCCESSPARTIAL))
-                    output.executionStatus = ExecutionStatus.SUCCESSABORT;
+                if (milkJob.isAskForStop() && (milkJobOutput.executionStatus == ExecutionStatus.SUCCESS || milkJobOutput.executionStatus == ExecutionStatus.SUCCESSPARTIAL))
+                    milkJobOutput.executionStatus = ExecutionStatus.SUCCESSABORT;
             } catch (Exception e) {
 
                 StringWriter sw = new StringWriter();
                 e.printStackTrace(new PrintWriter(sw));
                 String exceptionDetails = sw.toString();
                 logger.severe(" Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + e.getMessage() + " at " + exceptionDetails);
-                if (output == null) {
-                    output = new MilkJobOutput(milkJob);
-                    output.addEvent(new BEvent(eventPlugInViolation, "Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + e.getMessage() + " at " + exceptionDetails));
-                    output.executionStatus = ExecutionStatus.CONTRACTVIOLATION;
+                if (milkJobOutput == null) {
+                    milkJobOutput = new MilkJobOutput(milkJob);
+                    milkJobOutput.addEvent(new BEvent(eventPlugInViolation, "Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + e.getMessage() + " at " + exceptionDetails));
+                    milkJobOutput.executionStatus = ExecutionStatus.CONTRACTVIOLATION;
                 }
             } catch (Error er) {
                 StringWriter sw = new StringWriter();
                 er.printStackTrace(new PrintWriter(sw));
                 String exceptionDetails = sw.toString();
                 logger.severe(" Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + er.getMessage() + " at " + exceptionDetails);
-                if (output == null) {
-                    output = new MilkJobOutput(milkJob);
-                    output.addEvent(new BEvent(eventPlugInViolation, "Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + er.getMessage() + " at " + exceptionDetails));
-                    output.executionStatus = ExecutionStatus.CONTRACTVIOLATION;
+                if (milkJobOutput == null) {
+                    milkJobOutput = new MilkJobOutput(milkJob);
+                    milkJobOutput.addEvent(new BEvent(eventPlugInViolation, "Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + er.getMessage() + " at " + exceptionDetails));
+                    milkJobOutput.executionStatus = ExecutionStatus.CONTRACTVIOLATION;
                 }
             }
             milkJobExecution.end();
 
             long timeEnd = System.currentTimeMillis();
 
-            output.executionTimeInMs = (timeEnd - timeBegin);
+            milkJobOutput.executionTimeInMs = (timeEnd - timeBegin);
 
-            output.setMesure( MilkPlugInDescription.cstMesureTimeExecution, output.executionTimeInMs);
-            output.setMesure( MilkPlugInDescription.cstMesureNbItemProcessed, output.nbItemsProcessed);
+            milkJobOutput.setMesure( MilkPlugInDescription.cstMesureTimeExecution, milkJobOutput.executionTimeInMs);
+            milkJobOutput.setMesure( MilkPlugInDescription.cstMesureNbItemProcessed, milkJobOutput.nbItemsProcessed);
             
-            milkJob.addMesureValues( new Date(), output.getAllMesures());
+            milkJob.addMesureValues( new Date(), milkJobOutput.getAllMesures());
             // executionDescription += "(" + output.executionStatus + ") " + output.nbItemsProcessed + " in " + output.executionTimeInMs + ";";
 
         } catch (Exception e) {
-            output = new MilkJobOutput(milkJob);
-            output.addEvent(new BEvent(eventPlugInError, e, "PlugIn[" + plugIn.getName() + "]"));
-            output.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput = new MilkJobOutput(milkJob);
+            milkJobOutput.addEvent(new BEvent(eventPlugInError, e, "PlugIn[" + plugIn.getName() + "]"));
+            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
             logger.severe(" Execution error " + e.getMessage());
         }
-        if (output != null) {
+        if (milkJobOutput != null) {
             // maybe the plugin forgot to setup the execution ? So set it.
-            if (output.executionStatus == ExecutionStatus.NOEXECUTION)
-                output.executionStatus = ExecutionStatus.SUCCESS;
+            if (milkJobOutput.executionStatus == ExecutionStatus.NOEXECUTION)
+                milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
 
-            milkJob.registerExecution(tagTheDate, output);
-            listEvents.addAll(output.getListEvents());
+            milkJob.registerExecution(tagTheDate, milkJobOutput);
+            listEvents.addAll(milkJobOutput.getListEvents());
         }
         // calculate the next time
 
         listEvents.addAll(milkJob.calculateNextExecution("End-Of-Execution-recalculate"));
-        milkReportEngine.reportHeartBeatInformation("End Job[" + milkJob.getName() + "] (" + milkJob.getId() + ") Status["+output.executionStatus.toString()+"] NewNextDate["+sdfSynthetic.format(milkJob.getNextExecutionDate())+"]");
+        milkReportEngine.reportHeartBeatInformation("End Job[" + milkJob.getName() + "] (" + milkJob.getId() + ") Status["+milkJobOutput.executionStatus.toString()+"] NewNextDate["+sdfSynthetic.format(milkJob.getNextExecutionDate())+"]");
 
         milkJob.setImmediateExecution(false);
         milkJob.setAskForStop(false);

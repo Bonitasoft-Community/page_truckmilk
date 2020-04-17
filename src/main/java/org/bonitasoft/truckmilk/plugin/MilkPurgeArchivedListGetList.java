@@ -82,7 +82,7 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
         plugInDescription.setName( "ListPurgeCase");
         plugInDescription.setLabel( "Purge Archived Cases: get List (no purge)");
-        plugInDescription.setDescription( "Calculate the list of case to be purge, and update the report with the list (CSV Format).");
+        plugInDescription.setExplanation( "Calculate the list of case to be purge, and update the report with the list (CSV Format).");
         plugInDescription.setCategory( CATEGORY.CASES);
         plugInDescription.setStopJob( JOBSTOPPER.BOTH );
         plugInDescription.addParameter(cstParamDelayInDay);
@@ -107,7 +107,7 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
         jobExecution.setAvancementTotalStep(120);
         try {
 
-            SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, jobExecution.getMilkJob().getStopAfterNbItems()+1);
+            SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, jobExecution.getJobStopAfterMaxItems()+1);
 
             ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, searchActBuilder, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
 
@@ -170,7 +170,7 @@ public class MilkPurgeArchivedListGetList extends MilkPlugIn {
                 line.append( TypesCast.sdfCompleteDate.format(archivedProcessInstance.getArchiveDate()) + separatorCSV);
                 line.append( ""+separatorCSV); // status
                 w.write(line.toString() + "\n");
-                jobExecution.addManagedItem(1);
+                jobExecution.addManagedItems(1);
 
                 jobExecution.setAvancementStep(20L + (long) (100 * countInArchive / searchArchivedProcessInstance.getResult().size()));
 

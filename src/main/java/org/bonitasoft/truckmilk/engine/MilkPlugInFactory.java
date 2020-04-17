@@ -9,6 +9,7 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.plugin.MilkCancelCases;
 import org.bonitasoft.truckmilk.plugin.MilkDeleteCases;
+import org.bonitasoft.truckmilk.plugin.MilkDirectory;
 import org.bonitasoft.truckmilk.plugin.MilkEmailUsersTasks;
 import org.bonitasoft.truckmilk.plugin.MilkGrumman;
 import org.bonitasoft.truckmilk.plugin.MilkMeteor;
@@ -76,7 +77,7 @@ public class MilkPlugInFactory {
     private void collectListPlugIn(long tenantId) {
         listPlugIns = new ArrayList<>(); // clean it
         listPlugIns.add(new MilkDeleteCases());
-        // listPlugIns.add(new MilkDirectory());
+        listPlugIns.add(new MilkDirectory());
         listPlugIns.add(new MilkEmailUsersTasks());
         // listPlugIns.add(new MilkMail());
         listPlugIns.add(new MilkPing());

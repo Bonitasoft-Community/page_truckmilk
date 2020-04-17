@@ -43,7 +43,7 @@ public class MilkMail extends MilkPlugIn {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
         plugInDescription.setName( "MonitorMail");
         plugInDescription.setLabel( "Monitor Email");
-        plugInDescription.setDescription( "Monitor a email adress. When a email arrive on the mail, if it match the properties, a new case is created or a new task is executed");
+        plugInDescription.setExplanation( "Monitor a email adress. When a email arrive on the mail, if it match the properties, a new case is created or a new task is executed");
         plugInDescription.setCategory( CATEGORY.CASES );
         return plugInDescription;
     }

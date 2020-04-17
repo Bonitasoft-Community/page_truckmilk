@@ -29,10 +29,6 @@ public @Data class MilkPlugInDescription {
 
     MilkPlugInDescription.CATEGORY category = CATEGORY.OTHER;
     /**
-     * description is give by the user, to override it
-     */
-    String description;
-    /**
      * explanation is given by the plug in, user can't change it
      */
     private String explanation;
@@ -40,12 +36,15 @@ public @Data class MilkPlugInDescription {
     private List<PlugInParameter> analysisParameters = new ArrayList<>();
 
     private String cronSt = "0 0/10 * 1/1 * ? *"; // every 10 mn
-    public enum JOBSTOPPER { NO, DELAYMAXIMUM, ITEMSMAXIMUM, BOTH }
+    public enum JOBSTOPPER { NO, MAXMINUTES, MAXITEMS, BOTH }
     private JOBSTOPPER jobCanBeStopped = JOBSTOPPER.NO;
     Integer jobStopMaxItems = null;
     Integer jobStopMaxTimeMn = null;
 
-    
+    /**
+     * Plugin can set a special warning, to warm use on special information
+     */
+    private String warning=null;
     
     public MilkPlugInDescription() {
         addMesure( cstMesureTimeExecution );
@@ -53,13 +52,16 @@ public @Data class MilkPlugInDescription {
     }
     
     
-    public boolean isJobCanBeStopByDelay() {
-        return jobCanBeStopped == JOBSTOPPER.DELAYMAXIMUM || jobCanBeStopped == JOBSTOPPER.BOTH;
+    public boolean isJobCanBeStopByMaxMinutes() {
+        return jobCanBeStopped == JOBSTOPPER.MAXMINUTES || jobCanBeStopped == JOBSTOPPER.BOTH;
     }
-    public boolean isJobCanBeStopByItemsMaximum() {
-        return jobCanBeStopped == JOBSTOPPER.ITEMSMAXIMUM || jobCanBeStopped == JOBSTOPPER.BOTH;
+    public boolean isJobCanBeStopByMaxItems() {
+        return jobCanBeStopped == JOBSTOPPER.MAXITEMS || jobCanBeStopped == JOBSTOPPER.BOTH;
     }
 
+    public void addParameterSeparator(String title,String explanation) {
+        addParameter( PlugInParameter.createInstance(title, title, TypeParameter.SEPARATOR, "", explanation) );
+    }
     public void addParameter(PlugInParameter parameter) {
         inputParameters.add(parameter);
     }
@@ -125,7 +127,7 @@ public @Data class MilkPlugInDescription {
      * order is important to display it.
      */
     private List<PlugInMesure> listMesures = new ArrayList<>();
-    private Map<String,PlugInMesure> mapMesures = new HashMap<String,PlugInMesure>();
+    private Map<String,PlugInMesure> mapMesures = new HashMap<>();
     
     public void addMesure( PlugInMesure mesure ) {
         if (! mapMesures.containsKey(mesure.getName())) {

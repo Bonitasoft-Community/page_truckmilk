@@ -70,9 +70,9 @@ public class MilkPing extends MilkPlugIn {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
 
         plugInDescription.setName( "Ping" );
-        plugInDescription.setDescription( "Just do a ping" );
+        plugInDescription.setExplanation( "Just do a ping" );
         plugInDescription.setLabel( "Ping job" );
-        plugInDescription.setStopJob( JOBSTOPPER.DELAYMAXIMUM);
+        plugInDescription.setStopJob( JOBSTOPPER.MAXMINUTES);
         
         plugInDescription.addParameter(cstParamAddDate);
         plugInDescription.addParameter(cstParamTimeExecution);

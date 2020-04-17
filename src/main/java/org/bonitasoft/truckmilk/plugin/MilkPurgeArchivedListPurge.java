@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.bonitasoft.deepmonitoring.radar.connector.RadarTimeTrackerConnector;
 import org.bonitasoft.engine.api.ProcessAPI;
 import org.bonitasoft.engine.bpm.process.ArchivedProcessInstance;
 import org.bonitasoft.engine.bpm.process.ArchivedProcessInstancesSearchDescriptor;
@@ -19,6 +20,7 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMesure;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
@@ -45,6 +47,8 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
 
     private static PlugInParameter cstParamSeparatorCSV = PlugInParameter.createInstance("separatorCSV", "Separator CSV", TypeParameter.STRING, ",", "CSV use a separator. May be ; or ,");
     private static PlugInParameter cstParamInputDocument = PlugInParameter.createInstanceFile("inputdocument", "Input List (CSV)", TypeParameter.FILEREAD, null, "List is a CSV containing caseid column and status column. When the status is 'DELETE', then the case is deleted\nExample: caseId;status\n342;DELETE\n345;DELETE", "ListToPurge.csv", "text/csv");
+
+    private final static PlugInMesure cstMesureCasePurged = PlugInMesure.createInstance("CasePurged", "cases purged", "Number of case purged in this execution");
 
     public MilkPurgeArchivedListPurge() {
         super(TYPE_PLUGIN.EMBEDED);
@@ -151,7 +155,7 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
                         // purge now
                         long nbCaseDeleted = purgeList(sourceProcessInstanceIds, statistic, processAPI);
                         plugTourOutput.nbItemsProcessed = statistic.countNbItems;
-                        jobExecution.addManagedItem(nbCaseDeleted);
+                        jobExecution.addManagedItems(nbCaseDeleted);
                         sourceProcessInstanceIds.clear();
                     }
                 } else
@@ -160,26 +164,42 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
             // the end, purge a last time 
             if (! sourceProcessInstanceIds.isEmpty()) {
                 long nbCaseDeleted = purgeList(sourceProcessInstanceIds, statistic, processAPI);
-                jobExecution.addManagedItem(nbCaseDeleted);
+                jobExecution.addManagedItems(nbCaseDeleted);
                 sourceProcessInstanceIds.clear();
             }
             plugTourOutput.nbItemsProcessed = statistic.countNbItems;
             
             long endExecution = System.currentTimeMillis();
             
-            // calculated the last ignore  
+            // calculated the last ignore
+            
             statistic.countStillToAnalyse = statistic.totalLineCsv - lineNumber;
+            plugTourOutput.addReportTable( new String[] {"Mesure", "Value", "Analyse"});
+            
             StringBuilder reportEvent = new StringBuilder();
-            reportEvent.append("AlreadyDone: " + statistic.countAlreadyDone + "; ");
-            if (statistic.countIgnored>0)
-                reportEvent.append("Ignored(no status DELETE):" + statistic.countIgnored + ";");
-            if (statistic.countStillToAnalyse>0)
-                reportEvent.append("StillToAnalyse:" + statistic.countStillToAnalyse+";");
-            if (statistic.countBadDefinition > 0)
-                reportEvent.append("Bad Definition(noCaseid):" + statistic.countBadDefinition + " : " + analysis.toString()+";");
-            if (nbAnalyseAlreadyReported > 0)
-                reportEvent.append("(" + nbAnalyseAlreadyReported + ") more errors;");
-
+            plugTourOutput.addReportLine(new String[] {"Already done", String.valueOf( statistic.countAlreadyDone), ""});
+            
+            // reportEvent.append("AlreadyDone: " + statistic.countAlreadyDone + "; ");
+            if (statistic.countIgnored>0) {
+                plugTourOutput.addReportLine(new String[] {"Ignored(no status DELETE):", String.valueOf( statistic.countIgnored), ""});
+                // reportEvent.append("Ignored(no status DELETE):" + statistic.countIgnored + ";");
+            }
+            
+            if (statistic.countStillToAnalyse>0) {
+                plugTourOutput.addReportLine(new String[] {"StillToAnalyse", String.valueOf( statistic.countStillToAnalyse), ""});
+                // reportEvent.append("StillToAnalyse:" + statistic.countStillToAnalyse+";");
+            }
+            
+            if (statistic.countBadDefinition > 0) {
+                plugTourOutput.addReportLine(new String[] {"Bad Definition(noCaseid):", String.valueOf( statistic.countBadDefinition), analysis.toString()});
+                // reportEvent.append("Bad Definition(noCaseid):" + statistic.countBadDefinition + " : " + analysis.toString()+";");
+            }
+            
+            if (nbAnalyseAlreadyReported > 0) {
+                plugTourOutput.addReportLine(new String[] {"More errors", String.valueOf( nbAnalyseAlreadyReported), "" });
+                // reportEvent.append("(" + nbAnalyseAlreadyReported + ") more errors;");
+            }
+            
             // add Statistics
             reportEvent.append("Cases Deleted:" + statistic.countNbItems + " in " + statistic.sumTimeDeleted + " ms ");
             if (statistic.countNbItems > 0)
@@ -195,10 +215,14 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
             if (statistic.countNbItems  >= statistic.pleaseStopAfterManagedItems)
                     reportEvent.append("Reach the NumberOfItem;");
             
+            plugTourOutput.addReportEndTable();
+            
+            plugTourOutput.setMesure(cstMesureCasePurged, statistic.countNbItems);
             
             BEvent eventFinal = (statistic.countBadDefinition == 0) ? new BEvent(eventDeletionSuccess, reportEvent.toString()) : new BEvent(eventReportError, reportEvent.toString());
 
             plugTourOutput.addEvent(eventFinal);
+            
             plugTourOutput.executionStatus = (jobExecution.pleaseStop() || statistic.countStillToAnalyse > 0) ? ExecutionStatus.SUCCESSPARTIAL : ExecutionStatus.SUCCESS;
             if (statistic.countBadDefinition > 0) {
                 plugTourOutput.executionStatus = ExecutionStatus.ERROR;
@@ -222,15 +246,18 @@ public class MilkPurgeArchivedListPurge extends MilkPlugIn {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
         plugInDescription.setName( "PurgeCaseFromList");
         plugInDescription.setLabel( "Purge Archived Cases: Purge from list");
-        plugInDescription.setDescription( "Get a CSV File as input. Then, delete all case in the list where the column status ewuals DELETED");
+        plugInDescription.setExplanation( "Get a CSV File as input. Then, delete all case in the list where the column status equals DELETED");
+        plugInDescription.setWarning( "A case purged can't be retrieved. Operation is final. Use with caution.");
         plugInDescription.setCategory( CATEGORY.CASES );
         plugInDescription.setStopJob( JOBSTOPPER.BOTH );
         plugInDescription.addParameter(cstParamSeparatorCSV);
         plugInDescription.addParameter(cstParamInputDocument);
-        /*
-         * plugInDescription.addParameterFromMapJson(
-         * "{\"delayinmn\":10,\"maxtentative\":12,\"processfilter\":[]}");
-         */
+        
+        plugInDescription.addMesure(cstMesureCasePurged);
+
+
+
+
         return plugInDescription;
     }
 

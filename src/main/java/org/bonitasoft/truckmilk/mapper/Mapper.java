@@ -75,8 +75,7 @@ import org.json.simple.JSONValue;
 
 public class Mapper {
 
-    private static PlugInParameter cstParamProcessName = PlugInParameter.createInstance("ProcessName", "Process name", TypeParameter.STRING, "", "Give the process name to create case / execute tasks");
-    private static PlugInParameter cstParamProcessVersion = PlugInParameter.createInstance("ProcessVersion", "Process version", TypeParameter.STRING, "", "");
+    private static PlugInParameter cstParamProcessName = PlugInParameter.createInstance("ProcessName", "Process name", TypeParameter.PROCESSNAME, "", "Give the process name to create case/execute tasks");
     private static PlugInParameter cstParamCaseId = PlugInParameter.createInstance("CaseId", "Case ID", TypeParameter.STRING, "", "");
     private static PlugInParameter cstParamTaskId = PlugInParameter.createInstance("TaskId", "Task ID", TypeParameter.STRING, "", "");
     private static PlugInParameter cstParamTaskName = PlugInParameter.createInstance("TaskName", "Task Name", TypeParameter.STRING, "", "");
@@ -85,9 +84,10 @@ public class Mapper {
     private static PlugInParameter cstParamStringIndex3 = PlugInParameter.createInstance("StringIndex3", "Search by the String Index 3", TypeParameter.STRING, "", "Give a key to search the task by a string index. {{value}} can be used, example {{fileName}}");
     private static PlugInParameter cstParamStringIndex4 = PlugInParameter.createInstance("StringIndex4", "Search by the String Index 4", TypeParameter.STRING, "", "Give a key to search the task by a string index. {{value}} can be used, example {{fileName}}");
     private static PlugInParameter cstParamStringIndex5 = PlugInParameter.createInstance("StringIndex5", "Search by the String Index 5", TypeParameter.STRING, "", "Give a key to search the task by a string index. {{value}} can be used, example {{fileName}}");
-    private static PlugInParameter cstParamContract = PlugInParameter.createInstance("Contract", "Bonita Contract value (JSON)", TypeParameter.STRING, "", "Give the contract, as JSON. {{}} may be used. Example, 'fileDetected' : { 'filename' : '{{fileName}}' }");
+    private static PlugInParameter cstParamContract = PlugInParameter.createInstance("Contract", "Bonita Contract value (JSON)", TypeParameter.JSON, "", "Give the contract, as JSON. {{}} may be used. Operation are Long(<attribut>), Integer(<attribut>), Double(<attribut>), Date(<attribut>,<format>), LocalDate(<attribut>,<format>), LocalDateTime(<attribut>,<format>), OffsetDateTime(<attribut>,<format>), Boolean(<attribut>), File(<attribut>) Example, 'person' : { 'age': {{Integer(age)}}; 'birtday': '{{LocalDate(aniversary', 'dd/mm/yyyy')}}; 'filename' : '{{File(fileName)}}' }.");
+    
 
-    private static BEvent EVENT_PROCESS_NOT_FOUND = new BEvent(Mapper.class.getName(), 1, Level.APPLICATIONERROR,
+    private static BEvent eventProcessNotFound = new BEvent(Mapper.class.getName(), 1, Level.APPLICATIONERROR,
             "Process Not Found", "The process given (name and version) is not found. Case/task can't be created / executed", "Jobs can't run", "Check parameters");
 
     private static BEvent EVENT_BAD_JSON = new BEvent(Mapper.class.getName(), 2, Level.APPLICATIONERROR,
@@ -119,7 +119,6 @@ public class Mapper {
         // identify the object to create / apply
         if (policy == MAPPER_POLICY.CASECREATION) {
             plugInDescription.addParameter(cstParamProcessName);
-            plugInDescription.addParameter(cstParamProcessVersion);
         } else {
             plugInDescription.addParameter(cstParamCaseId);
             plugInDescription.addParameter(cstParamTaskId);
@@ -144,14 +143,14 @@ public class Mapper {
 
     public List<BEvent> initialisation(MilkJobExecution jobExecution, APIAccessor apiAccessor) {
         // Search the process
-        List<BEvent> listEvents = new ArrayList<BEvent>();
+        List<BEvent> listEvents = new ArrayList<>();
         ProcessAPI processAPI = apiAccessor.getProcessAPI();
         processName = jobExecution.getInputStringParameter(cstParamProcessName);
-        processVersion = jobExecution.getInputStringParameter(cstParamProcessVersion);
+        
         try {
             processDefinitionId = processAPI.getProcessDefinitionId(processName, processVersion);
         } catch (ProcessDefinitionNotFoundException e) {
-            listEvents.add(new BEvent(EVENT_PROCESS_NOT_FOUND, "ProcessName[" + processName + "] version[" + processVersion + "]"));
+            listEvents.add(new BEvent(eventProcessNotFound, "ProcessName[" + processName + "] version[" + processVersion + "]"));
         }
 
         return listEvents;
@@ -234,7 +233,7 @@ public class Mapper {
         try {
             mapperResult.processInstance = processAPI.startProcessWithInputs(processDefinitionId, instantiationInputs);
         } catch (ProcessDefinitionNotFoundException e) {
-            mapperResult.listEvents.add(new BEvent(EVENT_PROCESS_NOT_FOUND, "ProcessName[" + processName + "] version[" + processVersion + "]"));
+            mapperResult.listEvents.add(new BEvent(eventProcessNotFound, "ProcessName[" + processName + "] version[" + processVersion + "]"));
         } catch (ProcessActivationException e) {
             mapperResult.listEvents.add(new BEvent(EVENT_PROCESS_NOT_ACTIVATED, "ProcessName[" + processName + "] version[" + processVersion + "]"));
         } catch (ProcessExecutionException e) {

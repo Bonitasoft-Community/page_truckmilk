@@ -57,7 +57,7 @@ public class MilkRestartFlowNodes  extends MilkPlugIn {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
         plugInDescription.setName( "ReplayFlowNodes");
         plugInDescription.setLabel( "Replay (Stuck) Flow Nodes");
-        plugInDescription.setDescription( "Check all flow nodes in the database, and if this number is over the number of Pending flownodes, restart them");
+        plugInDescription.setExplanation( "Check all flow nodes in the database, and if this number is over the number of Pending flownodes, restart them");
         plugInDescription.setCategory( CATEGORY.TASKS );
 
         plugInDescription.addParameter(cstParamNumberOfFlowNodesToRestart);

@@ -3,15 +3,20 @@ package org.bonitasoft.truckmilk.toolbox;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.plugin.MilkCancelCases;
@@ -26,7 +31,7 @@ import org.bonitasoft.truckmilk.plugin.MilkCancelCases;
 
 
 public class CSVOperation {
-    static MilkLog logger = MilkLog.getLogger(MilkCancelCases.class.getName());
+    static MilkLog logger = MilkLog.getLogger(CSVOperation.class.getName());
 
 
     /* ******************************************************************************** */
@@ -66,7 +71,30 @@ public class CSVOperation {
         return nbLines;
         
     }
-
+    public long loadCsvDocument(MilkJobExecution jobExecution, File inputFile, String separatorCSV) throws IOException {
+        
+        // read the file to get the number of line --
+        nbLines =0;
+        FileReader FileCsv = new FileReader(inputFile);
+        reader = new BufferedReader(FileCsv);
+        while (reader.readLine()!=null)
+            nbLines++;
+        
+        if (nbLines>1)
+            nbLines--;
+        
+        this.separatorCSV = separatorCSV;
+        // restart at 0
+        FileCsv =  new FileReader(inputFile);
+        reader = new BufferedReader(FileCsv);
+        String line = reader.readLine();
+        
+        // read the header
+        header = line == null ? new String[0] : line.split(separatorCSV);
+        lineNumber = 1;
+        return nbLines;
+        
+    }
     public long getCount() {
         return nbLines;
     }
@@ -86,6 +114,59 @@ public class CSVOperation {
         return lineNumber;
     }
     
+    
+    
+    
+    /* ******************************************************************************** */
+    /*                                                                                  */
+    /* Write a CSV File to a InputParameter */
+    /*                                                                                  */
+    /*                                                                                  */
+    /* ******************************************************************************** */
+    
+    private ByteArrayOutputStream arrayOutputStream = null;
+    private Writer writerOutputStream=null; 
+    private String [] listHeaderCSV;
+    
+    public void writeCsvDocument(String [] listHeaderCSV, String separatorCSV) throws IOException {
+        arrayOutputStream = new ByteArrayOutputStream();
+        writerOutputStream= new OutputStreamWriter(arrayOutputStream);
+        this.separatorCSV = separatorCSV;
+                this.listHeaderCSV = listHeaderCSV;
+            
+        StringBuilder headerString = new StringBuilder();
+        for (String header : listHeaderCSV) {
+            if (headerString.length()>0)
+                headerString.append(separatorCSV);
+        headerString.append(header);
+        }
+        writerOutputStream.write(headerString.toString()+ "\n");
+    }
+
+    public void writeRecord(Map<String,String> record) throws IOException {
+        StringBuilder line = new StringBuilder();
+        for (String header : listHeaderCSV) {
+            if (line.length()>0)
+                line.append(separatorCSV);
+            line.append(record.get( header)==null ? "": record.get(header));
+        }
+        writerOutputStream.write(line.toString()+ "\n");
+    }
+    
+    public void closeAndWriteToParameter( MilkJobOutput milkJobOutput, PlugInParameter parameter) throws IOException {
+            writerOutputStream.flush();
+        milkJobOutput.setParameterStream(parameter, new ByteArrayInputStream(arrayOutputStream.toByteArray()));
+    }
+    
+    
+    
+    /* ******************************************************************************** */
+    /*                                                                                  */
+    /* Private Method */
+    /*                                                                                  */
+    /*                                                                                  */
+    /* ******************************************************************************** */
+
     private long nbLinesInCsv(ByteArrayOutputStream inputCSV) {
         try {
             BufferedReader readerLine = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(inputCSV.toByteArray())));

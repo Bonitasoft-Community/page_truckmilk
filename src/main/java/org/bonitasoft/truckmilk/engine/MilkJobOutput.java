@@ -19,7 +19,7 @@ import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
 public class MilkJobOutput {
 
-    private final static String LOGGER_LABEL = "MilkPing";
+    private final static String LOGGER_LABEL = "MilkJobOutput";
     private final static Logger logger = Logger.getLogger(MilkJobOutput.class.getName());
 
     public Date executionDate = new Date();
@@ -41,7 +41,10 @@ public class MilkJobOutput {
 
     public MilkJob milkJob;
 
-    public String explanation;
+    /**
+     * synthetic report on execution
+     */
+    StringBuilder report = new StringBuilder();
 
     /**
      * host name where execution was done
@@ -81,7 +84,50 @@ public class MilkJobOutput {
             logger.severe("setParameterStream not allowed on parameter[" + param.name + "] (plugin " + milkJob.getName() + "]");
         }
     }
-    
+
+    /* ******************************************************************************** */
+    /*                                                                                  */
+    /* collect Report of the execution, to give a synthesis to administrator */
+    /*                                                                                  */
+    /*                                                                                  */
+    /* ******************************************************************************** */
+    public void addReportInHtml(String reportLine) {
+        this.report.append(reportLine + "\n");
+    }
+
+    /**
+     * Note : the header my be null, then the table does not have a first th line
+     * 
+     * @param header
+     */
+    public void addReportTable(String[] header) {
+        this.report.append("<table class=\"table table-striped table-bordered table-sm\">");
+        if (header != null) {
+            this.report.append("<tr>");
+            for (String col : header)
+                this.report.append("<th>" + col + "</th>");
+            this.report.append("</tr>");
+        }
+    }
+
+    public void addReportLine(Object[] values) {
+        this.report.append("<tr>");
+        for (Object colValue : values) {
+            if (colValue instanceof Long || colValue instanceof Integer || colValue instanceof Double)
+                this.report.append("<td style=\"text-align:right\">" + colValue + "</td>");
+            else
+                this.report.append("<td>" + colValue + "</td>");
+        }
+        this.report.append("</tr>");
+    }
+
+    public void addReportEndTable() {
+        this.report.append("</table>");
+    }
+
+    public String getReportInHtml() {
+        return report.toString();
+    }
 
     /* ******************************************************************************** */
     /*                                                                                  */
@@ -115,7 +161,7 @@ public class MilkJobOutput {
         nbOccurencesOperation.put(marker.operationName, nbOccurences + 1);
     }
 
-    public String collectResult(boolean keepOperationNoOccurrence) {
+    public String collectPerformanceSynthesis(boolean keepOperationNoOccurrence) {
         StringBuilder result = new StringBuilder();
         for (String operationName : sumTimeOperation.keySet()) {
             long sumTime = sumTimeOperation.get(operationName);
@@ -132,25 +178,28 @@ public class MilkJobOutput {
 
     /* ******************************************************************************** */
     /*                                                                                  */
-    /* Register a Statistics Information                                                */
-    /* THis number is collected, and use to build a graph.
+    /* Register a Statistics Information */
+    /*
+     * THis number is collected, and use to build a graph.
      * PointOfInterest should be describe in the PlugInDescrition
      */
     /*                                                                                  */
     /*                                                                                  */
     /* ******************************************************************************** */
-    private Map<PlugInMesure,Double> mesures = new HashMap<>();
-    public void setMesure( PlugInMesure poi, double value) {
-        if (milkJob.getPlugIn().getDescription().containsMesure( poi ))
+    private Map<PlugInMesure, Double> mesures = new HashMap<>();
+
+    public void setMesure(PlugInMesure poi, double value) {
+        if (milkJob.getPlugIn().getDescription().containsMesure(poi))
             mesures.put(poi, value);
-         
+
     }
+
     public double getMesure(PlugInMesure poi) {
         return mesures.get(poi);
     }
-    
-    public Map<PlugInMesure,Double> getAllMesures() {
+
+    public Map<PlugInMesure, Double> getAllMesures() {
         return mesures;
     }
-    
+
 }

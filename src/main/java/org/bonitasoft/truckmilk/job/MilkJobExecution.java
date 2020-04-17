@@ -55,12 +55,25 @@ public class MilkJobExecution {
         this.apiAccessor = apiAccessor;
         this.tenantServiceAccessor = tenantServiceAccessor;
  
-        if ( milkJob.getPlugIn().getDescription().isJobCanBeStopByDelay())
-            setJobStopAfterTime(milkJob.getStopAfterNbMinutes(), MilkJob.CSTDEFAULT_STOPAFTER_NBMINUTES);
-        if ( milkJob.getPlugIn().getDescription().isJobCanBeStopByItemsMaximum())
-            setJobStopAfterMaxItems(milkJob.getStopAfterNbItems(), MilkJob.CSTDEFAULT_STOPAFTER_NBITEMS);
+        if ( milkJob.getPlugIn().getDescription().isJobCanBeStopByMaxMinutes()) {
+            if (milkJob.getStopAfterMaxMinutes() > 0)
+                pleaseStopAfterMaxMinutes = milkJob.getStopAfterMaxMinutes();
+            else if (milkJob.getPlugIn().getDescription().getJobStopMaxTimeMn() != null)
+                pleaseStopAfterMaxMinutes =milkJob.getPlugIn().getDescription().getJobStopMaxTimeMn();
+            else 
+                pleaseStopAfterMaxMinutes = MilkJob.CSTDEFAULT_STOPAFTER_MAXMINUTES;
+        }
+        
+        if ( milkJob.getPlugIn().getDescription().isJobCanBeStopByMaxItems()) {
+            if (milkJob.getStopAfterMaxItems()>0)
+                pleaseStopAfterMaxItems = milkJob.getStopAfterMaxItems();
+            else if (milkJob.getPlugIn().getDescription().getJobStopMaxItems() != null)
+                pleaseStopAfterMaxItems = milkJob.getPlugIn().getDescription().getJobStopMaxItems();
+            else
+                pleaseStopAfterMaxItems = MilkJob.CSTDEFAULT_STOPAFTER_MAXITEMS;
+        }
     }
-
+    
     public MilkJobOutput getMilkJobOutput() {
         return new MilkJobOutput(milkJob);
     }
@@ -180,23 +193,13 @@ public class MilkJobExecution {
      * /*
      */
     /* ******************************************************************************** */
-    private Integer pleaseStopInMinutes = null;
-    private Integer pleaseStopInManagedItems = null;
+    private Integer pleaseStopAfterMaxMinutes = null;
+    private Integer pleaseStopAfterMaxItems = null;
     private int nbManagedItems = 0;
     private int nbPrepareditems = 0;
 
-    public void setJobStopAfterTime(int timeInMinutes, Integer defaultValue) {
-        this.pleaseStopInMinutes = timeInMinutes == 0 ? defaultValue : timeInMinutes;
-        if (milkJob.getPlugIn().getDescription().getStopAfterMaxItems() !=null 
-                && timeInMinutes > milkJob.getPlugIn().getDescription().getStopAfterMaxTime() )
-            pleaseStopInManagedItems = milkJob.getPlugIn().getDescription().getStopAfterMaxTime(); 
 
-    }
-
-    public Integer getJobStopAfterTime() {
-        return pleaseStopInMinutes;
-    }
-
+   
     /**
      * in advancement, there are 2 concepts:
      * - the number of step advance
@@ -207,18 +210,15 @@ public class MilkJobExecution {
      * @param nbStepManagedItem
      */
 
-    public void setJobStopAfterMaxItems(Integer nbManagedItems, Integer defaultValue) {
-        pleaseStopInManagedItems = nbManagedItems == null || nbManagedItems == 0 ? defaultValue : nbManagedItems;
-        if (milkJob.getPlugIn().getDescription().getStopAfterMaxItems() !=null
-                && nbManagedItems > milkJob.getPlugIn().getDescription().getStopAfterMaxItems())
-            pleaseStopInManagedItems = milkJob.getPlugIn().getDescription().getStopAfterMaxItems(); 
-    }
 
     public Integer getJobStopAfterMaxItems() {
-        return pleaseStopInManagedItems;
+        return pleaseStopAfterMaxItems;
     }
-
-    public void addManagedItem(long managedItems) {
+    public Integer getJobStopAfterMaxMinutes() {
+        return pleaseStopAfterMaxMinutes;
+    }
+    
+    public void addManagedItems(long managedItems) {
         this.nbManagedItems += managedItems;
     }
 
@@ -231,8 +231,11 @@ public class MilkJobExecution {
      * 
      * @param itemInPreparation : Number of Item in preparation
      */
-    public void setNumberItemInPreparation(int nbPrepareditems) {
+    public void setPreparationItems(int nbPrepareditems) {
         this.nbPrepareditems = nbPrepareditems;
+    }
+    public void addPreparationItems(int nbPrepareditems) {
+        this.nbPrepareditems += nbPrepareditems;
     }
 
     boolean pleaseStop = false;
@@ -240,7 +243,6 @@ public class MilkJobExecution {
     public void setPleaseStop(boolean pleaseStop) {
         this.pleaseStop = pleaseStop;
     }
-
     /**
      * PleaseStop
      * 
@@ -248,18 +250,18 @@ public class MilkJobExecution {
      */
     public boolean pleaseStop() {
         if (pleaseStop)
-            return true;
+            return true;        
         if (milkJob.isAskedForStop())
             return true;
-        if (pleaseStopInMinutes != null ) {
+        if (pleaseStopAfterMaxMinutes != null && pleaseStopAfterMaxMinutes>0) {
             long currentTime = System.currentTimeMillis();
             long timeInMn = (currentTime - startTimeMs) / 1000 / 60;
-            if (timeInMn > pleaseStopInMinutes) {
+            if (timeInMn > pleaseStopAfterMaxMinutes) {
                 return true;
             }
         }
-        if (pleaseStopInManagedItems != null) {
-            if (nbManagedItems + nbPrepareditems >= pleaseStopInManagedItems) {
+        if (pleaseStopAfterMaxItems != null && pleaseStopAfterMaxItems>0) {
+            if (nbManagedItems + nbPrepareditems >= pleaseStopAfterMaxItems) {
                 return true;
             }
         }

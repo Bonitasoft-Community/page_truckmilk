@@ -17,7 +17,6 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
-import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
@@ -168,8 +167,8 @@ public class MilkPlugInToolbox {
         try
         {
             if (mapScope != null) {
-                delayResult.scopeInput = DELAYSCOPE.valueOf( mapScope.get( MilkJob.CSTJSON_PARAMETER_DELAY_SCOPE).toString());
-                delayResult.delayInput = Integer.parseInt(mapScope.get( MilkJob.CSTJSON_PARAMETER_DELAY_VALUE).toString());
+                delayResult.scopeInput = DELAYSCOPE.valueOf( mapScope.get( MilkConstantJson.CSTJSON_PARAMETER_DELAY_SCOPE).toString());
+                delayResult.delayInput = Integer.parseInt(mapScope.get( MilkConstantJson.CSTJSON_PARAMETER_DELAY_VALUE).toString());
             } else {
                 StringTokenizer st = new StringTokenizer(defaultValue, ":");
                 delayResult.scopeInput = DELAYSCOPE.valueOf( st.nextToken());

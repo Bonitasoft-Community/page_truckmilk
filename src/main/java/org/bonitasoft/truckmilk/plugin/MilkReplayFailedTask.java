@@ -51,7 +51,7 @@ public class MilkReplayFailedTask extends MilkPlugIn {
 
     private static PlugInParameter cstParamDelay = PlugInParameter.createInstance("delay", "Delay", TypeParameter.DELAY, MilkPlugInToolbox.DELAYSCOPE.MN + ":5", "Delay before asking to replay a failed task");
     private static PlugInParameter cstParamMaximumTentatives = PlugInParameter.createInstance("maxtentative", "Max tentatives", TypeParameter.LONG, 5, "Maximum tentative to replay a failed task. After this number of tentative, job will not try to replay it.");
-    private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Process Filter", TypeParameter.ARRAYPROCESSNAME, null, "List of processes in the perimeter. If no filter is given, all processes are in the perimeter");
+    private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Process Filter", TypeParameter.ARRAYPROCESSNAME, null, "List of processes in the perimeter. If no filter is given, all processes are in the perimeter", true);
     private static PlugInParameter cstParamNumberOfTasks = PlugInParameter.createInstance("NumberOfTasks", "Number of tasks", TypeParameter.LONG, 1000, "Number of failed tasks detected, and replayed.");
     private static PlugInParameter cstParamOnlyDetection = PlugInParameter.createInstance("OnlyDetection", "Only Detection", TypeParameter.BOOLEAN, Boolean.FALSE, "Only detection, do not replay tasks");
     private static PlugInParameter cstParamTasksInReport = PlugInParameter.createInstance("TasksInReport", "Task and case in report", TypeParameter.BOOLEAN, Boolean.FALSE, "In the report, the list of Task/Case processed is saved");
@@ -182,7 +182,7 @@ public class MilkReplayFailedTask extends MilkPlugIn {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
         plugInDescription.setName( "ReplayFailedTask");
         plugInDescription.setLabel( "Replay Failed Task");
-        plugInDescription.setDescription( "Monitor all failed tasks. Then after a delay, replay them, if the number of tentative is not reach");
+        plugInDescription.setExplanation( "Monitor all failed tasks. Then after a delay, replay them, if the number of tentative is not reach");
         plugInDescription.setCategory( CATEGORY.TASKS);
         plugInDescription.addParameter(cstParamDelay);
         plugInDescription.addParameter(cstParamMaximumTentatives);

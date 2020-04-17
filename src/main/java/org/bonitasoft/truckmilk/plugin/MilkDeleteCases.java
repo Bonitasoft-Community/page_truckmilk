@@ -14,10 +14,14 @@ import org.bonitasoft.engine.exception.SearchException;
 import org.bonitasoft.engine.search.SearchOptionsBuilder;
 import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
+import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
+import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
@@ -30,30 +34,18 @@ public class MilkDeleteCases extends MilkPlugIn {
 
     static MilkLog logger = MilkLog.getLogger(MilkDeleteCases.class.getName());
 
-    private static BEvent eventNoProcessMatchFilter = new BEvent(MilkDeleteCases.class.getName(), 1,
-            Level.APPLICATIONERROR,
-            "No process match filter", "No process is found with the given filter", "This filter does not apply.",
-            "Check the process name");
-
-    private static BEvent eventNoProcessForFilter = new BEvent(MilkDeleteCases.class.getName(), 2,
-            Level.APPLICATIONERROR,
-            "Filter is not active", "No processes was found for all the filter, search will not run",
-            "No filter at all apply, assuming configuration want to apply only on some process",
-            "Check the process name");
-
-    private static BEvent eventDeletionSuccess = new BEvent(MilkDeleteCases.class.getName(), 3, Level.SUCCESS,
+    private static BEvent eventDeletionSuccess = new BEvent(MilkDeleteCases.class.getName(), 1, Level.SUCCESS,
             "Deletion done with success", "Archived Cases are deleted with success");
 
-    private static BEvent eventDeletionFailed = new BEvent(MilkDeleteCases.class.getName(), 4, Level.ERROR,
+    private static BEvent eventDeletionFailed = new BEvent(MilkDeleteCases.class.getName(), 2, Level.ERROR,
             "Error during deletion", "An error arrived during the deletion of archived cases", "Cases are not deleted", "Check the exception");
 
-    private static PlugInParameter cstParamMaximumDeletion = PlugInParameter.createInstance("maximumdeletion", "Maximum cases Deletion", TypeParameter.LONG, 1000L, "Maximum of case to delete. When this number is reach, job stops");
-    private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Filter on process", TypeParameter.ARRAY, null, "Job manage only process which mach the filter. If no filter is given, all processes are inspected");
+    private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Filter on process", TypeParameter.ARRAYPROCESSNAME, null, "Job manage only process which mach the filter. If no filter is given, all processes are inspected", true);
 
     /**
      * it's faster to delete 100 per 100
      */
-    private static int casePerDeletion = 100;
+    private static int casePerDeletion = 500;
 
     public MilkDeleteCases() {
         super(TYPE_PLUGIN.EMBEDED);
@@ -71,46 +63,40 @@ public class MilkDeleteCases extends MilkPlugIn {
         // is the command Exist ? 
         return new ArrayList<>();
     }
-
     @Override
-    public MilkJobOutput execute(MilkJobExecution input) {
-        MilkJobOutput plugTourOutput = input.getMilkJobOutput();
+    public MilkPlugInDescription getDefinitionDescription() {
+        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
+        plugInDescription.setName( "DeleteCases");
+        plugInDescription.setLabel( "Delete Cases (active and archived)");
+        plugInDescription.setExplanation( "Delete all cases in the given process, by a limitation given in parameters");
+        plugInDescription.setWarning("This plugin delete ACTIVES and archived cases. A case deleted can't be retrieved. Operation is final. Use with caution.");
 
-        ProcessAPI processAPI = input.getApiAccessor().getProcessAPI();
+        plugInDescription.setCategory( CATEGORY.CASES);
+        plugInDescription.setStopJob( JOBSTOPPER.BOTH );
+        plugInDescription.addParameter(cstParamProcessFilter);
+        
+        return plugInDescription;
+    }
+    @Override
+    public MilkJobOutput execute(MilkJobExecution jobExecution) {
+        MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
+
+        ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
         // get Input 
-        @SuppressWarnings("unchecked")
-        List<String> listProcessName = (List<String>) input.getInputListParameter(cstParamProcessFilter);
-        Long maximumArchiveDeletionPerRound = input.getInputLongParameter(cstParamMaximumDeletion);
-        if (maximumArchiveDeletionPerRound > 10000)
-            maximumArchiveDeletionPerRound = 10000L;
+        SearchOptionsBuilder searchBuilderCase = new SearchOptionsBuilder(0, jobExecution.getJobStopAfterMaxItems() + 1);
+
+        int maximumArchiveDeletionPerRound = jobExecution.getJobStopAfterMaxItems();
+        if (maximumArchiveDeletionPerRound > 100000)
+            maximumArchiveDeletionPerRound = 100000;
         try {
+            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, true, searchBuilderCase, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
 
-            List<Long> listProcessDefinitionId = new ArrayList<>();
-
-            if (listProcessName != null && ! listProcessName.isEmpty()) {
-
-                for (String processName : listProcessName) {
-                    SearchOptionsBuilder searchOptionBuilder = new SearchOptionsBuilder(0, 1000);
-                    searchOptionBuilder.filter(ProcessDeploymentInfoSearchDescriptor.NAME, processName);
-                    SearchResult<ProcessDeploymentInfo> searchProcessDeployment = processAPI
-                            .searchProcessDeploymentInfos(searchOptionBuilder.done());
-                    if (searchProcessDeployment.getCount() == 0) {
-                        plugTourOutput.addEvent(new BEvent(eventNoProcessMatchFilter, "Filter[" + processName + "]"));
-
-                    }
-                    for (ProcessDeploymentInfo processInfo : searchProcessDeployment.getResult()) {
-                        listProcessDefinitionId.add(processInfo.getProcessId());
-                    }
-                }
-            }
-
-            if ( listProcessDefinitionId.isEmpty()) {
+            if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
-                plugTourOutput.addEvent(eventNoProcessForFilter);
+                plugTourOutput.addEvents(listProcessResult.listEvents);
                 plugTourOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
                 return plugTourOutput;
             }
-
             /*
              * long totalCaseToDelete=0;
              * for (Long processDefinitionId : listProcessDefinitionId)
@@ -123,38 +109,51 @@ public class MilkDeleteCases extends MilkPlugIn {
             int count = 0;
             int totalNumberCaseDeleted = 0;
             long totalTime = 0;
-            while (count < maximumArchiveDeletionPerRound) {
-                for (Long processDefinitionId : listProcessDefinitionId) {
+            int countNumberThisPass=1;
+            while (count < maximumArchiveDeletionPerRound && countNumberThisPass>0) {
+                if ( jobExecution.pleaseStop())
+                    break;
+                countNumberThisPass=0;
+                for (ProcessDeploymentInfo processDefinition : listProcessResult.listProcessDeploymentInfo) {
+                    if ( jobExecution.pleaseStop())
+                        break;
                     try {
                         long beginTime = System.currentTimeMillis();
 
                         int realCasePerDeletion = (int) (maximumArchiveDeletionPerRound - count);
                         if (realCasePerDeletion > casePerDeletion)
                             realCasePerDeletion = casePerDeletion;
-                        long numberActiveDeleted = processAPI.deleteProcessInstances(processDefinitionId, 0, realCasePerDeletion * 3) / 3;
+                        long numberActiveDeleted = processAPI.deleteProcessInstances(processDefinition.getProcessId(), 0, realCasePerDeletion * 3) / 3;
                         totalNumberCaseDeleted += numberActiveDeleted;
-
-                        long numberArchivedDeleted = processAPI.deleteArchivedProcessInstances(processDefinitionId, 0, realCasePerDeletion * 3) / 3;
+                        countNumberThisPass+= numberActiveDeleted;
+                        long numberArchivedDeleted = processAPI.deleteArchivedProcessInstances(processDefinition.getProcessId(), 0, realCasePerDeletion * 3) / 3;
                         long endTime = System.currentTimeMillis();
                         logger.info("MilkDeleteCase - delete " + (numberActiveDeleted + numberArchivedDeleted) + " in " + (endTime - beginTime) + " ms");
                         totalNumberCaseDeleted += numberArchivedDeleted;
+                        countNumberThisPass+= numberArchivedDeleted;
                         totalTime += (endTime - beginTime);
 
                     } catch (Exception e) {
-                        plugTourOutput.addEvent(new BEvent(eventDeletionFailed, e, "Purge:" + processDefinitionId));
+                        plugTourOutput.addEvent(new BEvent(eventDeletionFailed, e, "Purge:" + processDefinition.getName()+"("+processDefinition.getVersion()+")"));
                     }
                 }
                 count += casePerDeletion;
             }
 
             long totalCaseAfter = 0;
-            for (Long processDefinitionId : listProcessDefinitionId) {
-                totalCaseAfter += getNumberProcessInstance(processDefinitionId, processAPI);
+            for (ProcessDeploymentInfo processDefinition : listProcessResult.listProcessDeploymentInfo) {
+                totalCaseAfter += getNumberProcessInstance(processDefinition.getProcessId(), processAPI);
             }
 
             plugTourOutput.addEvent(new BEvent(eventDeletionSuccess, "Purge:" + totalNumberCaseDeleted + " in " + totalTime + " ms, still " + totalCaseAfter + " cases to deleted"));
-            plugTourOutput.executionStatus = totalNumberCaseDeleted == 0 ? ExecutionStatus.SUCCESSNOTHING : ExecutionStatus.SUCCESS;
-
+            if (totalNumberCaseDeleted == 0)
+                plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+            else if (jobExecution.pleaseStop())
+                plugTourOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
+            else    
+                plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
+            
+            
         } catch (Exception e1) {
             plugTourOutput.addEvent(new BEvent(eventDeletionFailed, e1, ""));
             plugTourOutput.executionStatus = ExecutionStatus.ERROR;
@@ -163,22 +162,7 @@ public class MilkDeleteCases extends MilkPlugIn {
         return plugTourOutput;
     }
 
-    @Override
-    public MilkPlugInDescription getDefinitionDescription() {
-        MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
-        plugInDescription.setName( "DeleteCases");
-        plugInDescription.setLabel( "Delete Cases (active and archived)");
-        plugInDescription.setDescription( "Delete all cases in the given process, by a limitation given in parameters");
-        plugInDescription.setCategory( CATEGORY.CASES);
-        plugInDescription.addParameter(cstParamMaximumDeletion);
-        plugInDescription.addParameter(cstParamProcessFilter);
-
-        /*
-         * plugInDescription.addParameterFromMapJson(
-         * "{\"delayinmn\":10,\"maxtentative\":12,\"processfilter\":[]}");
-         */
-        return plugInDescription;
-    }
+  
 
     private long getNumberProcessInstance(long processDefinitionId, ProcessAPI processAPI) {
 

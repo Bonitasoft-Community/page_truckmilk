@@ -17,7 +17,7 @@ import org.bonitasoft.truckmilk.toolbox.MilkLog;
 /**
  * this class is the API to the command. It's deploy the command on demand
  * 
- * @author Firstname Lastname
+ *
  */
 public class MilkCmdControlAPI {
 
@@ -111,8 +111,11 @@ public class MilkCmdControlAPI {
         
             
         cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-event", "1.8.0", "bonita-event-1.8.0.jar");
-        commandDescription.addJarDependencyLastVersion("bonita-properties", "2.1.1", "bonita-properties-2.1.1.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.2.0", "bonita-properties-2.2.0.jar");
+        cmdDependency.setForceDeploy( true );
+
         commandDescription.addJarDependencyLastVersion("mail", "1.5.0", "mail-1.5.0-b01.jar");
+        commandDescription.addJarDependencyLastVersion("activation", "1.1.1", "activation-1.1.1.jar");
         cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-worker", "1.5.0", "CustomPageWorker-1.5.0.jar");
         cmdDependency.setForceDeploy( true );
         

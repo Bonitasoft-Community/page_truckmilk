@@ -86,8 +86,8 @@
 		this.refreshListJobs = function() {
 			console.log("refreshListJobs:Start");
 			for ( var i in this.listplugtour) {
-				var plugtourindex = this.listplugtour[i];
-				this.preparePlugTourParameter(plugtourindex);
+				var milkJobindex = this.listplugtour[i];
+				this.prepareJobParameter(milkJobindex);
 			}
 			
 			// calculate a uniq time stamp, to avoid the infinit loop when
@@ -332,11 +332,19 @@
 		
 		this.addJob = function(plugin, nameJob) {
 			console.log("addJob: add["+nameJob+"]");
-			if (! nameJob || nameJob === '')
-			{
-				alert("Name is mandatory");
-				return;
+			var message="";
+			
+			if (! nameJob || nameJob === '') {
+				message += "Job Name is mandatory;"
 			}
+			if (! plugin || plugin ==='') {
+				message += "Select a plug in;"
+			}
+			if (message !== '') {
+				alert(message);
+				return;				
+			}
+
 			var param = {
 				'plugin' : plugin,
 				'name' : nameJob
@@ -344,102 +352,102 @@
 			this.operationJob('addJob', param, null, true);
 		}
 
-		this.removeJob = function(plugtour) {
+		this.removeJob = function(milkJob) {
 			var result = confirm("Do you want to remove this job?");
 			if (result) {
 				console.log("removeJob:Start");
 
 				var param = {
-					'name' :  plugtour.name,
-					'id'   :  plugtour.id
+					'name' :  milkJob.name,
+					'id'   :  milkJob.id
 				};
 				this.operationJob('removeJob', param, null, false);
 			}
 		}
 
-		this.abortJob = function( plugtour) {
+		this.abortJob = function( milkJob) {
 			console.log("abortTour:Start");
 			var param = {
-					'name' :  plugtour.name,
-					'id'   :  plugtour.id
+					'name' :  milkJob.name,
+					'id'   :  milkJob.id
 				};
-			this.operationJob('abortJob', param, plugtour, false);
+			this.operationJob('abortJob', param, milkJob, false);
 		}
 
 		// Activate / Deactivate
-		this.activateJob = function(plugtour) {
+		this.activateJob = function(milkJob) {
 			console.log("startJob:Start");
 			var param = {
-					'name' :  plugtour.name,
-					'id'   :  plugtour.id
+					'name' :  milkJob.name,
+					'id'   :  milkJob.id
 				};
-			this.operationJob('activateJob', param, plugtour, false);
+			this.operationJob('activateJob', param, milkJob, false);
 		}
 		
-		this.deactivateJob = function(plugtour) {
+		this.deactivateJob = function(milkJob) {
 			console.log("stopJob:beginning");
 			var param = {
-					'name' :  plugtour.name,
-					'id'   :  plugtour.id
+					'name' :  milkJob.name,
+					'id'   :  milkJob.id
 				};
 
-			this.operationJob('deactivateJob', param, plugtour, true);		
+			this.operationJob('deactivateJob', param, milkJob, true);		
 		}
 
 		
-		this.updateJob= function(plugtour) {
+		this.updateJob= function(milkJob) {
 			console.log("updateJob START")
-			var paramStart = plugtour;
+			var paramStart = milkJob;
 			var self=this;
 			// update maybe very heavy : truncate it
 			self.listeventsexecution="";
-			plugtour.listevents='';
+			milkJob.listevents='';
 			// first action will be a reset
 			// prepare the string
-			var  plugtourcopy =angular.copy( plugtour );
-			plugtourcopy.parametersdef = null; // parameters are in
-												// plugtourcopy.parametersvalue
-			plugtourcopy.parameters = null;
-			plugtourcopy.lastexecutionlistevents=null;
-			plugtourcopy.savedExecution = null;
+			var  milkJobcopy =angular.copy( milkJob );
+			milkJobcopy.parametersdef = null; // parameters are in
+												// milkJobcopy.parametersvalue
+			milkJobcopy.parameters = null;
+			milkJobcopy.lastexecutionlistevents=null;
+			milkJobcopy.savedExecution = null;
 			
-			var json = angular.toJson( plugtourcopy, false);
+			var json = angular.toJson( milkJobcopy, false);
 			
 			self.sendPost('updateJob', json );
 		}
 		
 		
 		
-		this.immediateJob = function(plugtour) {
+		this.immediateJob = function(milkJob) {
 			console.log("immediateJob:Start");
 			var param = {
-					'name' :  plugtour.name,
-					'id'   :  plugtour.id
+					'name' :  milkJob.name,
+					'id'   :  milkJob.id
 				};
 
-			this.operationJob('immediateExecution', param, plugtour, true);		
+			this.operationJob('immediateExecution', param, milkJob, true);		
 		}
-		this.abortJob = function(plugtour) {
+		this.abortJob = function(milkJob) {
 			console.log("abortJob:begin");
 			var param = {
-					'name' :  plugtour.name,
-					'id'   :  plugtour.id
+					'name' :  milkJob.name,
+					'id'   :  milkJob.id
 				};
 
-			this.operationJob('abortJob', param, plugtour, true);		
+			this.operationJob('abortJob', param, milkJob, true);		
 		}
-		this.resetJob = function(plugtour) {
+		this.resetJob = function(milkJob) {
 			console.log("resetJob:begin");
 			var param = {
-					'name' :  plugtour.name,
-					'id'   :  plugtour.id
+					'name' :  milkJob.name,
+					'id'   :  milkJob.id
 				};
 
-			this.operationJob('resetJob', param, plugtour, true);		
+			this.operationJob('resetJob', param, milkJob, true);		
 		}
 		
 		// execute an operation on Job
-		this.operationJob = function(action, param, plugtour, refreshParam) {
+		this.operationJob = function(action, param, milkJob, refreshParam) {
 			console.log("operationJob:Start");
 
 			
@@ -450,7 +458,7 @@
 			self.action = action;
 			self.addlistevents= "";
 			self.listevents = "";
-			self.currentplugtour = plugtour;
+			self.currentplugtour = milkJob;
 			self.refreshParam = refreshParam;
 			var json = encodeURIComponent(angular.toJson(param, true));
 			self.listevents='';
@@ -515,47 +523,66 @@
 
 		}
 
-		// preparePlugTourParameter
+		// prepareJobParameter
 		// we copy the different parameters from parameters[SourceRESTAPI] to
 		// parametersvalue [ANGULAR MAPPED]
-		this.preparePlugTourParameter = function(plugtour) {
+		this.prepareJobParameter = function(milkJob) {
 			
-			console.log("preparePlugTourParameter.start: " + plugtour.name);
-			plugtour.newname=plugtour.name;
-			plugtour.parametersvalue = {};
+			console.log("prepareJobParameter.start: " + milkJob.name);
+			milkJob.newname=milkJob.name;
+			milkJob.parametersvalue = {};
 			
-			for ( var key in plugtour.parameters) {
-				plugtour.parametersvalue[key] = JSON.parse( JSON.stringify( plugtour.parameters[key]) );
-				// console.log("Parameter[" + key + "] value[" + angular.toJson(plugtour.parameters[key]) + "] ="+angular.toJson(plugtour.parametersvalue,true ));
+			for ( var key in milkJob.parameters) {
+				milkJob.parametersvalue[key] = JSON.parse( JSON.stringify( milkJob.parameters[key]) );
+				// console.log("Parameter[" + key + "] value[" + angular.toJson(milkJob.parameters[key]) + "] ="+angular.toJson(milkJob.parametersvalue,true ));
 			}
 			// prepare all test button
-			for (var key in plugtour.parametersdef)
+			for (var key in milkJob.parametersdef)
 			{
-				var parameterName=plugtour.parametersdef[ key ].name;
-
-				if (plugtour.parametersdef[ key ].type==="BUTTONARGS")
+				var parameterName=milkJob.parametersdef[ key ].name;
+				var parameterType = milkJob.parametersdef[ key ].type;
+				if (parameterType==="BUTTONARGS")
 				{
 
 					// console.log("buttonARGS detected key=["+key+"]
 					// name=["+buttonName+"]
-					// args="+angular.toJson(plugtour.parametersdef[ key
+					// args="+angular.toJson(milkJob.parametersdef[ key
 					// ].args));
 					// set the default value
-					var listArgs=plugtour.parametersdef[ key ].args;
+					var listArgs=milkJob.parametersdef[ key ].args;
 					var mapArgsValue={};
-					plugtour.parametersvalue[ parameterName ]=mapArgsValue;
+					milkJob.parametersvalue[ parameterName ]=mapArgsValue;
 					for (var i in listArgs)
 					{
 						var argname=listArgs[ i ].name;
 						mapArgsValue[ argname ] = listArgs[ i ].value;
 					}
 				}
+				if (parameterType==="ARRAYPROCESSNAME" || parameterType==='ARRAY' || parameterType==='ARRAYMAP')
+				{
+					// give a empty list
+					if (! milkJob.parametersvalue[ parameterName ]) {
+						milkJob.parametersvalue[ parameterName ] = [];
+					}
+				}
+				
+				
 				
 			}
-			console.log("PlugTourPreration END " + plugtour.name+" plugtour.parametersvalue="+angular.toJson( plugtour.parametersvalue,true ));
+			console.log("milkJobPreration END " + milkJob.name+" milkJob.parametersvalue="+angular.toJson( milkJob.parametersvalue,true ));
 
 		}
 		
+		this.isVisibleParameter = function ( milkJob, parameterdef ) {
+			$scope.milkJob=milkJob;
+			$scope.milkParameter=parameterdef;
+			var isVisible = true;
+			if (parameterdef.visibleCondition) {
+				isVisible = $scope.$eval(parameterdef.visibleCondition);
+				console.log("isVisibleParameter milkJob["+milkJob.name+"] parameter["+parameterdef.name+"] result="+isVisible);
+			}
+			return isVisible;
+		}
 		// -----------------------------------------------------------------------------------------
 		// manupulate array in parameters
 		this.isAnArray = function( value ) {
@@ -568,6 +595,7 @@
 			console.log("addInArray:Start");
 			// console.log("addInArray valueArray="+angular.toJson( valueArray
 			// ));
+			
 			valueArray.push(  valueToAdd );
 			// console.log("add valueArray="+angular.toJson( valueArray ));
 		}
@@ -595,23 +623,23 @@
 		
 		// click on a test button
 		var currentButtonExecution=null;
-		this.testbutton = function(parameterdef, plugtour)
+		this.testbutton = function(parameterdef, milkJob)
 		{
 			console.log("testbutton:Start");
 			var self=this;
-			var  plugtourcopy =angular.copy( plugtour );
-			plugtourcopy.parametersdef = null; // parameters are in
-												// plugtourcopy.parametersvalue
-			plugtourcopy.parameters = null;
-			plugtourcopy.savedExecution = null;
-			plugtourcopy.buttonName= parameterdef.name;
-			plugtourcopy.args = plugtour.parametersvalue[ parameterdef.name ];
+			var  milkJobcopy =angular.copy( milkJob );
+			milkJobcopy.parametersdef = null; // parameters are in
+												// milkJobcopy.parametersvalue
+			milkJobcopy.parameters = null;
+			milkJobcopy.savedExecution = null;
+			milkJobcopy.buttonName= parameterdef.name;
+			milkJobcopy.args = milkJob.parametersvalue[ parameterdef.name ];
 			
-			// console.log("testbutton with "+angular.toJson( plugtourcopy ));
+			// console.log("testbutton with "+angular.toJson( milkJobcopy ));
 			parameterdef.listeventsexecution="";
 			self.currentButtonExecution = parameterdef;	
 			parameterdef.listeventsexecution="";
-			self.sendPost('testButton', angular.toJson( plugtourcopy ) );
+			self.sendPost('testButton', angular.toJson( milkJobcopy ) );
 		}
 				
 		// -----------------------------------------------------------------------------------------
@@ -657,9 +685,9 @@
 		// -----------------------------------------------------------------------------------------
 		// Show information
 		// -----------------------------------------------------------------------------------------
-		this.hideall = function(plugtour) {
+		this.hideall = function(milkJob) {
 			console.log("hideall:Start");
-			plugtour.show = {
+			milkJob.show = {
 				'schedule' : false,
 				'parameters' : false,
 				'report' : false,
@@ -669,87 +697,87 @@
 			};
 		}
 
-		this.showSchedule = function(plugtour) {
+		this.showSchedule = function(milkJob) {
 			console.log("showSchedule:Start");
-			this.hideall(plugtour);
-			plugtour.show.schedule = true;
+			this.hideall(milkJob);
+			milkJob.show.schedule = true;
 		}
-		this.showHostRestriction = function(plugtour) {
+		this.showHostRestriction = function(milkJob) {
 			console.log("showHost Restriction:Start");
-			this.hideall(plugtour);
-			plugtour.show.hostrestriction = true;
+			this.hideall(milkJob);
+			milkJob.show.hostrestriction = true;
 		}
 
-		this.showparameters = function(plugtour) {
+		this.showparameters = function(milkJob) {
 			// console.log("showparameters:Start");
 
-			this.hideall(plugtour);
-			plugtour.show.parameters = true;
+			this.hideall(milkJob);
+			milkJob.show.parameters = true;
 		}
-		this.showreport = function(plugtour) {
+		this.showreport = function(milkJob) {
 			// console.log("showreport:Start");
-			this.hideall(plugtour);
-			plugtour.show.report = true;
+			this.hideall(milkJob);
+			milkJob.show.report = true;
 		}
-		this.showdashboard = function(plugtour) {
+		this.showdashboard = function(milkJob) {
 			// console.log("showreport:Start");
-			this.hideall(plugtour);
-			plugtour.show.dashboard = true;
+			this.hideall(milkJob);
+			milkJob.show.dashboard = true;
 		}
-		this.showanalysis = function(plugtour) {
+		this.showanalysis = function(milkJob) {
 			// console.log("showreport:Start");
-			this.hideall(plugtour);
-			plugtour.show.analysis = true;
+			this.hideall(milkJob);
+			milkJob.show.analysis = true;
 		}
-		this.hasanalysis = function( plugtour) {
-			return plugtour.analysisdef.length > 0 ;
+		this.hasanalysis = function( milkJob) {
+			return milkJob.analysisdef.length > 0 ;
 		}
-		this.getJobStyle= function(plugtour) {
-			// console.log("getTourStyle:Start (r/o) plugtour="+plugtour.id+"
-			// imediateExecution="+plugtour.imediateExecution+"
-			// inExecution="+plugtour.trackExecution.inExecution+"
-			// enable="+plugtour.enable+" askForStop="+plugtour.askForStop);
+		this.getJobStyle= function(milkJob) {
+			// console.log("getTourStyle:Start (r/o) milkJob="+milkJob.id+"
+			// imediateExecution="+milkJob.imediateExecution+"
+			// inExecution="+milkJob.trackExecution.inExecution+"
+			// enable="+milkJob.enable+" askForStop="+milkJob.askForStop);
 			
 			/*
-			 * no more color if (plugtour.imediateExecution) return
-			 * "background-color: #fafabd80"; if (plugtour.inExecution &&
-			 * plugtour.askForStop) return "background-color: #ffa5004f"; if
-			 * (plugtour.inExecution) return "background-color: #f6f696";
+			 * no more color if (milkJob.imediateExecution) return
+			 * "background-color: #fafabd80"; if (milkJob.inExecution &&
+			 * milkJob.askForStop) return "background-color: #ffa5004f"; if
+			 * (milkJob.inExecution) return "background-color: #f6f696";
 			 * 
-			 * if (plugtour.lastexecutionstatus == "ERROR") return
-			 * "background-color: #e7c3c3"; if (plugtour.lastexecutionstatus ==
+			 * if (milkJob.lastexecutionstatus == "ERROR") return
+			 * "background-color: #e7c3c3"; if (milkJob.lastexecutionstatus ==
 			 * "WARNING") return "background-color: #fcf8e3"; if
-			 * (plugtour.enable) return "background-color: #ebfae5";
+			 * (milkJob.enable) return "background-color: #ebfae5";
 			 */
 		}
-		this.getNowStyle= function( plugtour )
+		this.getNowStyle= function( milkJob )
 		{
-			// console.log("getNowStyle:Start (r/o) plugtour="+plugtour.id);
-			if (plugtour.trackExecution.imediateExecution)
+			// console.log("getNowStyle:Start (r/o) milkJob="+milkJob.id);
+			if (milkJob.trackExecution.imediateExecution)
 				return "btn btn-success btn-xs"
 			return "btn btn-info btn-xs";
 		}		
-		this.getNowTitle=function( plugtour )
+		this.getNowTitle=function( milkJob )
 		{
-			// console.log("getNowTitle:Start (r/o) plugtour="+plugtour.id);
-			if (plugtour.trackExecution.imediateExecution)
+			// console.log("getNowTitle:Start (r/o) milkJob="+milkJob.id);
+			if (milkJob.trackExecution.imediateExecution)
 				return "An execution will start as soon as possible, at the next round"
 			return "Click to have an immediat execution (this does not change the schedule, or the activate state)";
 		}
 		
-		this.getAbortStyle= function( plugtour )
+		this.getAbortStyle= function( milkJob )
 		{
 			return "btn btn-warning btn-xs"
 		}		
-		this.getAbortTitle=function( plugtour )
+		this.getAbortTitle=function( milkJob )
 		{
 			return "Click to ask the job to stop as soon as possible, at the end of it's current transaction";
 		}
-		this.getResetStyle= function( plugtour )
+		this.getResetStyle= function( milkJob )
 		{
 			return "btn btn-danger btn-xs"
 		}		
-		this.getResetTitle=function( plugtour )
+		this.getResetTitle=function( milkJob )
 		{
 			return "Click to kill immediately the job";
 		}
@@ -757,11 +785,11 @@
 		// -----------------------------------------------------------------------------------------
 		// Report parameters
 		// -----------------------------------------------------------------------------------------
-		this.downloadParameterFile = function(plugtour, parameterdef)
+		this.downloadParameterFile = function(milkJob, parameterdef)
 		{
 			// console.log("downloadParameterFile:Start (r/o)
 			// ["+parameterdef.name+"]");
-			var param={"plugintour": plugtour.id, "parametername":parameterdef.name};			
+			var param={"plugintour": milkJob.id, "parametername":parameterdef.name};			
 			var json = encodeURIComponent(angular.toJson(param, true));
 			// do not calculate a new date now:we will have a recursive call in
 			// Angular
@@ -777,19 +805,19 @@
 			// console.log("calculateParameterUpload - start");
 			this.listParameterUpload = [];
 			for ( var i in this.listplugtour) {
-				var plugtour = this.listplugtour[i];
+				var milkJob = this.listplugtour[i];
 				// console.log("calculateParameterUpload - look
 				// "+plugtour.name);
-				for ( var key in plugtour.parametersdef) {
-					var parameter = plugtour.parametersdef[ key ];
+				for ( var key in milkJob.parametersdef) {
+					var parameter = milkJob.parametersdef[ key ];
 					// console.log("calculateParameterUpload - look
-					// "+plugtour.name+"/"+parameter.name);
+					// "+milkJob.name+"/"+parameter.name);
 					if (parameter.type ==='FILEREAD' || parameter.type ==='FILEREADWRITE')
 					{
 						// console.log("calculateParameterUpload - Add
-						// "+plugtour.name+"/"+parameter.name);
-						var item = { "plugtour": plugtour.name, "id": plugtour.id, "parameter":parameter.name, "displayname" : plugtour.name+" ("+parameter.label+")"};
-						item.internalid=plugtour.id+"#"+parameter.name;
+						// "+milkJob.name+"/"+parameter.name);
+						var item = { "plugtour": milkJob.name, "id": milkJob.id, "parameter":parameter.name, "displayname" : milkJob.name+" ("+parameter.label+")"};
+						item.internalid=milkJob.id+"#"+parameter.name;
 						this.listParameterUpload.push( item );
 						// set a default value ?
 						// console.log("Set a default value?
@@ -1045,10 +1073,13 @@
 					param.newscheduler= this.scheduler.type;
 					param.logheartbeat = this.scheduler.logheartbeat;
 					param.nbsavedheartbeat = this.scheduler.nbsavedheartbeat;
-		}
+			}
 					
 			var json = encodeURIComponent(angular.toJson(param, true));
-			self.scheduler.schedulerlistevents= '';
+			// that's means we already get the scheduler informatin
+			if (self.scheduler) {
+				self.scheduler.schedulerlistevents= '';
+			}
 			
 			// console.log("schedulerMaintenance call HTTP");
 			$http.get('?page=custompage_truckmilk&action=schedulermaintenance&paramjson=' + json+'&t='+Date.now())

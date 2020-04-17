@@ -30,6 +30,7 @@ import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJob.MapContentParameter;
+import org.bonitasoft.truckmilk.job.MilkJob.SAVEDEXECUTIONPOLICY;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerFactory;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt;
@@ -99,6 +100,9 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
 
     private static BEvent eventButtonArgFailed = new BEvent(MilkCmdControl.class.getName(), 9, Level.ERROR,
             "No Answer", "The Button Arg does not return an anwser", "Operation can't be realised", "Contact your administrator");
+
+    private static BEvent eventMissingParametersToCreateAJob= new BEvent(MilkCmdControl.class.getName(), 10, Level.APPLICATIONERROR,
+            "Missing parameters to create a job", "A job must be created with a name and a Plug In", "No job is created", "Specify a name and a plug in");
 
     /* ******************************************************************************** */
     /*                                                                                  */
@@ -329,9 +333,9 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                   public int compare(Map<String,Object> s1,
                           Map<String,Object> s2)
                   {
-                      if (s1.get(MilkPlugIn.CSTJSON_DISPLAYNAME)==null || s2.get(MilkPlugIn.CSTJSON_DISPLAYNAME)==null)
+                      if (s1.get(MilkConstantJson.CSTJSON_PLUGIN_DISPLAYNAME)==null || s2.get(MilkConstantJson.CSTJSON_PLUGIN_DISPLAYNAME)==null)
                           return 0;
-                    return s1.get(MilkPlugIn.CSTJSON_DISPLAYNAME).toString().compareTo(s2.get(MilkPlugIn.CSTJSON_DISPLAYNAME).toString());
+                    return s1.get(MilkConstantJson.CSTJSON_PLUGIN_DISPLAYNAME).toString().compareTo(s2.get(MilkConstantJson.CSTJSON_PLUGIN_DISPLAYNAME).toString());
                   }
                 });
 
@@ -345,13 +349,18 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
             } else if (VERBE.ADDJOB.equals(verbEnum)) {
 
                 MilkPlugIn plugIn = milkPlugInFactory.getPluginFromName(executeParameters.getParametersString("plugin"));
-                if (plugIn == null) {
-                    logger.severe("No job found with name[" + executeParameters.getParametersString("plugin") + "]");
-                    executeAnswer.listEvents.add(new BEvent(eventInternalError, "No job found with name[" + executeParameters.getParametersString("plugin") + "]"));
-
-                    return null;
-                }
                 String jobName = executeParameters.getParametersString("name");
+                if (plugIn == null || jobName==null || jobName.trim().length()==0) {
+                    StringBuilder message= new StringBuilder();
+                    if (plugIn==null)
+                        message.append("No job found with name[" + executeParameters.getParametersString("plugin") + "];");
+                    if (jobName==null || jobName.trim().length()==0)
+                        message.append("JobName is required, must not be empty");
+                    logger.severe(message.toString());
+                    executeAnswer.listEvents.add(new BEvent(eventMissingParametersToCreateAJob, message.toString()));
+
+                    return executeAnswer;
+                }
                 logger.info("Add jobName[" + jobName + "] PlugIn[" + executeParameters.getParametersString("plugin") + "]");
 
                 MilkJobExecution milkJobExecution = new MilkJobExecution( executeParameters.tenantId, apiAccessor, tenantServiceAccessor);
@@ -451,17 +460,23 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
 
                         Map<String, Object> parametersObject = executeParameters.getParametersMap("parametersvalue");
                         // History
-                        milkJob.setNbHistoryMesure( executeParameters.getParametersInt( MilkJob.CSTJSON_NB_HISTORYMESURES, milkJob.getPlugIn().getDefaultNbHistoryMesures() ));
-                        milkJob.setNbSavedExecution(executeParameters.getParametersInt( MilkJob.CSTJSON_NB_SAVEDEXECUTION, milkJob.getPlugIn().getDefaultNbSavedExecution()));
+                        milkJob.setNbHistoryMesure( executeParameters.getParametersInt( MilkConstantJson.CSTJSON_NB_HISTORYMEASUREMENT, milkJob.getPlugIn().getDefaultNbHistoryMesures() ));
+                        milkJob.setNbSavedExecution(executeParameters.getParametersInt( MilkConstantJson.CSTJSON_NB_SAVEDEXECUTION, milkJob.getPlugIn().getDefaultNbSavedExecution()));
                         // Limitation
-                        milkJob.setStopAfterNbItems( executeParameters.getParametersInt( MilkJob.CSTJSON_STOPAFTER_NBITEMS, milkJob.CSTDEFAULT_STOPAFTER_NBITEMS));
-                        milkJob.setStopAfterNbMinutes( executeParameters.getParametersInt( MilkJob.CSTJSON_STOPAFTER_NBMINUTES, milkJob.CSTDEFAULT_STOPAFTER_NBMINUTES ));
+                        milkJob.setUserStopAfterMaxItems( executeParameters.getParametersInt( MilkConstantJson.CSTJSON_STOPAFTER_NBITEMS, MilkJob.CSTDEFAULT_STOPAFTER_MAXITEMS));
+                        milkJob.setUserStopAfterMaxMinutes( executeParameters.getParametersInt( MilkConstantJson.CSTJSON_STOPAFTER_NBMINUTES, MilkJob.CSTDEFAULT_STOPAFTER_MAXMINUTES ));
 
                         
-                        String cronSt = executeParameters.getParametersString(MilkJob.CSTJSON_CRON);
                         milkJob.setJobParameters(parametersObject);
+                        String cronSt = executeParameters.getParametersString(MilkConstantJson.CSTJSON_JOB_CRON);
                         milkJob.setCron(cronSt);
-                        milkJob.setHostsRestriction(executeParameters.getParametersString(MilkJob.CSTJSON_HOSTSRESTRICTION));
+                        try {
+                            String saveExecutionPolicy = executeParameters.getParametersString(MilkConstantJson.CSTJSON_SAVEDEXECUTIONPOLICY);
+                            milkJob.setSavedExecutionPolicy( SAVEDEXECUTIONPOLICY.valueOf(saveExecutionPolicy));
+                        } catch(Exception e) {                            
+                        }
+                        
+                        milkJob.setHostsRestriction(executeParameters.getParametersString(MilkConstantJson.CSTJSON_HOSTSRESTRICTION));
                         milkJob.setDescription(executeParameters.getParametersString("description"));
                         String newName = executeParameters.getParametersString("newname");
                         milkJob.setName(newName);
