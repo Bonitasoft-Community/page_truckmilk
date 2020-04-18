@@ -272,11 +272,11 @@
 		}
 		// 
 		this.refreshPlugTourFromServer = function( completeStatus, self, jsonResult ) {
-			console.log("refreshPlugTour - complete="+completeStatus);
+			console.log("refreshPlugTourFromServer - complete="+completeStatus);
 		
 			if (completeStatus)
 			{
-				console.log("refreshPlugTour True, update all  (scheduler)"+angular.toJson( self.scheduler)); 
+				// console.log("refreshPlugTour True, update all  (scheduler)"+angular.toJson( self.scheduler)); 
 	
 				self.listplugtour 	= jsonResult.listplugtour;
 				self.refreshListJobs();
@@ -288,7 +288,7 @@
 			}
 			else
 			{
-				console.log("refreshPlugTour completeStatus False"); 
+				// console.log("refreshPlugTour completeStatus False"); 
 				for (var i in jsonResult.listplugtour)
 				{
 					var serverPlugTour = jsonResult.listplugtour[ i ];
@@ -301,7 +301,7 @@
 						// ["+localPlugTour.name+"]("+localPlugTour.id+")");
 						if (serverPlugTour.id == localPlugTour.id)
 						{
-							console.log("refreshPlugTour: Found it ["+localPlugTour.id+"]-["+localPlugTour.name+"]");
+							// console.log("refreshPlugTour: Found it ["+localPlugTour.id+"]-["+localPlugTour.name+"]");
 							foundIt= true;
 							// localPlugTour.name = serverPlugTour.name;
 							// cron
@@ -312,8 +312,9 @@
 							localPlugTour.savedExecution					= serverPlugTour.savedExecution;
 							localPlugTour.askForStop						= serverPlugTour.askForStop;
 							localPlugTour.listevents						= serverPlugTour.listevents;
+							localPlugTour.parameters						= serverPlugTour.parameters;
 							
-							console.log("Values does not change:"+angular.toJson(localPlugTour.parametersvalue));
+							// console.log("Values does not change:"+angular.toJson(localPlugTour.parametersvalue));
 						}
 	
 					}
@@ -323,7 +324,9 @@
 						// console.log("Found it !");
 						// self.listplugtour.push(serverPlugTour );
 					}
-				}						
+				}	
+				self.refreshListJobs();
+
 				self.refreshListReportExecution();
 
 			}

@@ -77,7 +77,7 @@ public class MilkPlugInFactory {
     private void collectListPlugIn(long tenantId) {
         listPlugIns = new ArrayList<>(); // clean it
         listPlugIns.add(new MilkDeleteCases());
-        listPlugIns.add(new MilkDirectory());
+        // listPlugIns.add(new MilkDirectory());
         listPlugIns.add(new MilkEmailUsersTasks());
         // listPlugIns.add(new MilkMail());
         listPlugIns.add(new MilkPing());

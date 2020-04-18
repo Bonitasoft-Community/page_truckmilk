@@ -13,11 +13,13 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMesure;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
+import org.bonitasoft.truckmilk.toolbox.TypesCast;
 import org.hibernate.internal.jaxb.mapping.orm.JaxbInheritanceType;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 public class MilkRestartFlowNodes  extends MilkPlugIn {
@@ -35,7 +37,9 @@ public class MilkRestartFlowNodes  extends MilkPlugIn {
             Level.ERROR,
             "No radar Worker found", "A radar definition is missing", "Flow nodes to restart can't be detected",
             "Check exception");
-    private static PlugInParameter cstParamNumberOfFlowNodesToRestart = PlugInParameter.createInstance("NumberOfFlowNodesToRestart", "Number Of Flow Nodes to restart", TypeParameter.LONG, 5000, "The x oldest flow nodes are restarted");
+  
+    private final static PlugInMesure cstMesureTasksExecuted = PlugInMesure.createInstance("TasksExecuted", "Tasks Executed", "Number of task executed");
+    private final static PlugInMesure cstMesureTasksError = PlugInMesure.createInstance("TasksError", "Task execution error", "Number of task in error when a re-execution was asked");
 
     public MilkRestartFlowNodes() {
         super(TYPE_PLUGIN.EMBEDED);
@@ -60,7 +64,12 @@ public class MilkRestartFlowNodes  extends MilkPlugIn {
         plugInDescription.setExplanation( "Check all flow nodes in the database, and if this number is over the number of Pending flownodes, restart them");
         plugInDescription.setCategory( CATEGORY.TASKS );
 
-        plugInDescription.addParameter(cstParamNumberOfFlowNodesToRestart);
+        plugInDescription.setJobCanBeStopped(JOBSTOPPER.BOTH);
+        
+          
+        plugInDescription.addMesure(cstMesureTasksExecuted);
+        plugInDescription.addMesure(cstMesureTasksError);
+        
         return plugInDescription;
         }
 
@@ -92,38 +101,63 @@ FROM flownode_instance AS f
 WHERE (f.state_Executing = 1 OR f.stable = 0 OR f.terminal = 1 OR f.stateCategory = 'ABORTING' OR f.stateCategory = 'CANCELLING') 
 ORDER BY id;
          */
-        List<Map<String,Object>> listFlowNodes = radarWorkers.getOldestFlowNodesWaitingForExecution(jobExecution.getTenantId(), 1+ jobExecution.getInputLongParameter(cstParamNumberOfFlowNodesToRestart));
+        
+        List<Map<String,Object>> listFlowNodes = radarWorkers.getOldestFlowNodesWaitingForExecution(jobExecution.getTenantId(), jobExecution.getJobStopAfterMaxItems() +100 );
         if (listFlowNodes.isEmpty())
         {
             plugTourOutput.executionStatus =ExecutionStatus.SUCCESSNOTHING;
+            plugTourOutput.setMesure(cstMesureTasksExecuted, 0);
+            plugTourOutput.setMesure(cstMesureTasksError, 0);
+            plugTourOutput.addReportTable( new String[] {"Indicator", "Value"});
+            plugTourOutput.addReportLine( new Object[] {"Number of tasks detected", listFlowNodes.size() });
+            plugTourOutput.addReportEndTable();
+            
             return plugTourOutput;
         }
         // restart somes nodes
         jobExecution.setAvancementTotalStep(listFlowNodes.size());
         boolean oneErrorDetected=false;
-        
+        int countCorrects=0;
+        int countErrors=0; 
         for (int i=0;i<listFlowNodes.size();i++)
         {
+            // PB  ca ne s'arrete pas au max
+
             if (jobExecution.pleaseStop())
                 break;
             jobExecution.setAvancementStep( i );
 
-            Long flowNodeId = (Long) listFlowNodes.get( i ).get("ID");
-            Long rootContainerId = (Long) listFlowNodes.get( i ).get("ROOTCONTAINERID");
-            
-            try {
-                processAPI.executeFlowNode( flowNodeId);
-            } catch (FlowNodeExecutionException e) {
-                
-                // the flow node may notexist, because a worker executed it in the mean time
-                oneErrorDetected=true;
-                plugTourOutput.addEvent(new BEvent(eventErrorExecuteFlownode, "FlowNodeId["+flowNodeId+"] caseId["+rootContainerId+"]"));
-
+            Long flowNodeId = TypesCast.getLong(listFlowNodes.get( i ).get("ID"), null);
+            Long rootContainerId = TypesCast.getLong( listFlowNodes.get( i ).get("ROOTCONTAINERID"), null);
+            if (flowNodeId!=null)
+                try {
+                    processAPI.executeFlowNode( flowNodeId);
+                    countCorrects++;
+                } catch (Exception e) {
+                    
+                    // the flow node may notexist, because a worker executed it in the mean time
+                    oneErrorDetected=true;
+                    plugTourOutput.addEvent(new BEvent(eventErrorExecuteFlownode, "FlowNodeId["+flowNodeId+"] caseId["+rootContainerId+"] "+e.getMessage()));
+                    countErrors++;
+                } 
+            else {
+                plugTourOutput.addEvent(new BEvent(eventErrorExecuteFlownode, "FlowNodeId is not a Long["+listFlowNodes.get( i ).get("ID")+"] CaseId["+listFlowNodes.get( i ).get("ROOTCONTAINERID")+"]"));
+                countErrors++;
             }
         }
+        plugTourOutput.addReportTable( new String[] {"Indicator", "Value"});
+        plugTourOutput.addReportLine( new Object[] {"Number of tasks detected", listFlowNodes.size() });
+        plugTourOutput.addReportLine( new Object[] {"Task executed", countCorrects});
+        plugTourOutput.addReportLine( new Object[] {"Task execution error", countErrors});
+        plugTourOutput.addReportEndTable();
+        
+        plugTourOutput.setMesure(cstMesureTasksExecuted, countCorrects);
+        plugTourOutput.setMesure(cstMesureTasksError, countErrors);
+        plugTourOutput.setNbItemsProcessed(countCorrects);
+        
         if (oneErrorDetected)
             plugTourOutput.executionStatus =ExecutionStatus.ERROR;
-        else if (listFlowNodes.size() > jobExecution.getInputLongParameter(cstParamNumberOfFlowNodesToRestart))
+        else if (listFlowNodes.size() > jobExecution.getJobStopAfterMaxItems())
             plugTourOutput.executionStatus =ExecutionStatus.SUCCESSPARTIAL;
         else
             plugTourOutput.executionStatus =ExecutionStatus.SUCCESS;

@@ -84,20 +84,30 @@ public class MilkCancelCases extends MilkPlugIn {
     private static BEvent eventSearchFailed = new BEvent(MilkCancelCases.class.getName(), 7, Level.ERROR,
             "Search failed", "Search failed, no case/task can be retrieved", "Case in the scope can't be calculated", "Check exception");
 
-    private static PlugInParameter cstParamDelayInDay = PlugInParameter.createInstance("delayinday", "Delai", TypeParameter.DELAY, MilkPlugInToolbox.DELAYSCOPE.YEAR + ":1", "Only cases archived before this delay are in the perimeter");
+    private static PlugInParameter cstParamOperation = PlugInParameter.createInstanceListValues("operation", "operation: Build a list of cases to operate, do directlly the operation, or do the operation from a list",
+            new String[] { CSTOPERATION_GETLIST, CSTOPERATION_DIRECT, CSTOPERATION_FROMLIST }, CSTOPERATION_DIRECT, "Result may be the cancellation or deletion , or build a list, or used the uploaded list");
 
-    private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Filter on process", TypeParameter.ARRAYPROCESSNAME, null, "Job manage only process which mach the filter. If no filter is given, all processes are inspected");
+    private static PlugInParameter cstParamDelayInDay = PlugInParameter.createInstance("delayinday", "Delai", TypeParameter.DELAY, MilkPlugInToolbox.DELAYSCOPE.YEAR + ":1", "Only cases archived before this delay are in the perimeter",
+            true,
+            "milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_DIRECT + "'");
+
+
+    private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Filter on process", TypeParameter.ARRAYPROCESSNAME, null, "Job manage only process which mach the filter. If no filter is given, all processes are inspected",
+            false,
+            "milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_FROMLIST + "'");
 
     private static PlugInParameter cstParamActionOnCases = PlugInParameter.createInstanceListValues("actiononcases", "Action on cases : cancellation or deletion",
             new String[] { CSTACTION_CANCELLATION, CSTACTION_DELETION }, CSTACTION_CANCELLATION, "Cases are cancelled or deleted");
 
-    private static PlugInParameter cstParamOperation = PlugInParameter.createInstanceListValues("operation", "operation: Build a list of cases to operate, do directlly the operation, or do the operation from a list",
-            new String[] { CSTOPERATION_GETLIST, CSTOPERATION_DIRECT, CSTOPERATION_FROMLIST }, CSTOPERATION_DIRECT, "Result may be the cancellation or deletion , or build a list, or used the uploaded list");
 
     private static PlugInParameter cstParamTriggerOnCases = PlugInParameter.createInstanceListValues("triggeroncases", "Trigger to detect case to work on",
             new String[] { CSTTRIGGER_STARTDATE, CSTTRIGGER_LASTUPDATEDATE }, CSTTRIGGER_LASTUPDATEDATE, CSTTRIGGER_STARTDATE + " : the cases started before the delay are in the perimeter, else " + CSTTRIGGER_LASTUPDATEDATE + " only cases without any operations after the delay ");
 
-    private static PlugInParameter cstParamSeparatorCSV = PlugInParameter.createInstance("separatorCSV", "Separator CSV", TypeParameter.STRING, ",", "CSV use a separator. May be ; or ,");
+    private static PlugInParameter cstParamSeparatorCSV = PlugInParameter.createInstance("separatorCSV", "Separator CSV", TypeParameter.STRING, ",", "CSV use a separator. May be ; or ,",
+            false,
+            "milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_DIRECT + "'");
+
+           
     private static PlugInParameter cstParamReport = PlugInParameter.createInstanceFile("report", "Report Execution", TypeParameter.FILEWRITE, null, "List of cases managed is calculated and saved in this parameter", "ListToOperate.csv", "application/CSV");
 
     private static PlugInParameter cstParamInputDocument = PlugInParameter.createInstanceFile("inputdocument", "Cases to delete/cancel", TypeParameter.FILEREAD, null, "List is a CSV containing caseid column and status column. When the status is 'DELETE' or 'CANCELLED' or 'OPERATE', then the case is operate according the status (if OPERATE, then the job operation is used)\nExample: caseId;status\n342;DELETE\n345;DELETE", "ListToPurge.csv", "text/csv");
@@ -313,6 +323,9 @@ public class MilkCancelCases extends MilkPlugIn {
             }
 
             milkJobOutput.addEvent(new BEvent(eventStatus, "Treated:" + totalNumberCase + " in " + (endTime - beginTime) + " ms " + milkJobOutput.collectPerformanceSynthesis(false)));
+            
+            milkJobOutput.addMarkersInReport(false, true);
+            
             milkJobOutput.setParameterStream(cstParamReport, new ByteArrayInputStream(arrayOutputStream.toByteArray()));
             milkJobOutput.nbItemsProcessed = totalNumberCase;
             if (totalNumberCase == 0)

@@ -169,14 +169,14 @@ public class Actions {
               String paramJsonPartial = request.getParameter("paramjsonpartial");
               if (paramJsonPartial==null)
                 paramJsonPartial="";
-              logger.fine("collect_reset  paramJsonPartial=["+paramJsonPartial+"]");
+              // logger.fine("collect_reset  paramJsonPartial=["+paramJsonPartial+"]");
               httpSession.setAttribute("accumulate", paramJsonPartial );              
               actionAnswer.responseMap.put("status", "ok");
             }
             else if ("collect_add".equals(action))
             {
               String paramJsonPartial = request.getParameter("paramjsonpartial");
-              logger.fine("collect_add paramJsonPartial=["+paramJsonPartial+"] json=["+paramJsonSt+"]");
+              // logger.fine("collect_add paramJsonPartial=["+paramJsonPartial+"] json=["+paramJsonSt+"]");
         
               String accumulateJson = (String) httpSession.getAttribute("accumulate" );
               accumulateJson+=paramJsonPartial;
@@ -186,10 +186,10 @@ public class Actions {
             else if ("updateJob".equals(action))
             {
               String accumulateJson = (String) httpSession.getAttribute("accumulate" );
-              logger.fine("update Job accumulateJson=["+accumulateJson+"]");
+              // logger.fine("update Job accumulateJson=["+accumulateJson+"]");
               if (accumulateJson !=null && accumulateJson.length() >0)
               {
-                logger.fine("collect_end use the saved value ["+accumulateJson+"]");
+                // logger.fine("collect_end use the saved value ["+accumulateJson+"]");
                 // recalculate the parameters from accumate mechanism
                 parameter.setInformation(accumulateJson);
               }
@@ -199,10 +199,10 @@ public class Actions {
             else if ("testButton".equals(action))
             {
               String accumulateJson = (String) httpSession.getAttribute("accumulate" );
-              logger.fine("update Job accumulateJson=["+accumulateJson+"]");
+              // logger.fine("update Job accumulateJson=["+accumulateJson+"]");
               if (accumulateJson !=null && accumulateJson.length() >0)
               {
-                logger.fine("collect_end use the saved value ["+accumulateJson+"]");
+                // logger.fine("collect_end use the saved value ["+accumulateJson+"]");
                 // recalculate the parameters from accumate mechanism
                 parameter.setInformation(accumulateJson);
               }
@@ -211,10 +211,8 @@ public class Actions {
             }
             else if ("immediateExecution".equals(action))
             {
-                logger.fine("#### TruckMilk:Actions call immediateExecution");
-                
                actionAnswer.responseMap = milkAccessAPI.immediateExecution( parameter);
-               logger.fine("#### TruckMilk:Actions call immediateExecution : YES");
+               // logger.fine("#### TruckMilk:Actions call immediateExecution : YES");
             }     
             else if ("downloadParamFile".equals(action))
             {
@@ -223,7 +221,7 @@ public class Actions {
               actionAnswer.isResponseMap=false;
               
               // ATTENTION : on a Linux Tomcat, order is important : first, HEADER then CONTENT. on Windows Tomcat, don't care
-              logger.fine("#### TruckMilk:Actions downloadParamFile write To Output=["+parameter.toString()+"]");
+              // logger.fine("#### TruckMilk:Actions downloadParamFile write To Output=["+parameter.toString()+"]");
               
               String logHeaders="";
               Map<String,String> mapHeaders = milkAccessAPI.readParameterHeader( parameter );
@@ -233,9 +231,6 @@ public class Actions {
                   logHeaders += key+"="+mapHeaders.get( key )+"; ";
               }
              
-                  
-              logger.fine("#### TruckMilk:Actions downloadParamFile addHeaders:["+logHeaders+"]");
-              
               OutputStream output = response.getOutputStream();
                
               
@@ -250,10 +245,10 @@ public class Actions {
             } 
             else if ("uploadParamFile".equals(action))
             {
-                logger.fine("#### TruckMilk:Actions call immediateExecution");
+                // logger.fine("#### TruckMilk:Actions call immediateExecution");
                 
                actionAnswer.responseMap = milkAccessAPI.updateJob( parameter);
-               logger.fine("#### TruckMilk:Actions call immediateExecution : YES");
+               // logger.fine("#### TruckMilk:Actions call immediateExecution : YES");
 
             }
             else  if ("scheduler".equals(action))
@@ -284,7 +279,7 @@ public class Actions {
               Set<String> setProcessesWithoutVersion=new HashSet<String>();
               
               SearchResult<ProcessDeploymentInfo> searchResult = processAPI.searchProcessDeploymentInfos(searchOptionsBuilder.done() );
-              logger.info("TruckMilk:Search process deployment containing ["+processFilter+"] - found "+searchResult.getCount());
+              // logger.info("TruckMilk:Search process deployment containing ["+processFilter+"] - found "+searchResult.getCount());
 
               for (final ProcessDeploymentInfo processDeploymentInfo : searchResult.getResult())
               {

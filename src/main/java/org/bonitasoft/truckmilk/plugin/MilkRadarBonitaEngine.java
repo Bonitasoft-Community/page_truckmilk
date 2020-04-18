@@ -10,6 +10,7 @@ import org.bonitasoft.deepmonitoring.radar.RadarFactory;
 import org.bonitasoft.deepmonitoring.radar.RadarPhoto;
 import org.bonitasoft.deepmonitoring.radar.RadarPhoto.IndicatorPhoto;
 import org.bonitasoft.deepmonitoring.radar.connector.RadarTimeTrackerConnector;
+import org.bonitasoft.deepmonitoring.radar.connector.RadarTimeTrackerConnector.TimeTrackerParameter;
 import org.bonitasoft.deepmonitoring.radar.workers.RadarWorkers;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
@@ -128,7 +129,8 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
                 if (isActivated) {
                     
                     // Take the photo
-                    RadarPhotoResult radarPhotoResult = radarTimeTrackerConnector.takePhoto(null);
+                    TimeTrackerParameter timeTrackerParameter = new TimeTrackerParameter(); 
+                    RadarPhotoResult radarPhotoResult = radarTimeTrackerConnector.takePhoto(timeTrackerParameter);
                     
                     listPhoto.addAll(radarPhotoResult.listPhotos);
                     plugTourOutput.addEvents(radarPhotoResult.listEvents);
@@ -151,7 +153,7 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
                     plugTourOutput.addReportLine(new Object[] { "Threshold (in sec)", jobExecution.getInputLongParameter(cstParamConnectorDurationInSecond) });
                     
                     for (IndicatorPhoto indicator : list )
-                        plugTourOutput.addReportLine(new String[] { indicator.getName(), indicator.details });
+                        plugTourOutput.addReportLine(new String[] { indicator.getName(), indicator.details==null ? "" : indicator.details });
                     
                     plugTourOutput.addReportEndTable();
                     

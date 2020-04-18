@@ -139,26 +139,45 @@ public class MilkJobOutput {
     public static class StartMarker {
 
         private long beginTime;
+        private long endTime;
         private String operationName;
 
         public StartMarker(String operationName) {
             this.operationName = operationName;
             this.beginTime = System.currentTimeMillis();
         }
+        /** 
+         * Must call MilkJobOutput.endMarker() 
+         */
+        protected void stopTracker() {
+            endTime=System.currentTimeMillis();
+        }
+        public long getTimeExecution() {
+           return endTime - beginTime; 
+        }
     }
 
-    private Map<String, Long> sumTimeOperation = new HashMap();
-    private Map<String, Long> nbOccurencesOperation = new HashMap();
+    private Map<String, Long> sumTimeOperation = new HashMap<>();
+    private Map<String, Long> nbOccurencesOperation = new HashMap<>();
 
     public StartMarker getStartMarker(String operationName) {
         return new StartMarker(operationName);
     }
 
-    public void endMarker(StartMarker marker) {
+    /**
+     * return the time in MS of this mark (diff between the startMarker and the endMarker)
+     * @param marker
+     * @return
+     */
+    public long endMarker(StartMarker marker) {
+        if (marker==null)
+            return 0;
         long sumTime = sumTimeOperation.get(marker.operationName) == null ? 0 : sumTimeOperation.get(marker.operationName);
         long nbOccurences = nbOccurencesOperation.get(marker.operationName) == null ? 0 : nbOccurencesOperation.get(marker.operationName);
-        sumTimeOperation.put(marker.operationName, sumTime + (System.currentTimeMillis() - marker.beginTime));
+        marker.stopTracker();
+        sumTimeOperation.put(marker.operationName, sumTime + marker.getTimeExecution());
         nbOccurencesOperation.put(marker.operationName, nbOccurences + 1);
+        return marker.getTimeExecution();
     }
 
     public String collectPerformanceSynthesis(boolean keepOperationNoOccurrence) {
@@ -174,6 +193,24 @@ public class MilkJobOutput {
             result.append("; ");
         }
         return result.toString();
+    }
+    
+    /**
+     * Add the markers in the report
+     * @param keepOperationNoOccurrence
+     */
+    public void addMarkersInReport(boolean keepOperationNoOccurrence, boolean addAverage) {
+        addReportTable(new String[] { "Performance Indicator", "Value" });
+        for (String operationName : sumTimeOperation.keySet()) {
+            long sumTime = sumTimeOperation.get(operationName);
+            long nbOccurences = nbOccurencesOperation.get(operationName);
+            if (nbOccurences == 0 && !keepOperationNoOccurrence)
+                continue;
+            addReportLine(new Object [] { operationName, TypesCast.getHumanDuration(sumTime, true) });
+            if (nbOccurences > 0 && addAverage)
+                addReportLine(new Object [] { operationName+ " ms/operation", sumTime / nbOccurences });
+        }
+        addReportEndTable();
     }
 
     /* ******************************************************************************** */
