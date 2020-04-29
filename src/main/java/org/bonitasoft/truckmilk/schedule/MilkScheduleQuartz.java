@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.StringWriter;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -12,8 +13,6 @@ import java.util.Map;
 import org.bonitasoft.engine.builder.BuilderFactory;
 import org.bonitasoft.engine.dependency.model.ScopeType;
 import org.bonitasoft.engine.scheduler.SchedulerService;
-import org.bonitasoft.engine.scheduler.builder.SJobDescriptorBuilderFactory;
-import org.bonitasoft.engine.scheduler.builder.SJobParameterBuilderFactory;
 import org.bonitasoft.engine.scheduler.model.SJobDescriptor;
 import org.bonitasoft.engine.scheduler.model.SJobParameter;
 import org.bonitasoft.engine.scheduler.trigger.Trigger;
@@ -22,6 +21,7 @@ import org.bonitasoft.engine.service.TenantServiceAccessor;
 import org.bonitasoft.engine.service.TenantServiceSingleton;
 import org.bonitasoft.engine.service.impl.ServiceAccessorFactory;
 import org.bonitasoft.engine.sessionaccessor.SessionAccessor;
+import org.bonitasoft.engine.transaction.UserTransactionService;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
@@ -95,10 +95,9 @@ public class MilkScheduleQuartz extends MilkSchedulerInt {
      */
     public boolean isStarted = true;
 
-    public MilkScheduleQuartz( MilkSchedulerFactory factory ) {
-        super( factory );
-     }
-
+    public MilkScheduleQuartz(MilkSchedulerFactory factory) {
+        super(factory);
+    }
 
     /* ******************************************************************************** */
     /*                                                                                  */
@@ -227,10 +226,12 @@ public class MilkScheduleQuartz extends MilkSchedulerInt {
     public List<BEvent> startup(long tenantId, boolean forceReset) {
         List<BEvent> listEvents = new ArrayList<>();
         MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
-        milkReportEngine.reportHeartBeatInformation("Startup QuartzJob reset[" + forceReset + "]");
+        milkReportEngine.reportHeartBeatInformation("Startup QuartzJob reset[" + forceReset + "]", true);
         try {
             final TenantServiceAccessor tenantAccessor = TenantServiceSingleton.getInstance(tenantId);
-            tenantAccessor.getUserTransactionService().executeInTransaction(() -> {
+            UserTransactionService userTransactionService = tenantAccessor.getUserTransactionService();
+
+            userTransactionService.executeInTransaction(() -> {
                 SchedulerService bonitaScheduler = ServiceAccessorFactory.getInstance().createPlatformServiceAccessor()
                         .getSchedulerService();
                 SessionAccessor sessionAccessor = tenantAccessor.getSessionAccessor();
@@ -250,20 +251,23 @@ public class MilkScheduleQuartz extends MilkSchedulerInt {
                 String cronString;
                 cronString = "0 0/1 * 1/1 * ? *"; // every minutes
                 // cronString = "0/20 0 0 ? * * *"; // every 20 s
-                final Trigger syncJobTrigger = new UnixCronTrigger(
+                final Trigger jobTrigger = new UnixCronTrigger(
                         getJobTriggerName(tenantId),
                         new Date(),
                         cronString,
                         org.bonitasoft.engine.scheduler.trigger.Trigger.MisfireRestartPolicy.ALL);
+                
+                
                 // Job descriptor is WHAT to run
-                SJobDescriptorBuilderFactory jobDescriptorBuilder = BuilderFactory.get(SJobDescriptorBuilderFactory.class);
-                SJobDescriptor jobDescriptor = jobDescriptorBuilder
-                        .createNewInstance("org.bonitasoft.truckmilk.schedule.quartz.MilkQuartzJob", getJobTriggerName(tenantId), false).done();
-                List<SJobParameter> syncJobParameters = new ArrayList<>();
-                // tenantId in the job param
-                SJobParameterBuilderFactory jobParameterBuilderFactory = BuilderFactory.get(SJobParameterBuilderFactory.class);
-                syncJobParameters.add(jobParameterBuilderFactory.createNewInstance(CSTPARAMTENANTID, tenantId).done());
-                bonitaScheduler.schedule(jobDescriptor, syncJobParameters, syncJobTrigger);
+                CallDeploimentStatus callDeployment = getJobBeforeV10(tenantId, bonitaScheduler, jobTrigger);
+                if (callDeployment.jobDescriptor == null) {
+                    callDeployment = getJobAfterV10(tenantId, bonitaScheduler, jobTrigger);
+                }
+                if (callDeployment.jobDescriptor == null) {
+                    logger.severe(logHeader + "~~~~~~~~~~  : ERROR " + callDeployment.exception + " at " + callDeployment.stackTrace);
+                    listEvents.add(new BEvent(eventQuartzScheduleError, callDeployment.exception, ""));
+                    return listEvents;
+                }
                 logger.info(logHeader + " QuartzJob[" + getJobTriggerName(tenantId) + "] Started with Cron[" + cronString + "]");
                 return null;
             });
@@ -279,11 +283,206 @@ public class MilkScheduleQuartz extends MilkSchedulerInt {
         return listEvents;
     }
 
+    private final static String CST_CLASSNAME = "org.bonitasoft.truckmilk.schedule.quartz.MilkQuartzJob";
+
+    private class CallDeploimentStatus {
+        SJobDescriptor jobDescriptor=null;
+        String stackTrace;
+        Exception exception;
+    }
+    
+
+    /* ******************************************************************************** */
+    /*                                                                                  */
+    /* getAndSchedule method before and after V10 */
+    /*                                                                                  */
+    /*                                                                                  */
+    /* ******************************************************************************** */
+
+    /**
+     * 
+     * @param tenantId
+     * @param bonitaScheduler
+     * @param syncJobTrigger
+     * @param listEvents
+     * @return
+     */
+    private CallDeploimentStatus getJobBeforeV10(long tenantId, SchedulerService bonitaScheduler, Trigger jobTrigger) {
+        CallDeploimentStatus callDeploimentStatus = new CallDeploimentStatus();
+        String jobName = getJobTriggerName(tenantId);
+
+        /**
+         * This is the code 7.8
+         * SJobDescriptorBuilderFactory jobDescriptorBuilder = BuilderFactory.get(SJobDescriptorBuilderFactory.class);
+         * jobDescriptorBuilder jobDescriptorBuilder = jobDescriptorBuilder.createNewInstance(CST_CLASSNAME, jobName, false);
+         * JobDescriptor job= jobDescriptorBuilder.done();
+         * SJobParameterBuilderFactory jobParameterBuilderFactory = BuilderFactory.get(SJobParameterBuilderFactory.class);
+         * SJobParameterBuilder jobParameterBuilder = jobParameterBuilderFactory.createNewInstance(CSTPARAMTENANTID, tenantId);
+         * SJobParameter jobParameter = jobParameterBuilder.done();
+         * syncJobParameters.add( jobParameter );
+         * bonitaScheduler.schedule(jobDescriptor, syncJobParameters, syncJobTrigger);
+         */
+        try {
+
+            Class<?> sJobDescriptorBuilderFactoryClass = Class.forName("org.bonitasoft.engine.scheduler.builder.SJobDescriptorBuilderFactory");
+            Object jobDescriptorBuilderFactory = callStaticMethod("org.bonitasoft.engine.builder.BuilderFactory", "get", new Object[] { sJobDescriptorBuilderFactoryClass },null);
+            Object jobDescriptorBuilder = callObjectMethod( jobDescriptorBuilderFactory, "createNewInstance", new Object[] { CST_CLASSNAME, jobName, false },null);
+            SJobDescriptor jobDescriptor = (SJobDescriptor) callObjectMethod( jobDescriptorBuilder, "done", new Object[] {},null);
+            List<SJobParameter> listJobParameters = new ArrayList<>();
+            // tenantId in the job param
+
+            // SJobParameterBuilderFactory jobParameterBuilderFactory = BuilderFactory.get(SJobParameterBuilderFactory.class);
+            Class<?> sJobParameterBuilderFactoryClass = Class.forName("org.bonitasoft.engine.scheduler.builder.SJobParameterBuilderFactory");
+            Object jobParameterBuilderFactory = callStaticMethod("org.bonitasoft.engine.builder.BuilderFactory", "get", new Object[] { sJobParameterBuilderFactoryClass },null);
+
+            // org.bonitasoft.engine.scheduler.builder.SJobParameterBuilder jobParameterBuilder = jobParameterBuilderFactory.createNewInstance(CSTPARAMTENANTID, tenantId);
+            Object jobParameterBuilder = callObjectMethod( jobParameterBuilderFactory, "createNewInstance", new Object[] { CSTPARAMTENANTID, tenantId },new Class[] { String.class, Serializable.class });
+
+            // SJobParameter jobParameter = jobParameterBuilder.done();
+            SJobParameter jobParameter = (SJobParameter) callObjectMethod( jobParameterBuilder, "done", new Object[] {},null);
+
+            listJobParameters.add(jobParameter);
+            bonitaScheduler.schedule(jobDescriptor, listJobParameters, jobTrigger);
+            callDeploimentStatus.jobDescriptor = jobDescriptor;
+            return callDeploimentStatus;
+        } catch (Exception e) {
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            String exceptionDetails = sw.toString();
+            callDeploimentStatus.stackTrace = exceptionDetails;
+            callDeploimentStatus.exception = e;
+            return callDeploimentStatus;
+        }
+    }
+
+    /**
+     * Deploy the quartz job after 7.10
+     * @param tenantId
+     * @param bonitaScheduler
+     * @param syncJobTrigger
+     * @param listEvents
+     * @return
+     */
+    private CallDeploimentStatus getJobAfterV10(long tenantId, SchedulerService bonitaScheduler, Trigger jobTrigger) {
+        CallDeploimentStatus callDeploimentStatus = new CallDeploimentStatus();
+        String jobName = getJobTriggerName(tenantId);
+        /*
+         * This is the code 7.10
+         * SJobDescriptorBuilder jobDescriptorBuilder = SJobDescriptor.builder();
+         * jobDescriptorBuilder.jobClassName(CST_CLASSNAME);
+         * jobDescriptorBuilder.jobName(jobName);
+         * jobDescriptorBuilder.description("TruckMilkHeartBeat");
+         * SJobParameter jobParameter = SJobParameter.builder()
+         * .key("key")
+         * .value("value").build();
+         * return jobDescriptorBuilder.build();
+         */
+        try {
+            Object jobDescriptorBuilder = callStaticMethod("org.bonitasoft.engine.scheduler.model.SJobDescriptor", "builder", new Object[] {},null);
+            callObjectMethod( jobDescriptorBuilder, "jobClassName", new Object[] { CST_CLASSNAME },null);
+            callObjectMethod( jobDescriptorBuilder, "jobName", new Object[] { jobName },null);
+            callObjectMethod( jobDescriptorBuilder, "description", new Object[] { "TruckMilkHeartBeat" },null);
+            SJobDescriptor jobDescriptor = (SJobDescriptor) callMethod(null, jobDescriptorBuilder, "build", new Object[] {},null);
+
+            /* SJobParameterBuilder */
+            Object jobParameterBuilder = callMethod("org.bonitasoft.engine.scheduler.model.SJobParameter", null, "builder", new Object[] {},null);
+            callObjectMethod( jobParameterBuilder, "key", new Object[] { CSTPARAMTENANTID },null);
+            callObjectMethod( jobParameterBuilder, "value", new Object[] {  Long.valueOf(tenantId) }, new Class[] { Serializable.class });
+
+                    
+            SJobParameter jobParameter = (SJobParameter) callObjectMethod( jobParameterBuilder, "build", new Object[] {},null);
+
+            List<SJobParameter> listJobParameters = new ArrayList<>();
+            listJobParameters.add(jobParameter);
+            bonitaScheduler.schedule(jobDescriptor, listJobParameters, jobTrigger);
+            callDeploimentStatus.jobDescriptor = jobDescriptor;
+            return callDeploimentStatus;
+            
+        } catch (Exception e) {
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            String exceptionDetails = sw.toString();
+            callDeploimentStatus.stackTrace = exceptionDetails;
+            callDeploimentStatus.exception = e;
+            return callDeploimentStatus;
+        }
+
+    }
+
+
+    /* ******************************************************************************** */
+    /*                                                                                  */
+    /* Call Method by reflection */
+    /*                                                                                  */
+    /*                                                                                  */
+    /* ******************************************************************************** */
+
+    @SuppressWarnings("rawtypes")
+    private Object callStaticMethod(String className, String methodName, Object[] parameters,  Class[] parameterClass) throws Exception {
+        return callMethod(className, null, methodName, parameters, parameterClass);
+    }
+        
+    @SuppressWarnings("rawtypes")
+    private Object callObjectMethod( Object object, String methodName, Object[] parameters,  Class[] parameterClass) throws Exception {
+        return callMethod(null, object, methodName, parameters, parameterClass);
+        
+    }
+    
+    @SuppressWarnings("rawtypes")
+    private Object callMethod(String className, Object object, String methodName, Object[] parameters,  Class[] parameterClass) throws Exception {
+        Class<?> callClass = null;
+
+        if (object == null)
+            // this is a static method call
+            callClass = Class.forName(className);
+        else
+            callClass = object.getClass();
+
+        /**
+         * if null, then calculate it
+         */
+        if (parameterClass==null)
+        {
+            parameterClass = new Class[parameters.length];
+            for (int i = 0; i < parameters.length; i++) {
+                if (parameters[i] instanceof Boolean)
+                    parameterClass[i] = boolean.class;
+                else
+                    parameterClass[i] = parameters[i].getClass();
+            }
+        }
+        Method correctMethod = callClass.getMethod(methodName, parameterClass);
+        /*
+         * Method[] methods = callClass.getMethods();
+         * // search the correct method
+         * Method correctMethod=null;
+         * for (Method m : methods)
+         * {
+         * if (m.getName().equals(methodName)) {
+         * Class[] methodParameters = m.getParameterTypes();
+         * if ( methodParameters.length == parameters.length) {
+         * boolean identical=true;
+         * for (int i=0;i<methodParameters.length;i++) {
+         * if (! methodParameters[ i ].equals(parameters[i].getClass()))
+         * identical=false;
+         * }
+         * if (identical)
+         * correctMethod=m;
+         * }
+         * }
+         * }
+         */
+        if (correctMethod == null)
+            throw new Exception("Can't find method");
+        // then call
+        return correctMethod.invoke(object, parameters);
+    }
+    
     public List<BEvent> shutdown(long tenantId) {
         List<BEvent> listEvents = new ArrayList<>();
         isStarted = false;
         MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
-        milkReportEngine.reportHeartBeatInformation( "SHUTDOWN Quartz Scheduler");
+        milkReportEngine.reportHeartBeatInformation("SHUTDOWN Quartz Scheduler", true);
         // Kill the job
         try {
             final TenantServiceAccessor tenantAccessor = TenantServiceSingleton.getInstance(tenantId);
@@ -320,9 +519,8 @@ public class MilkScheduleQuartz extends MilkSchedulerInt {
     /* ******************************************************************************** */
     @Override
     public List<BEvent> operation(Map<String, Serializable> parameters) {
-        if ("heartbeat".equals( parameters.get("scheduleroperation")))
-        {
-          
+        if ("heartbeat".equals(parameters.get("scheduleroperation"))) {
+
         }
         return new ArrayList<>();
     };

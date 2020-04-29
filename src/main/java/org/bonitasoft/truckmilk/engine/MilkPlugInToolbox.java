@@ -15,6 +15,7 @@ import org.bonitasoft.engine.search.SearchOptionsBuilder;
 import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.DELAYSCOPE;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
@@ -137,13 +138,6 @@ public class MilkPlugInToolbox {
 
     }
     
-    /* ******************************************************************************** */
-    /*                                                                                  */
-    /* GetTime from the delay */
-    /*                                                                                  */
-    /*                                                                                  */
-    /* ******************************************************************************** */
-    public enum DELAYSCOPE { YEAR, MONTH, WEEK, DAY, HOUR, MN }
     public static class DelayResult {
         public List<BEvent> listEvents= new ArrayList<>();
         public DELAYSCOPE scopeInput;
@@ -180,7 +174,7 @@ public class MilkPlugInToolbox {
         catch( Exception e)
         {
             if (delayResult.scopeInput == null)
-                delayResult.scopeInput=DELAYSCOPE.YEAR;
+                delayResult.scopeInput= DELAYSCOPE.YEAR;
             delayResult.listEvents.add( new BEvent(eventIncorrectDelayStructure, "Value:["+defaultValue+"]"));
             return delayResult;
         }

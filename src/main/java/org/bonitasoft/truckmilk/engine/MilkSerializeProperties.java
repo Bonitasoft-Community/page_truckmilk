@@ -99,9 +99,9 @@ public class MilkSerializeProperties {
 
         
         
-        String jsonStMesures = (String) bonitaProperties.get(jobId.toString() + CSTPREFIXPROPERTIES_MESURES);
+        String jsonStMesures = (String) bonitaProperties.get(jobId.toString() + CSTPREFIXPROPERTIES_MEASUREMENT);
         if (jsonStMesures != null)
-            milkJob.readMesureValuesFromList(getListFromJsonSt( jsonStMesures) );
+            milkJob.readMeasurementValuesFromList(getListFromJsonSt( jsonStMesures) );
 
         // askstop has its own variable, so read it after the track execution
         Object askStopObj = bonitaProperties.get(jobId.toString() + CSTPREFIXPROPERTIES_ASKSTOP);
@@ -143,7 +143,7 @@ public class MilkSerializeProperties {
             // String plugInTourSt = (String) bonitaProperties.get(idTour);
             Long idTour = null;
             try {
-                if (idTourSt.endsWith(CSTPREFIXPROPERTIES_ASKSTOP) ||   idTourSt.endsWith(CSTPREFIXPROPERTIES_TRACKEXECUTION) || idTourSt.endsWith(CSTPREFIXPROPERTIES_SAVEDEXECUTION) || idTourSt.endsWith(CSTPREFIXPROPERTIES_MESURES))
+                if (idTourSt.endsWith(CSTPREFIXPROPERTIES_ASKSTOP) ||   idTourSt.endsWith(CSTPREFIXPROPERTIES_TRACKEXECUTION) || idTourSt.endsWith(CSTPREFIXPROPERTIES_SAVEDEXECUTION) || idTourSt.endsWith(CSTPREFIXPROPERTIES_MEASUREMENT))
                     continue;
                 idTour = Long.valueOf(idTourSt);
             } catch (Exception e) {
@@ -288,7 +288,7 @@ public class MilkSerializeProperties {
         public static SerializationJobParameters getInstanceStartExecutionJob() {
             SerializationJobParameters saveParameters = new SerializationJobParameters();
             saveParameters.trackExecution = true;
-            saveParameters.savedExecution = false;
+            saveParameters.savedExecution = true; // we want to save the start execution
             saveParameters.askStop = true;
             saveParameters.saveBase = false;
             saveParameters.fileRead = false;
@@ -338,7 +338,7 @@ public class MilkSerializeProperties {
     private final static String CSTPREFIXPROPERTIES_ASKSTOP = "_askStop";
     private final static String CSTPREFIXPROPERTIES_TRACKEXECUTION = "_trackExec";
     private final static String CSTPREFIXPROPERTIES_SAVEDEXECUTION = "_savedExecution";
-    private final static String CSTPREFIXPROPERTIES_MESURES = "_mesures";
+    private final static String CSTPREFIXPROPERTIES_MEASUREMENT = "_mesures";
 
     //  public static String prefixPropertiesTrackStream = "_stream";
 
@@ -373,8 +373,8 @@ public class MilkSerializeProperties {
         }
         
         if (saveParameters.mesures) {
-            bonitaProperties.put(String.valueOf(milkJob.getId()) + CSTPREFIXPROPERTIES_MESURES, getJsonSt( milkJob.getListMesureValues(false)) );
-            listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_MESURES);
+            bonitaProperties.put(String.valueOf(milkJob.getId()) + CSTPREFIXPROPERTIES_MEASUREMENT, getJsonSt( milkJob.getListMeasurementValues(false)) );
+            listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_MEASUREMENT);
         }
         
         // save all

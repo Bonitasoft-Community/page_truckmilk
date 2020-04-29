@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMesure;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMeasurement;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 
@@ -15,8 +15,8 @@ import lombok.Data;
 
 public @Data class MilkPlugInDescription {
 
-    public final static PlugInMesure cstMesureTimeExecution         = PlugInMesure.createInstance( "timeexecution", "Time Execution", "Time to execute the plug in (in ms)");
-    public final static PlugInMesure cstMesureNbItemProcessed       = PlugInMesure.createInstance( "nbItemsprocessed", "Nb items processed", "Number of item the job processed during the execution");
+    public final static PlugInMeasurement cstMesureTimeExecution         = PlugInMeasurement.createInstance( "timeexecution", "Time Execution", "Time to execute the plug in (in ms)");
+    public final static PlugInMeasurement cstMesureNbItemProcessed       = PlugInMeasurement.createInstance( "nbItemsprocessed", "Nb items processed", "Number of item the job processed during the execution");
 
     String name;
     private String version;
@@ -126,26 +126,26 @@ public @Data class MilkPlugInDescription {
      * Description has to describe the different mesure defined
      * order is important to display it.
      */
-    private List<PlugInMesure> listMesures = new ArrayList<>();
-    private Map<String,PlugInMesure> mapMesures = new HashMap<>();
+    private List<PlugInMeasurement> listMesures = new ArrayList<>();
+    private Map<String,PlugInMeasurement> mapMesures = new HashMap<>();
     
-    public void addMesure( PlugInMesure mesure ) {
+    public void addMesure( PlugInMeasurement mesure ) {
         if (! mapMesures.containsKey(mesure.getName())) {
             mapMesures.put( mesure.getName(), mesure );
             listMesures.add(mesure);
         }
     }
-    public List<PlugInMesure> getMesures() {
+    public List<PlugInMeasurement> getMesures() {
         return listMesures;
     }
 
-    public boolean containsMesure(PlugInMesure poi ) {
+    public boolean containsMesure(PlugInMeasurement poi ) {
         return mapMesures.containsKey( poi.getName());
     }
     public boolean hasMesures() {
         return ! mapMesures.isEmpty();
     }
-    public PlugInMesure getMesureFromName(String name ) {
+    public PlugInMeasurement getMesureFromName(String name ) {
         return mapMesures.get( name );
     }
        

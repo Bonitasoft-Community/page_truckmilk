@@ -4,21 +4,20 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.bonitasoft.deepmonitoring.radar.Radar.RadarPhotoResult;
-import org.bonitasoft.deepmonitoring.radar.Radar.RadarResult;
-import org.bonitasoft.deepmonitoring.radar.RadarFactory;
-import org.bonitasoft.deepmonitoring.radar.RadarPhoto;
-import org.bonitasoft.deepmonitoring.radar.RadarPhoto.IndicatorPhoto;
-import org.bonitasoft.deepmonitoring.radar.connector.RadarTimeTrackerConnector;
-import org.bonitasoft.deepmonitoring.radar.connector.RadarTimeTrackerConnector.TimeTrackerParameter;
-import org.bonitasoft.deepmonitoring.radar.workers.RadarWorkers;
+import org.bonitasoft.radar.Radar.RadarPhotoResult;
+import org.bonitasoft.radar.Radar.RadarResult;
+import org.bonitasoft.radar.RadarFactory;
+import org.bonitasoft.radar.RadarPhoto;
+import org.bonitasoft.radar.RadarPhoto.IndicatorPhoto;
+import org.bonitasoft.radar.connector.RadarTimeTrackerConnector;
+import org.bonitasoft.radar.connector.RadarTimeTrackerConnector.TimeTrackerParameter;
+import org.bonitasoft.radar.workers.RadarWorkers;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
@@ -40,12 +39,12 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
 
     private static PlugInParameter cstParamMonitorConnector = PlugInParameter.createInstance("Connector", "Connector Too Long", TypeParameter.BOOLEAN, true, "Monitor connector execution. When an execution is too long, return it");
     private static PlugInParameter cstParamConnectorDurationInSecond = PlugInParameter.createInstance("Connectorduration", "Connector Limit Duration (seconds)", TypeParameter.LONG, 50L, "Report all connector execution longer than this value");
-    private static PlugInParameter cstParamConnectorFrame = PlugInParameter.createInstance("Connectframe", "Connector Frame (in minutes)", TypeParameter.DELAY, MilkPlugInToolbox.DELAYSCOPE.HOUR + ":12", "Search in all connector execution between now and now - frame");
+    private static PlugInParameter cstParamConnectorFrame = PlugInParameter.createInstanceDelay("Connectframe", "Connector Frame (in minutes)", DELAYSCOPE.HOUR,12, "Search in all connector execution between now and now - frame");
 
     private static PlugInParameter cstParamMonitorWorker = PlugInParameter.createInstance("Worker", "Workers", TypeParameter.BOOLEAN, true, "Monitor workers. Return number of workers running, waiting");
 
-    private final static PlugInMesure cstMesureConnectorConnectorCall = PlugInMesure.createInstance(RadarTimeTrackerConnector.CSTPHOTO_CONNECTORSCALL, "Number of connector called", "Give the number of connector called in the period");
-    private final static PlugInMesure cstMesureConnectorConnectorOverloaded = PlugInMesure.createInstance(RadarTimeTrackerConnector.CSTPHOTO_CONNECTORSOVERLOADED, "Number of connector with a long execution", "Number of connectors with a long execution");
+    private final static PlugInMeasurement cstMesureConnectorConnectorCall = PlugInMeasurement.createInstance(RadarTimeTrackerConnector.CSTPHOTO_CONNECTORSCALL, "Number of connector called", "Give the number of connector called in the period");
+    private final static PlugInMeasurement cstMesureConnectorConnectorOverloaded = PlugInMeasurement.createInstance(RadarTimeTrackerConnector.CSTPHOTO_CONNECTORSOVERLOADED, "Number of connector with a long execution", "Number of connectors with a long execution");
 
     public MilkRadarBonitaEngine() {
         super(TYPE_PLUGIN.EMBEDED);
@@ -174,7 +173,7 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
     /*                                                                                  */
     /* ******************************************************************************** */
 
-    private double addMesureFromIndicator(PlugInMesure mesure, RadarPhotoResult radarPhotoResult, MilkJobOutput plugTourOutput) {
+    private double addMesureFromIndicator(PlugInMeasurement mesure, RadarPhotoResult radarPhotoResult, MilkJobOutput plugTourOutput) {
         List<IndicatorPhoto> list = radarPhotoResult.getIndicators(mesure.name);
         double value = 0;
         for (IndicatorPhoto photo : list) {

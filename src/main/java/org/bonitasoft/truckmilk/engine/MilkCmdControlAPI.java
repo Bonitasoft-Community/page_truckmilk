@@ -107,20 +107,20 @@ public class MilkCmdControlAPI {
         CommandJarDependency cmdDependency;
         
         cmdDependency=commandDescription.addJarDependencyLastVersion(BonitaCommandDeployment.NAME, BonitaCommandDeployment.VERSION, BonitaCommandDeployment.JAR_NAME);
-        cmdDependency.setForceDeploy( true );
+        // cmdDependency.setForceDeploy( true );
         
             
         cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-event", "1.8.0", "bonita-event-1.8.0.jar");
-        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.2.0", "bonita-properties-2.2.0.jar");
-        cmdDependency.setForceDeploy( true );
+        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.3.0", "bonita-properties-2.3.0.jar");
+        // cmdDependency.setForceDeploy( true );
 
         commandDescription.addJarDependencyLastVersion("mail", "1.5.0", "mail-1.5.0-b01.jar");
         commandDescription.addJarDependencyLastVersion("activation", "1.1.1", "activation-1.1.1.jar");
-        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-worker", "1.5.1", "CustomPageWorker-1.5.1.jar");
-        cmdDependency.setForceDeploy( true );
+        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-worker", "1.6.0", "CustomPageWorker-1.6.0.jar");
+        // cmdDependency.setForceDeploy( true );
         
         cmdDependency= commandDescription.addJarDependencyLastVersion("custompage-grumman", "1.1.0", "CustomPageGrumman-1.0.0.jar");
-        cmdDependency.setForceDeploy( true );
+        // cmdDependency.setForceDeploy( true );
 
         
         // don't add the Meteor Dependency : with Bonita, all dependencies are GLOBAL. If we reference the MeteorAPI, we will have the same API for all pages
@@ -158,10 +158,10 @@ public class MilkCmdControlAPI {
         else if ("changescheduler".equals(operation)) {
             for (Entry<String, Object> entry : information.entrySet())
                 parameters.put( entry.getKey(), (Serializable) entry.getValue());
-            parameters.put(MilkCmdControl.cstSchedulerChangeType, (String) information.get("newscheduler"));
+            parameters.put(MilkConstantJson.cstSchedulerChangeType, (String) information.get("newscheduler"));
             result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULERCHANGE.toString(), parameters, tenantId, commandAPI);
         } else {
-            parameters.put(MilkCmdControl.cstSchedulerOperation, operation);
+            parameters.put(MilkConstantJson.cstSchedulerOperation, operation);
             result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULEROPERATION.toString(), parameters, tenantId, commandAPI);
         }
 

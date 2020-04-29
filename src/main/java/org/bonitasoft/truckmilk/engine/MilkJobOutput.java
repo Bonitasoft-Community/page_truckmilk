@@ -12,7 +12,7 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.plugin.MilkPing;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMesure;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMeasurement;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
@@ -120,7 +120,9 @@ public class MilkJobOutput {
         }
         this.report.append("</tr>");
     }
-
+    public void addReportLine(String htmlLine) {
+        this.report.append( htmlLine );
+    }
     public void addReportEndTable() {
         this.report.append("</table>");
     }
@@ -136,13 +138,13 @@ public class MilkJobOutput {
     /*                                                                                  */
     /* ******************************************************************************** */
 
-    public static class StartMarker {
+    public static class Chronometer {
 
         private long beginTime;
         private long endTime;
         private String operationName;
 
-        public StartMarker(String operationName) {
+        public Chronometer(String operationName) {
             this.operationName = operationName;
             this.beginTime = System.currentTimeMillis();
         }
@@ -160,8 +162,8 @@ public class MilkJobOutput {
     private Map<String, Long> sumTimeOperation = new HashMap<>();
     private Map<String, Long> nbOccurencesOperation = new HashMap<>();
 
-    public StartMarker getStartMarker(String operationName) {
-        return new StartMarker(operationName);
+    public Chronometer beginChronometer(String operationName) {
+        return new Chronometer(operationName);
     }
 
     /**
@@ -169,7 +171,7 @@ public class MilkJobOutput {
      * @param marker
      * @return
      */
-    public long endMarker(StartMarker marker) {
+    public long endChronometer(Chronometer marker) {
         if (marker==null)
             return 0;
         long sumTime = sumTimeOperation.get(marker.operationName) == null ? 0 : sumTimeOperation.get(marker.operationName);
@@ -199,8 +201,8 @@ public class MilkJobOutput {
      * Add the markers in the report
      * @param keepOperationNoOccurrence
      */
-    public void addMarkersInReport(boolean keepOperationNoOccurrence, boolean addAverage) {
-        addReportTable(new String[] { "Performance Indicator", "Value" });
+    public void addChronometersInReport(boolean keepOperationNoOccurrence, boolean addAverage) {
+        addReportTable(new String[] { "Chronometer", "Time" });
         for (String operationName : sumTimeOperation.keySet()) {
             long sumTime = sumTimeOperation.get(operationName);
             long nbOccurences = nbOccurencesOperation.get(operationName);
@@ -223,19 +225,19 @@ public class MilkJobOutput {
     /*                                                                                  */
     /*                                                                                  */
     /* ******************************************************************************** */
-    private Map<PlugInMesure, Double> mesures = new HashMap<>();
+    private Map<PlugInMeasurement, Double> mesures = new HashMap<>();
 
-    public void setMesure(PlugInMesure poi, double value) {
+    public void setMesure(PlugInMeasurement poi, double value) {
         if (milkJob.getPlugIn().getDescription().containsMesure(poi))
             mesures.put(poi, value);
 
     }
 
-    public double getMesure(PlugInMesure poi) {
+    public double getMesure(PlugInMeasurement poi) {
         return mesures.get(poi);
     }
 
-    public Map<PlugInMesure, Double> getAllMesures() {
+    public Map<PlugInMeasurement, Double> getAllMesures() {
         return mesures;
     }
 

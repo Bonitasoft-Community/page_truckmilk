@@ -35,7 +35,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
-import org.bonitasoft.truckmilk.engine.MilkJobOutput.StartMarker;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput.Chronometer;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.CSVOperation;
@@ -87,14 +87,13 @@ public class MilkCancelCases extends MilkPlugIn {
     private static PlugInParameter cstParamOperation = PlugInParameter.createInstanceListValues("operation", "operation: Build a list of cases to operate, do directlly the operation, or do the operation from a list",
             new String[] { CSTOPERATION_GETLIST, CSTOPERATION_DIRECT, CSTOPERATION_FROMLIST }, CSTOPERATION_DIRECT, "Result may be the cancellation or deletion , or build a list, or used the uploaded list");
 
-    private static PlugInParameter cstParamDelayInDay = PlugInParameter.createInstance("delayinday", "Delai", TypeParameter.DELAY, MilkPlugInToolbox.DELAYSCOPE.YEAR + ":1", "Only cases archived before this delay are in the perimeter",
-            true,
-            "milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_DIRECT + "'");
+    private static PlugInParameter cstParamDelayInDay = PlugInParameter.createInstanceDelay("delayinday", "Delai", DELAYSCOPE.YEAR, 1, "Only cases archived before this delay are in the perimeter")
+            .withMandatory(true)
+            .withVisibleCondition("milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_FROMLIST + "'");
 
 
-    private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Filter on process", TypeParameter.ARRAYPROCESSNAME, null, "Job manage only process which mach the filter. If no filter is given, all processes are inspected",
-            false,
-            "milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_FROMLIST + "'");
+    private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Filter on process", TypeParameter.ARRAYPROCESSNAME, null, "Job manage only process which mach the filter. If no filter is given, all processes are inspected")            
+            .withVisibleCondition("milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_FROMLIST + "'");
 
     private static PlugInParameter cstParamActionOnCases = PlugInParameter.createInstanceListValues("actiononcases", "Action on cases : cancellation or deletion",
             new String[] { CSTACTION_CANCELLATION, CSTACTION_DELETION }, CSTACTION_CANCELLATION, "Cases are cancelled or deleted");
@@ -102,10 +101,8 @@ public class MilkCancelCases extends MilkPlugIn {
 
     private static PlugInParameter cstParamTriggerOnCases = PlugInParameter.createInstanceListValues("triggeroncases", "Trigger to detect case to work on",
             new String[] { CSTTRIGGER_STARTDATE, CSTTRIGGER_LASTUPDATEDATE }, CSTTRIGGER_LASTUPDATEDATE, CSTTRIGGER_STARTDATE + " : the cases started before the delay are in the perimeter, else " + CSTTRIGGER_LASTUPDATEDATE + " only cases without any operations after the delay ");
-
-    private static PlugInParameter cstParamSeparatorCSV = PlugInParameter.createInstance("separatorCSV", "Separator CSV", TypeParameter.STRING, ",", "CSV use a separator. May be ; or ,",
-            false,
-            "milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_DIRECT + "'");
+    private static PlugInParameter cstParamSeparatorCSV = PlugInParameter.createInstance("separatorCSV", "Separator CSV", TypeParameter.STRING, ",", "CSV use a separator. May be ; or ,")            
+            .withVisibleCondition("milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_DIRECT + "'");
 
            
     private static PlugInParameter cstParamReport = PlugInParameter.createInstanceFile("report", "Report Execution", TypeParameter.FILEWRITE, null, "List of cases managed is calculated and saved in this parameter", "ListToOperate.csv", "application/CSV");
@@ -117,7 +114,7 @@ public class MilkCancelCases extends MilkPlugIn {
      */
 
     public MilkCancelCases() {
-        super(TYPE_PLUGIN.EMBEDED);
+        super( TYPE_PLUGIN.EMBEDED);
     }
 
     /**
@@ -277,10 +274,10 @@ public class MilkCancelCases extends MilkPlugIn {
                         // save in the report
                     } else if (CSTACTION_DELETION.equals(action)) {
                         try {
-                            StartMarker deleteCasesMarker = milkJobOutput.getStartMarker("DeleteCases");
+                            Chronometer deleteCasesMarker = milkJobOutput.beginChronometer("DeleteCases");
 
                             processAPI.deleteProcessInstance(sourceProcessInstance.processInstance.getId());
-                            milkJobOutput.endMarker(deleteCasesMarker);
+                            milkJobOutput.endChronometer(deleteCasesMarker);
 
                             status = "DELETED";
                         } catch (DeletionException e) {
@@ -290,10 +287,10 @@ public class MilkCancelCases extends MilkPlugIn {
                         }
                     } else if (CSTACTION_CANCELLATION.equals(action)) {
                         try {
-                            StartMarker cancelCasesMarker = milkJobOutput.getStartMarker("CancelCase");
+                            Chronometer cancelCasesMarker = milkJobOutput.beginChronometer("CancelCase");
 
                             processAPI.cancelProcessInstance(sourceProcessInstance.processInstance.getId());
-                            milkJobOutput.endMarker(cancelCasesMarker);
+                            milkJobOutput.endChronometer(cancelCasesMarker);
 
                             status = "CANCELLED";
                         } catch (Exception e) {
@@ -324,7 +321,7 @@ public class MilkCancelCases extends MilkPlugIn {
 
             milkJobOutput.addEvent(new BEvent(eventStatus, "Treated:" + totalNumberCase + " in " + (endTime - beginTime) + " ms " + milkJobOutput.collectPerformanceSynthesis(false)));
             
-            milkJobOutput.addMarkersInReport(false, true);
+            milkJobOutput.addChronometersInReport(false, true);
             
             milkJobOutput.setParameterStream(cstParamReport, new ByteArrayInputStream(arrayOutputStream.toByteArray()));
             milkJobOutput.nbItemsProcessed = totalNumberCase;
@@ -402,10 +399,10 @@ public class MilkCancelCases extends MilkPlugIn {
                 listProcessResult.sob.sort(ProcessInstanceSearchDescriptor.START_DATE, Order.ASC);
             }
             try {
-                StartMarker searchProcessInstanceMarker = milkJobOutput.getStartMarker("SearchProcessInstance");
+                Chronometer searchProcessInstanceMarker = milkJobOutput.beginChronometer("SearchProcessInstance");
                 searchResult = processAPI.searchOpenProcessInstances(listProcessResult.sob.done());
 
-                milkJobOutput.endMarker(searchProcessInstanceMarker);
+                milkJobOutput.endChronometer(searchProcessInstanceMarker);
 
                 if (CSTTRIGGER_LASTUPDATEDATE.equals(this.trigger)) {
                     listEvents.addAll(searchLastUpdateCases(searchResult, timeSearch, milkJobOutput, processAPI));
@@ -483,11 +480,11 @@ public class MilkCancelCases extends MilkPlugIn {
                 // we want the last recent in first
                 sobTasks.sort(FlowNodeInstanceSearchDescriptor.LAST_UPDATE_DATE, Order.DESC);
                 try {
-                    StartMarker searchFlowNodeMarker = milkJobOutput.getStartMarker("SearchFlowNode");
+                    Chronometer searchFlowNodeMarker = milkJobOutput.beginChronometer("SearchFlowNode");
                     SearchResult<FlowNodeInstance> searchTasks = processAPI.searchFlowNodeInstances(sobTasks.done());
-                    milkJobOutput.endMarker(searchFlowNodeMarker);
+                    milkJobOutput.endChronometer(searchFlowNodeMarker);
 
-                    StartMarker detectionActiveCaseMarker = milkJobOutput.getStartMarker("DetectionActiveCase");
+                    Chronometer detectionActiveCaseMarker = milkJobOutput.beginChronometer("DetectionActiveCase");
 
                     for (FlowNodeInstance flowNode : searchTasks.getResult()) {
                         if (flowNode.getLastUpdateDate() == null)
@@ -507,7 +504,7 @@ public class MilkCancelCases extends MilkPlugIn {
                                 processInactive.add(listToProcess.get(i).getRootProcessInstanceId());
                         }
                     }
-                    milkJobOutput.endMarker(detectionActiveCaseMarker);
+                    milkJobOutput.endChronometer(detectionActiveCaseMarker);
 
                 } catch (Exception e) {
                     listEvents.add(new BEvent(eventSearchFailed, e, ""));

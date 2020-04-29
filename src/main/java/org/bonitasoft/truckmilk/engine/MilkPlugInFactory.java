@@ -4,19 +4,23 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.ReplacementPlugIn;
+
 import org.bonitasoft.truckmilk.plugin.MilkCancelCases;
 import org.bonitasoft.truckmilk.plugin.MilkDeleteCases;
-import org.bonitasoft.truckmilk.plugin.MilkDirectory;
+import org.bonitasoft.truckmilk.plugin.MilkDeleteDuplicateTasks;
+
 import org.bonitasoft.truckmilk.plugin.MilkEmailUsersTasks;
 import org.bonitasoft.truckmilk.plugin.MilkGrumman;
 import org.bonitasoft.truckmilk.plugin.MilkMeteor;
 import org.bonitasoft.truckmilk.plugin.MilkPing;
 import org.bonitasoft.truckmilk.plugin.MilkPurgeArchive;
-import org.bonitasoft.truckmilk.plugin.MilkPurgeArchivedListGetList;
-import org.bonitasoft.truckmilk.plugin.MilkPurgeArchivedListPurge;
+
+
 import org.bonitasoft.truckmilk.plugin.MilkRadarBonitaEngine;
 import org.bonitasoft.truckmilk.plugin.MilkReplayFailedTask;
 import org.bonitasoft.truckmilk.plugin.MilkRestartFlowNodes;
@@ -82,8 +86,8 @@ public class MilkPlugInFactory {
         // listPlugIns.add(new MilkMail());
         listPlugIns.add(new MilkPing());
         listPlugIns.add(new MilkPurgeArchive());
-        listPlugIns.add(new MilkPurgeArchivedListPurge());
-        listPlugIns.add(new MilkPurgeArchivedListGetList());
+        // listPlugIns.add(new MilkPurgeArchivedListPurge());
+        // listPlugIns.add(new MilkPurgeArchivedListGetList());
         listPlugIns.add(new MilkReplayFailedTask());
         listPlugIns.add(new MilkSLA());
         listPlugIns.add(new MilkUnassignTasks() );
@@ -92,15 +96,38 @@ public class MilkPlugInFactory {
         listPlugIns.add(new MilkGrumman() );
         listPlugIns.add(new MilkCancelCases() );
         listPlugIns.add(new MilkRadarBonitaEngine() );
+        listPlugIns.add(new MilkDeleteDuplicateTasks() );
     }
 
+    /**
+     * Get the plug in from the name
+     * Some plug in are deprecated, and replaced by new one
+     * @param name
+     * @return
+     */
     public MilkPlugIn getPluginFromName(String name) {
         for (MilkPlugIn plugIn : listPlugIns)
             if (plugIn.getName().equals(name))
                 return plugIn;
+       
         return null;
     }
 
+   
+    /**
+     * get a replacement if exist, then update parameters
+     * @param plugInName
+     * @param parameterMap
+     * @return
+     */
+    public ReplacementPlugIn getReplacement( String plugInName, Map<String,Object> parameterMap ) {
+        for (MilkPlugIn plugIn : listPlugIns) {
+            ReplacementPlugIn replacement = plugIn.getReplacement( plugInName, parameterMap);
+            if (replacement != null)
+                return replacement;
+        }
+        return null;
+    }
     public List<MilkPlugIn> getListPlugIn() {
         return listPlugIns;
     }

@@ -17,6 +17,7 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkCmdControl;
 import org.bonitasoft.truckmilk.engine.MilkCmdControlAPI;
+import org.bonitasoft.truckmilk.engine.MilkConstantJson;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
@@ -130,7 +131,7 @@ public class MilkAccessAPI {
         else if (!deployStatus.alreadyDeployed)
             statusDeployment = "Command not deployed;";
 
-        if (MilkCmdControl.cstEnvironmentStatus_V_ERROR.equals(result.get(MilkCmdControl.cstEnvironmentStatus))) {
+        if (MilkConstantJson.cstEnvironmentStatus_V_ERROR.equals(result.get(MilkConstantJson.cstEnvironmentStatus))) {
             statusDeployment = "Bad environment;";
         } else
             //  second call the command getStatus		    

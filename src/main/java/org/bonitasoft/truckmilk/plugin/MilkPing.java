@@ -29,8 +29,8 @@ public class MilkPing extends MilkPlugIn {
     private final static PlugInParameter cstParamAddDate = PlugInParameter.createInstance("addDate", "Add a date", TypeParameter.BOOLEAN, true, "If set, the date of execution is added in the status of execution");
     private final static PlugInParameter cstParamTimeExecution = PlugInParameter.createInstance("timeExecution", "Time execution (in mn)", TypeParameter.LONG, true, "The job will run this time, and will update the % of execution each minutes");
 
-    private final static PlugInMesure cstMesureMS         = PlugInMesure.createInstance( "MS", "Random Value", "Give a random value to demonstrate the function");
-    private final static PlugInMesure cstMesureHourOfDay  = PlugInMesure.createInstance( "HourOfDay", "Hour of day", "Register the hour of day when the execution ran");
+    private final static PlugInMeasurement cstMesureMS         = PlugInMeasurement.createInstance( "MS", "Random Value", "Give a random value to demonstrate the function");
+    private final static PlugInMeasurement cstMesureHourOfDay  = PlugInMeasurement.createInstance( "HourOfDay", "Hour of day", "Register the hour of day when the execution ran");
     
     private final static String LOGGER_LABEL = "MilkPing";
     private final static Logger logger = Logger.getLogger(MilkPing.class.getName());

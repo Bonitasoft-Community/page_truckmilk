@@ -107,4 +107,37 @@ public class MilkConstantJson {
     public final static String CSTJSON_PLUGIN_PARAMETERMANDATORY ="isMandatory";
     public final static String CSTJSON_PLUGIN_PARAMETERVISIBLECONDITION = "visibleCondition";
 
+
+    /* ******************************************************************************** */
+    /*                                                                                  */
+    /* Scheduler */
+    /*                                                                                  */
+    /* ******************************************************************************** */
+
+    public final static String cstJsonDashboardEvents = "dashboardlistevents";
+    public final static String cstJsonDashboardSyntheticEvents = "dashboardsyntheticlistevents";
+    public final static String cstJsonScheduler = "scheduler";
+    public final static String cstJsonSchedulerType = "type";
+    public final static String CSTJSON_SCHEDULERINFO = "info";
+    public final static String CSTJSON_LOGHEARTBEAT = "logheartbeat";
+    public final static String CSTJSON_NBSAVEDHEARTBEAT = "nbsavedheartbeat";
+ 
+    
+    
+    
+    public final static String cstJsonSchedulerStatus = "status";
+    public final static String cstJsonSchedulerStatus_V_RUNNING = "RUNNING";
+    public final static String cstJsonSchedulerStatus_V_SHUTDOWN = "SHUTDOWN";
+    public final static String cstJsonSchedulerStatus_V_STOPPED = "STOPPED";
+
+    public final static String cstSchedulerChangeType = "schedulerchangetype";
+    public final static String cstJsonListTypesSchedulers = "listtypeschedulers";
+    public final static String CSTJSON_LASTHEARTBEAT = "lastheartbeat";
+
+    public final static String cstSchedulerOperation = "scheduleroperation";
+
+    public final static String cstEnvironmentStatus = "ENVIRONMENTSTATUS";
+    public final static String cstEnvironmentStatus_V_CORRECT = "OK";
+    public final static String cstEnvironmentStatus_V_ERROR = "ERROR";
+
 }

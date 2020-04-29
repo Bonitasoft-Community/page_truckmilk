@@ -138,7 +138,7 @@ public class MilkHeartBeat {
 
         }
         StringBuilder executionDescription = new StringBuilder();
-        executionDescription.append(  " Heart #" + thisThreadId + ": Heat at "+sdf.format(currentDate)+", Host[" + (ip == null ? "" : ip.getHostAddress()) + "];  ");
+        executionDescription.append(  " Heart #" + thisThreadId + ": Heat at "+sdf.format(currentDate)+", Host[" + (ip == null ? "" : ip.getHostAddress()) + "];<br>");
         logger.fine( executionDescription.toString());
         
         try {
@@ -147,10 +147,10 @@ public class MilkHeartBeat {
 
                 MilkExecuteJobThread milkExecuteJobThread = new MilkExecuteJobThread(milkJob, milkCmdControl.getApiAccessor(), milkCmdControl.getTenantServiceAccessor());
 
-                executionDescription.append( milkExecuteJobThread.checkAndStart(currentDate));
+                executionDescription.append( milkExecuteJobThread.checkAndStart(currentDate)+"<br>");
             }
             if (executionDescription.length() == 0)
-                executionDescription.append( "No jobs executed;");
+                executionDescription.append( "<b>No jobs executed;</b><br>");
 
 
         } catch (Exception e) {
@@ -162,7 +162,7 @@ public class MilkHeartBeat {
         executionDescription.append(" Heart executed in " + (timeEndHearth - timeBeginHearth) + " ms");
         // logger.info("MickCmdControl.beathearth #" + thisThreadId + " : Start at " + sdf.format(currentDate) + ", End in " + (timeEndHearth - timeBeginHearth) + " ms on [" + (ip == null ? "" : ip.getHostAddress()) + "] " + executionDescription);
         MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
-        milkReportEngine.reportHeartBeatInformation(executionDescription.toString());
+        milkReportEngine.reportHeartBeatInformation(executionDescription.toString(),true);
         milkSchedulerFactory.savedScheduler(tenantId);
     }
     

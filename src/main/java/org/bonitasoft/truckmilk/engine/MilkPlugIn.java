@@ -9,6 +9,8 @@ import java.util.Map;
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.DELAYSCOPE;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
@@ -159,7 +161,10 @@ public abstract class MilkPlugIn {
     public enum TypeParameter {
         USERNAME, PROCESSNAME, ARRAYPROCESSNAME, STRING, TEXT, DELAY, JSON, LONG, OBJECT, ARRAY, BOOLEAN, ARRAYMAP, BUTTONARGS, FILEREAD, FILEWRITE, FILEREADWRITE, LISTVALUES, SEPARATOR
     }
-
+    public enum DELAYSCOPE { YEAR, MONTH, WEEK, DAY, HOUR, MN }
+    public static String getDelayValue( DELAYSCOPE delay, int value ) {
+        return delay.toString() + ":"+value;
+    }
     public static class ColDefinition {
 
         public String name;
@@ -192,6 +197,13 @@ public abstract class MilkPlugIn {
 
     public static class PlugInParameter {
 
+        /* ******************************************************************************** */
+        /*                                                                                  */
+        /* GetTime from the delay */
+        /*                                                                                  */
+        /*                                                                                  */
+        /* ******************************************************************************** */
+   
         public String name;
         public String label;
         public Object defaultValue;
@@ -212,26 +224,22 @@ public abstract class MilkPlugIn {
 
         public List<ColDefinition> arrayMapDescription;
 
-        public static PlugInParameter createInstance(String name, String label, TypeParameter typeParameter, Object defaultValue, String explanation) {
-           return createInstance(name, label, typeParameter, defaultValue, explanation, false);
-        }
+        
         /**
-         * 
+         * default information : name, label, type and default value, explanation
          * @param name
          * @param label
          * @param typeParameter
          * @param defaultValue
          * @param explanation
-         * @param isMandatory
-         * @param visibleCondition use a condition. To check with the value of other parameters, use "milkJob.parametersvalue[ <nameOfParameter> ]". Example "milkJob.parametersvalue[ 'operation' ] != 'GetFromList'"
          * @return
          */
-        public static PlugInParameter createInstance(String name, String label, TypeParameter typeParameter, Object defaultValue, String explanation, boolean isMandatory, String visibleCondition) {
+        public static PlugInParameter createInstance(String name, String label, TypeParameter typeParameter, Object defaultValue, String explanation) {
             PlugInParameter plugInParameter = new PlugInParameter();
             plugInParameter.name = name;
             plugInParameter.label = label;
-            plugInParameter.isMandatory = isMandatory;
-            plugInParameter.visibleCondition =  visibleCondition;
+            plugInParameter.isMandatory = false;
+            plugInParameter.visibleCondition =  null;
             plugInParameter.typeParameter = typeParameter;
             plugInParameter.defaultValue = defaultValue;
             plugInParameter.explanation = explanation;
@@ -241,10 +249,24 @@ public abstract class MilkPlugIn {
 
             return plugInParameter;
         }
-        public static PlugInParameter createInstance(String name, String label, TypeParameter typeParameter, Object defaultValue, String explanation, boolean isMandatory) {
-            
-            return createInstance(name, label, typeParameter,defaultValue,explanation,isMandatory,null);
+      
+        public static PlugInParameter createInstanceDelay(String name, String label, DELAYSCOPE delay, int value, String explanation) {
+            return createInstance(name, label, TypeParameter.DELAY, getDelayValue(delay, value), explanation);
+         }
+        
+        /**
+         * Updater list
+         */
+        public PlugInParameter withMandatory( boolean isMandatory) {
+            this.isMandatory = isMandatory;
+            return this;
         }
+        public PlugInParameter withVisibleCondition( String visibleCondition ) {
+            this.visibleCondition = visibleCondition;
+            return this;
+        }
+        
+       
         public static PlugInParameter createInstanceArrayMap(String name, String label, List<ColDefinition> arrayMapDefinition, Object defaultValue, String explanation) {
             PlugInParameter plugInParameter = new PlugInParameter();
             plugInParameter.name = name;
@@ -284,9 +306,6 @@ public abstract class MilkPlugIn {
         }
 
         public static PlugInParameter createInstanceFile(String name, String label, TypeParameter typeParameter, Object defaultValue, String explanation, String fileName, String contentType) {
-            return createInstanceFile(name, label, typeParameter, defaultValue, explanation, fileName,contentType, false, null);
-        }
-        public static PlugInParameter createInstanceFile(String name, String label, TypeParameter typeParameter, Object defaultValue, String explanation, String fileName, String contentType, boolean isMandatory,  String visibleCondition) {
             PlugInParameter plugInParameter = new PlugInParameter();
             plugInParameter.name = name;
             plugInParameter.label = label;
@@ -295,8 +314,8 @@ public abstract class MilkPlugIn {
             plugInParameter.explanation = explanation;
             plugInParameter.fileName = fileName;
             plugInParameter.contentType = contentType;
-            plugInParameter.isMandatory = isMandatory;
-            plugInParameter.visibleCondition= visibleCondition;
+            plugInParameter.isMandatory = false;
+            plugInParameter.visibleCondition= null;
 
             // set an empty value then
             if (typeParameter == TypeParameter.ARRAY && defaultValue == null)
@@ -367,18 +386,18 @@ public abstract class MilkPlugIn {
 
     /* ******************************************************************************** */
     /*                                                                                  */
-    /* Mesure */
+    /* Measurement */
     /*                                                                                  */
     /*                                                                                  */
     /* ******************************************************************************** */
 
-    public static @Data class PlugInMesure {
+    public static @Data class PlugInMeasurement {
         public String name;
         public String label;
         public String explanation;
         
-        public static PlugInMesure createInstance(String name, String label, String explanation ) {
-            PlugInMesure plugInMesure = new PlugInMesure();
+        public static PlugInMeasurement createInstance(String name, String label, String explanation ) {
+            PlugInMeasurement plugInMesure = new PlugInMeasurement();
             plugInMesure.name = name;
             plugInMesure.label = label;
             plugInMesure.explanation = explanation;
@@ -491,5 +510,35 @@ public abstract class MilkPlugIn {
     public List<BEvent> buttonParameters(String buttonName, MilkJobExecution input, Map<String, Object> argsParameters, APIAccessor apiAccessor) {
         return new ArrayList<>();
     }
+    /* ******************************************************************************** */
+    /*                                                                                  */
+    /* Replacement*/
+    /*                                                                                  */
+    /* A plug in may be replace an another one. Then, in that situation, plug in has    */
+    /* to return a replacement Object                                                   */
+    /*                                                                                  */
+    /* ******************************************************************************** */
 
+    /**
+     * get a another plug in from a deprecated on
+     * 
+     * @return true if a solution exist
+     */
+    public class ReplacementPlugIn {
+        public MilkPlugIn plugIn;
+        /**
+         * This is the parameters updated.
+         */
+        public Map<String, Object> parameters;
+        public ReplacementPlugIn( MilkPlugIn plugIn, Map<String,Object> parameters) {
+            this.plugIn = plugIn;
+            this.parameters = parameters;
+            if (this.parameters==null)
+                this.parameters=new HashMap<>();
+        }
+    }
+    public ReplacementPlugIn getReplacement( String plugInName, Map<String,Object> parameters) {
+        return null;
+    }
+    
 }

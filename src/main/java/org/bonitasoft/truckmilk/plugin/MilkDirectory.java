@@ -11,7 +11,6 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
@@ -26,32 +25,31 @@ public class MilkDirectory extends MilkPlugIn {
     private static String OPERATIONPOLICY_FILE = "Operation on File";
     private static String OPERATIONPOLICY_CSVONECASE = "Operation on CSV, One case per file";
     private static String OPERATIONPOLICY_CSVONECASEPERLINE = "Operation on CSV, One case per line in the CSV";
-    
-    private static String[] OPERATIONPOLICY = { OPERATIONPOLICY_FILE, OPERATIONPOLICY_CSVONECASE,OPERATIONPOLICY_CSVONECASEPERLINE };
+
+    private static String[] OPERATIONPOLICY = { OPERATIONPOLICY_FILE, OPERATIONPOLICY_CSVONECASE, OPERATIONPOLICY_CSVONECASEPERLINE };
 
     private static String ARCHIVEPOLICY_MOVETOARCHIVEDDIRECTORY = "Archive";
     private static String ARCHIVEPOLICY_DELETE = "Delete";
     private static String ARCHIVEPOLICY_MOVETOARCHIVEDDIRECTORYANDPURGE = "Archive, then purge ";
-    
-    private static String[] ARCHIVEPOLICY = { ARCHIVEPOLICY_MOVETOARCHIVEDDIRECTORY, ARCHIVEPOLICY_DELETE,ARCHIVEPOLICY_MOVETOARCHIVEDDIRECTORYANDPURGE };
 
-    private static PlugInParameter cstParamDirectory = PlugInParameter.createInstance("directory", "Directory", TypeParameter.STRING, "", "This directory is monitor. Each file detected in this directory which match the filter trigger an action (create a case)", true);
-    
+    private static String[] ARCHIVEPOLICY = { ARCHIVEPOLICY_MOVETOARCHIVEDDIRECTORY, ARCHIVEPOLICY_DELETE, ARCHIVEPOLICY_MOVETOARCHIVEDDIRECTORYANDPURGE };
+
+    private static PlugInParameter cstParamDirectory = PlugInParameter.createInstance("directory", "Directory", TypeParameter.STRING, "", "This directory is monitor. Each file detected in this directory which match the filter trigger an action (create a case)")
+            .withMandatory(true);
+
     private static PlugInParameter cstParamOperation = PlugInParameter.createInstanceListValues("operation", "Operation", OPERATIONPOLICY, OPERATIONPOLICY_FILE, "when a file is detected, operation running. "
-    + OPERATIONPOLICY_FILE +": one case is created per file. "
-    + OPERATIONPOLICY_CSVONECASE +": one case is created per file, attributes can be read in the first CSV line."
-    + OPERATIONPOLICY_CSVONECASEPERLINE+": one case is created per line in the CSV file; if the CSV is empty, to case are created"
-    );
-    
+            + OPERATIONPOLICY_FILE + ": one case is created per file. "
+            + OPERATIONPOLICY_CSVONECASE + ": one case is created per file, attributes can be read in the first CSV line."
+            + OPERATIONPOLICY_CSVONECASEPERLINE + ": one case is created per line in the CSV file; if the CSV is empty, to case are created");
+
     private static PlugInParameter cstParamFileFilter = PlugInParameter.createInstance("fileFilter", "File Filter", TypeParameter.STRING, "*.*", "File filter, to load only file who match the filter. * and ? may be used");
-    private static PlugInParameter cstParamArchiveFilePolicy = PlugInParameter.createInstanceListValues("archivePolicy", "Archive policy", ARCHIVEPOLICY, ARCHIVEPOLICY_MOVETOARCHIVEDDIRECTORY, 
+    private static PlugInParameter cstParamArchiveFilePolicy = PlugInParameter.createInstanceListValues("archivePolicy", "Archive policy", ARCHIVEPOLICY, ARCHIVEPOLICY_MOVETOARCHIVEDDIRECTORY,
             "When the file is processed, policy to apply: "
-            + ARCHIVEPOLICY_DELETE+": file(s) are immediately deleted."
-            + ARCHIVEPOLICY_MOVETOARCHIVEDDIRECTORY+": file(s) are moved to the archive directory, specified in the parameters"
-            + ARCHIVEPOLICY_MOVETOARCHIVEDDIRECTORYANDPURGE+": file(s) are moved to the archive directory, then purge after a delay."
-            );
+                    + ARCHIVEPOLICY_DELETE + ": file(s) are immediately deleted."
+                    + ARCHIVEPOLICY_MOVETOARCHIVEDDIRECTORY + ": file(s) are moved to the archive directory, specified in the parameters"
+                    + ARCHIVEPOLICY_MOVETOARCHIVEDDIRECTORYANDPURGE + ": file(s) are moved to the archive directory, then purge after a delay.");
     private static PlugInParameter cstParamDirectoryArchive = PlugInParameter.createInstance("directoryarchive", "Directory Archive", TypeParameter.STRING, "", "When a file is used, it will be moved in this directory. If no directory is set, file is removed");
-    private static PlugInParameter cstParamDelayArchive = PlugInParameter.createInstance("delayarchive", "Delay before purging Archive Directory", TypeParameter.DELAY,MilkPlugInToolbox.DELAYSCOPE.MONTH + ":1", "Files older than this delay in the archive directory are definitively purged");
+    private static PlugInParameter cstParamDelayArchive = PlugInParameter.createInstanceDelay("delayarchive", "Delay before purging Archive Directory", DELAYSCOPE.MONTH, 1, "Files older than this delay in the archive directory are definitively purged");
 
     private static PlugInParameter cstParamCsvSeparator = PlugInParameter.createInstance("csvSeparator", "Csv Separator", TypeParameter.STRING, ",", "Separator expected to separate the different value (in the header, in data)");
 
@@ -85,34 +83,35 @@ public class MilkDirectory extends MilkPlugIn {
             listEvents.add(new BEvent(EVENT_DIRECTORY_NOT_EXIST, jobExecution.getInputStringParameter(cstParamDirectory)));
         return listEvents;
     };
+
     @Override
     public MilkPlugInDescription getDefinitionDescription() {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
-        plugInDescription.setName( "MonitorDirectory");
-        plugInDescription.setLabel( "Monitor Directory");
-        plugInDescription.setExplanation( "Monitor a directory. When a file arrive in this directory, a new case is created");
-        
-        plugInDescription.setCategory( CATEGORY.MONITOR);
-        plugInDescription.addParameter( cstParamDirectory );
-        plugInDescription.addParameter( cstParamOperation );
-        plugInDescription.addParameter( cstParamFileFilter );
-        plugInDescription.addParameter(  cstParamArchiveFilePolicy );
-        plugInDescription.addParameter( cstParamDirectoryArchive );
-        plugInDescription.addParameter( cstParamDelayArchive );
-        plugInDescription.addParameter( cstParamCsvSeparator );
+        plugInDescription.setName("MonitorDirectory");
+        plugInDescription.setLabel("Monitor Directory");
+        plugInDescription.setExplanation("Monitor a directory. When a file arrive in this directory, a new case is created");
+
+        plugInDescription.setCategory(CATEGORY.MONITOR);
+        plugInDescription.addParameter(cstParamDirectory);
+        plugInDescription.addParameter(cstParamOperation);
+        plugInDescription.addParameter(cstParamFileFilter);
+        plugInDescription.addParameter(cstParamArchiveFilePolicy);
+        plugInDescription.addParameter(cstParamDirectoryArchive);
+        plugInDescription.addParameter(cstParamDelayArchive);
+        plugInDescription.addParameter(cstParamCsvSeparator);
 
         mapper.addPlugInParameter(plugInDescription);
-        
+
         return plugInDescription;
     }
+
     @Override
     public MilkJobOutput execute(MilkJobExecution jobExecution) {
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
         try {
             String operationPolicy = jobExecution.getInputStringParameter(cstParamOperation);
             String separatorCSV = jobExecution.getInputStringParameter(cstParamCsvSeparator);
-            
-            
+
             List<BEvent> listEvents = mapper.initialisation(jobExecution, jobExecution.getApiAccessor());
             if (BEventFactory.isError(listEvents)) {
                 plugTourOutput.addEvents(listEvents);
@@ -121,7 +120,7 @@ public class MilkDirectory extends MilkPlugIn {
 
             }
             String fileFilter = jobExecution.getInputStringParameter(cstParamFileFilter);
-            
+
             File fileDirectoy = new File(jobExecution.getInputStringParameter(cstParamDirectory));
             File[] listFiles = fileDirectoy.listFiles();
             jobExecution.setAvancementTotalStep(listFiles.length);
@@ -137,17 +136,15 @@ public class MilkDirectory extends MilkPlugIn {
                 parameters.put("FILEDATEINMS", fileInDirectory.lastModified());
                 List<File> fileAttachement = new ArrayList<>();
                 fileAttachement.add(fileInDirectory);
-                
-                
+
                 if (OPERATIONPOLICY_CSVONECASEPERLINE.equals(operationPolicy) && fileInDirectory.getName().toLowerCase().endsWith(".csv")) {
                     CSVOperation csvOperation = new CSVOperation();
                     csvOperation.loadCsvDocument(jobExecution, fileInDirectory, separatorCSV);
                     Map<String, String> record;
-                    while (( record =  csvOperation.getNextRecord()) !=null)
-                    {
+                    while ((record = csvOperation.getNextRecord()) != null) {
                         Map<String, Object> recordComplete = new HashMap<>();
-                        recordComplete.putAll( record );
-                        recordComplete.putAll( parameters );
+                        recordComplete.putAll(record);
+                        recordComplete.putAll(parameters);
                         mapper.createCase(jobExecution, recordComplete, fileAttachement, jobExecution.getApiAccessor());
                     }
                     // open the CSV
@@ -155,27 +152,26 @@ public class MilkDirectory extends MilkPlugIn {
                     // open the CSV, complete parameters, but create a case anytime
                     CSVOperation csvOperation = new CSVOperation();
                     csvOperation.loadCsvDocument(jobExecution, fileInDirectory, separatorCSV);
-                    Map<String, String> record =  csvOperation.getNextRecord();
+                    Map<String, String> record = csvOperation.getNextRecord();
                     Map<String, Object> recordComplete = new HashMap<>();
-                    if (record!=null)
-                        recordComplete.putAll( record );
-                    recordComplete.putAll( parameters );
+                    if (record != null)
+                        recordComplete.putAll(record);
+                    recordComplete.putAll(parameters);
                     mapper.createCase(jobExecution, recordComplete, fileAttachement, jobExecution.getApiAccessor());
                 } else if (OPERATIONPOLICY_FILE.equals(operationPolicy)) {
                     // one case per file
                     mapper.createCase(jobExecution, parameters, fileAttachement, jobExecution.getApiAccessor());
                 }
-                
+
                 // move file to archive directory
             }
-            
+
             // now, purge the archive directory?
-            
+
         } catch (Exception e) {
 
         }
         return plugTourOutput;
     }
 
-   
 }

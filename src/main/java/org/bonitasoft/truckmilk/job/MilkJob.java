@@ -23,8 +23,9 @@ import org.bonitasoft.truckmilk.engine.MilkConstantJson;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory.MilkFactoryOp;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMesure;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMeasurement;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.ReplacementPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
@@ -170,7 +171,11 @@ public @Data class MilkJob {
         /**
          * Something is wrong in the configuration, and the plugin can't run
          */
-        BADCONFIGURATION
+        BADCONFIGURATION,
+        /**
+         * Not a final execution status, just report that the job start
+         */
+        START
     }
 
     public MilkJob(String name, MilkPlugIn plugIn, MilkJobFactory milkJobFactory) {
@@ -195,12 +200,17 @@ public @Data class MilkJob {
     }
 
     public String toString() {
-        return name + " (" + (isEnable ? "ENABLE " : "disable ")
-                + (trackExecution.isImmediateExecution ? "<i> " : "")
-                + (trackExecution.inExecution ? "EXECUTION_IN_PROGRESS " : "")
+        return name + "("+ idJob+"): " + (isEnable ? "ENABLE " : "disable ")
+                + (trackExecution.isImmediateExecution ? "[ IMMEDIAT ] " : "")
+                + (trackExecution.inExecution ? "[ EXECUTION ] " : "")
+                + (trackExecution.nextExecutionDate == null ? "NoNextDate" : sdf.format(trackExecution.nextExecutionDate)) ;
+    }
+    public String getHtmlInfo() {
+        return "<b>"+name + "</b> ("+idJob+") " + (isEnable ? "<div style=\"color:green\">ENABLE</div>" : "disable ")
+                + (trackExecution.isImmediateExecution ? "<div style=\"color:blue\">&ltIMMEDIAT&gt</div>" : "")
+                + (trackExecution.inExecution ? "<div style=\"color:blue\">&ltEXECUTION&gt</div>" : "")
                 + (trackExecution.nextExecutionDate == null ? "NoNextDate" : sdf.format(trackExecution.nextExecutionDate)) + ")";
     }
-
     public long getId() {
         return idJob;
     }
@@ -523,28 +533,28 @@ public @Data class MilkJob {
     /* ******************************************************************************** */
     /*                                                                                  */
     /*
-     * Mesure
+     * Measure
      * /*
      */
     /* ******************************************************************************** */
-    public static class MesureAtDate {
+    public static class MeasurementAtDate {
 
         public Date date;
-        public Map<PlugInMesure, Double> values;
-        public MesureAtDate(Date date ) {
+        public Map<PlugInMeasurement, Double> values;
+        public MeasurementAtDate(Date date ) {
             this.date = date;
         }
     }
 
-    private List<MesureAtDate> listAllMesureValues = new ArrayList<>();
+    private List<MeasurementAtDate> listAllMeasurementValues = new ArrayList<>();
 
-    public void addMesureValues(Date date, Map<PlugInMesure, Double> values) {
-        MesureAtDate mesure = new MesureAtDate( date );
+    public void addMesureValues(Date date, Map<PlugInMeasurement, Double> values) {
+        MeasurementAtDate mesure = new MeasurementAtDate( date );
         mesure.values = values;
-        listAllMesureValues.add(0,mesure);
-        if (listAllMesureValues.size() > getNbHistoryMesure()) {
+        listAllMeasurementValues.add(0,mesure);
+        if (listAllMeasurementValues.size() > getNbHistoryMesure()) {
             if (listSavedExecution.size() > nbSavedExecution)
-                listAllMesureValues = listAllMesureValues.subList(0, getNbHistoryMesure()-1);
+                listAllMeasurementValues = listAllMeasurementValues.subList(0, getNbHistoryMesure()-1);
         }
     }
 
@@ -559,20 +569,20 @@ public @Data class MilkJob {
      * 
      * @return
      */
-    public List<Map<String, Object>> getListMesureValues( boolean listOfValues) {
+    public List<Map<String, Object>> getListMeasurementValues( boolean listOfValues) {
         List<Map<String, Object>> listPoints = new ArrayList<>();
-        for (MesureAtDate mesureAtDate : listAllMesureValues) {
+        for (MeasurementAtDate mesureAtDate : listAllMeasurementValues) {
             Map<String, Object> mapMesureValue = new HashMap<>();
             mapMesureValue.put( MilkConstantJson.CSTJSON_MEASUREMENTATDATE_DATEST, mesureAtDate.date==null ? "" : sdf.format(mesureAtDate.date));
             if (listOfValues) {
                 List<Double> listValues = new ArrayList<>();
-                for (PlugInMesure plugInMesure : plugIn.getDescription().getListMesures()) {
+                for (PlugInMeasurement plugInMesure : plugIn.getDescription().getListMesures()) {
                     listValues.add( mesureAtDate.values.get(plugInMesure));
                 }
                 mapMesureValue.put(MilkConstantJson.CSTJSON_MEASUREMENTATDATE_VALUELIST, listValues);
             } else {
                 Map<String, Double> mapValues = new HashMap<>();
-                for (Entry<PlugInMesure, Double> entry :  mesureAtDate.values.entrySet()) {
+                for (Entry<PlugInMeasurement, Double> entry :  mesureAtDate.values.entrySet()) {
                     mapValues.put(entry.getKey().getName(), entry.getValue());
                 }
                 mapMesureValue.put(MilkConstantJson.CSTJSON_MEASUREMENTATDATE_VALUEMAP, mapValues);
@@ -589,21 +599,21 @@ public @Data class MilkJob {
      * @return
      */
     @SuppressWarnings("unchecked")
-    public void readMesureValuesFromList(List<Map<String, Object>> listMesures) {
-        listAllMesureValues = new ArrayList<>();
+    public void readMeasurementValuesFromList(List<Map<String, Object>> listMesures) {
+        listAllMeasurementValues = new ArrayList<>();
         for (Map<String, Object> pointMap : listMesures) {
             try {
                 Date dateMesure=  sdf.parse((String) pointMap.get( MilkConstantJson.CSTJSON_MEASUREMENTATDATE_DATEST ));
-                MesureAtDate mesureAtDate = new MesureAtDate(dateMesure);
+                MeasurementAtDate mesureAtDate = new MeasurementAtDate(dateMesure);
 
                 mesureAtDate.values = new HashMap<>();
 
                 for (Entry<String, Double> entry : ((Map<String, Double>) pointMap.get(MilkConstantJson.CSTJSON_MEASUREMENTATDATE_VALUEMAP)).entrySet()) {
-                    PlugInMesure mesure = getPlugIn().getDescription().getMesureFromName(entry.getKey());
+                    PlugInMeasurement mesure = getPlugIn().getDescription().getMesureFromName(entry.getKey());
                     if (mesure != null)
                         mesureAtDate.values.put(mesure, entry.getValue());
                 }
-                listAllMesureValues.add(mesureAtDate);
+                listAllMeasurementValues.add(mesureAtDate);
             } catch (Exception e) {
                 logger.severe(LOGGER_HEADER + " Can't decode PointOfInterest " + pointMap.toString() + " : " + e.getMessage());
             }
@@ -710,11 +720,14 @@ public @Data class MilkJob {
     /* ******************************************************************************** */
     /*                                                                                  */
     /*
-     * Parameter File
+     * Parameters File
      * /*
      */
     /* ******************************************************************************** */
-
+    public void setParameterValue( PlugInParameter plugInParameter, Object value ) { 
+            parameters.put(plugInParameter.name, value);
+    }
+    
     /**
      * save/load FILE parameters
      * setParameterStream set the stream, i.e. WRITE the content to the plugInTour. After that, a
@@ -825,19 +838,28 @@ public @Data class MilkJob {
         String plugInName = (String) jsonMap.get(MilkConstantJson.CSTJSON_JOB_PLUGINNAME);
         MilkPlugInFactory milkPlugInFactory = milkJobFactory.getMilkPlugInFactory();
 
-        MilkPlugIn plugIn = milkPlugInFactory.getPluginFromName(plugInName);
-        if (plugIn == null)
-            return null;
-
         String name = (String) jsonMap.get(MilkConstantJson.CSTJSON_JOB_NAME);
-        MilkJob milkJob = new MilkJob(name, plugIn, milkJobFactory);
+        MilkJob milkJob = null;
+        Map<String,Object> parametersMap = (Map<String, Object>) jsonMap.get(MilkConstantJson.CSTJSON_PARAMETERS);
+
+        MilkPlugIn plugIn = milkPlugInFactory.getPluginFromName(plugInName);
+        if (plugIn == null) {
+            // there is  maybe a replacement ?
+            ReplacementPlugIn replacementPlugIn = milkPlugInFactory.getReplacement(plugInName, parametersMap);
+            if (replacementPlugIn == null)
+                return null;
+            plugIn =replacementPlugIn.plugIn;
+            parametersMap = replacementPlugIn.parameters;
+        }
+        
+        milkJob = new MilkJob(name, plugIn, milkJobFactory);
+        
+        milkJob.parameters = parametersMap;
+        
         milkJob.description = (String) jsonMap.get(MilkConstantJson.CSTJSON_JOB_DESCRIPTION);
 
-        milkJob.idJob = getLongValue(jsonMap.get(MilkConstantJson.CSTJSON_JOB_ID), 0L);
+        milkJob.idJob = getLongValue( jsonMap.get(MilkConstantJson.CSTJSON_JOB_ID), 0L);
 
-        // clone the parameters !
-        // new HashMap<>(description.getParametersMap()) not need at this moment because the maps is created
-        milkJob.parameters = (Map<String, Object>) jsonMap.get(MilkConstantJson.CSTJSON_PARAMETERS);
 
         @SuppressWarnings("unused")
         List<Map<String, Object>> listParametersDef = (List<Map<String, Object>>) jsonMap.get(MilkConstantJson.CSTJSON_PARAMETERS_DEF);
@@ -999,7 +1021,7 @@ public @Data class MilkJob {
         map.put( MilkConstantJson.CSTJSON_SAVEEXEC_OVERLOAD, Boolean.valueOf(listSavedExecution.size() > CSTMAXLIMITEDDATA));
         
         if (mapContent.mesures) {
-            map.put(MilkConstantJson.CSTJSON_MEASUREMENT, getMapMesures(mapContent.limitData, mapContent.destinationHtml));
+            map.put(MilkConstantJson.CSTJSON_MEASUREMENT, getMapMeasurement(mapContent.limitData, mapContent.destinationHtml));
         }
         return map;
     }
@@ -1028,17 +1050,17 @@ public @Data class MilkJob {
      * @param limitData
      * @return
      */
-    public Map<String, Object> getMapMesures( boolean limitData, boolean destinationHtml ) {
+    public Map<String, Object> getMapMeasurement( boolean limitData, boolean destinationHtml ) {
         
         Map<String, Object> listMesures = new HashMap<>();
         List<Map<String,Object>> listDef = new ArrayList<>();
-        for (PlugInMesure plugInMesure : plugIn.getDescription().getMesures())
+        for (PlugInMeasurement plugInMesure : plugIn.getDescription().getMesures())
         {
             listDef.add( plugInMesure.getMap());
         }
         listMesures.put( MilkConstantJson.CSTJSON_MEASUREMENT_DEF, listDef);
         // now, values
-       listMesures.put( MilkConstantJson.CSTJSON_MEASUREMENT_HISTORY, getListMesureValues( destinationHtml));
+       listMesures.put( MilkConstantJson.CSTJSON_MEASUREMENT_HISTORY, getListMeasurementValues( destinationHtml));
         
         return listMesures;
     
@@ -1207,7 +1229,7 @@ public @Data class MilkJob {
     /*                                                                                  */
     /* ******************************************************************************** */
 
-    private static class SavedExecution {
+    public static class SavedExecution {
 
         public Date executionDate;
         public ExecutionStatus executionStatus;
@@ -1216,20 +1238,29 @@ public @Data class MilkJob {
         public String reportInHtml;
         
         public long nbItemsProcessed = 0;
-        public long executionTimeInMs;
+        /** null if no execution */
+        public Long executionTimeInMs;
         public String hostName;
 
         public SavedExecution() {
         };
 
         public SavedExecution(MilkJobOutput output) {
-            executionDate = output.executionDate;
-            executionStatus = output.executionStatus;
-            listEventSt = BEventFactory.getSyntheticHtml(output.getListEvents());
-            nbItemsProcessed = output.nbItemsProcessed;
-            executionTimeInMs = output.executionTimeInMs;
-            hostName = output.hostName;
-            reportInHtml = output.getReportInHtml();
+            this.executionDate = output.executionDate;
+            this.executionStatus = output.executionStatus;
+            this.listEventSt = BEventFactory.getSyntheticHtml(output.getListEvents());
+            this.nbItemsProcessed = output.nbItemsProcessed;
+            this.executionTimeInMs = output.executionTimeInMs;
+            this.hostName = output.hostName;
+            this.reportInHtml = output.getReportInHtml();
+        }
+        public SavedExecution( Date dateExecution, ExecutionStatus execution,  String hostName, String reportInHtml, List<BEvent> listEvents ) {
+            this.executionDate = dateExecution;
+            this.executionStatus = execution;
+            this.listEventSt = BEventFactory.getSyntheticHtml(listEvents);
+            this.hostName = hostName;
+            this.reportInHtml = reportInHtml;
+            
         }
 
         public Map<String, Object> getMap(boolean destinationHtml) {
@@ -1241,7 +1272,8 @@ public @Data class MilkJob {
             map.put(MilkConstantJson.CSTJSON_SAVEEXEC_REPORTINHTML, reportInHtml);
             map.put(MilkConstantJson.CSTJSON_SAVEEXEC_ITEMSPROCESSED, nbItemsProcessed);
             map.put(MilkConstantJson.cstJsonSaveExecTimeinMs, executionTimeInMs);
-            map.put(MilkConstantJson.cstJsonSaveExecTimeinMs + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, TypesCast.getHumanDuration(executionTimeInMs, false));
+            if (executionTimeInMs!=null)
+                map.put(MilkConstantJson.cstJsonSaveExecTimeinMs + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, TypesCast.getHumanDuration(executionTimeInMs, false));
 
             map.put(MilkConstantJson.cstJsonSaveExecHostName, hostName);
             return map;
@@ -1266,12 +1298,30 @@ public @Data class MilkJob {
             savedExecution.hostName = (String) jsonMap.get(MilkConstantJson.cstJsonSaveExecHostName);
             return savedExecution;
         }
+        public String toString() {
+            return executionStatus.toString()+" "+sdf.format(executionDate)+" "+reportInHtml;
+        }
     }
 
     // save a job execution
     // keep a history of the last X execution. X is a parameters for each job.
     List<SavedExecution> listSavedExecution = new ArrayList<>();
 
+    public SavedExecution registerExecution(Date currentDate, ExecutionStatus executionOperation, String hostName, String reportInHtml) {
+        SavedExecution savedExecution = new SavedExecution(currentDate, executionOperation,hostName,reportInHtml, new ArrayList<BEvent>());
+        
+        listSavedExecution.add(0, savedExecution);
+
+        if (listSavedExecution.size() > nbSavedExecution)
+            listSavedExecution = listSavedExecution.subList(0, nbSavedExecution - 1);
+        return savedExecution;
+    }
+        
+    public void replaceExecution(SavedExecution savedExecution, Date currentDate, MilkJobOutput output) {
+        if (savedExecution!=null)
+            listSavedExecution.remove(savedExecution);
+        registerExecution(currentDate, output);
+    }
     /**
      * register an execution. Keep the last 10
      * 

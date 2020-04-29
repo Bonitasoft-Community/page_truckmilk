@@ -109,7 +109,7 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
     public List<BEvent> startup(long tenantId, boolean forceReset) {
         List<BEvent> listEvents = new ArrayList<>();
         MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
-        milkReportEngine.reportHeartBeatInformation("Startup ThreadScheduler reset[" + forceReset + "]");
+        milkReportEngine.reportHeartBeatInformation("Startup ThreadScheduler reset[" + forceReset + "]",true);
         try {
 
             // already register ? 
@@ -153,7 +153,7 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
 
         List<BEvent> listEvents = new ArrayList<>();
         MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
-        milkReportEngine.reportHeartBeatInformation( "SHUTDOWN Quartz Scheduler");
+        milkReportEngine.reportHeartBeatInformation( "SHUTDOWN Quartz Scheduler",true);
 
         // already register ? 
         synchronized (listSchedulerThread) {

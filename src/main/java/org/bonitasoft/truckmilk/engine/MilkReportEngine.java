@@ -91,9 +91,9 @@ public class MilkReportEngine {
      * @param message
      * @param forceLog
      */
-    public void reportHeartBeatInformation(String message) {
-        reduceLists();
-        report(message, true, true );
+    public void reportHeartBeatInformation(String message, boolean doSaveInDatabase) {
+        
+        report(message, true, true, doSaveInDatabase );
 
     }
     
@@ -117,7 +117,7 @@ public class MilkReportEngine {
                 listEventSt.append(event.getParameters());
             listEventSt.append("; ");
         }
-        report(listEventSt.toString(), true, false);
+        report(listEventSt.toString(), true, false,true);
     }
     public List<String> getListReportOperation(){
         return listSaveReportInformation;
@@ -147,8 +147,14 @@ public class MilkReportEngine {
         
     }
 
-    
-    private synchronized void report(String message, boolean forceLog, boolean saveHeartBeat) {
+    /**
+     * 
+     * @param message
+     * @param forceLog
+     * @param saveHeartBeat
+     * @param doSaveInDatabase : do not save everytime, to save execution CPU. Start and End of a job can wait for example the next heartbeat
+     */
+    private synchronized void report(String message, boolean forceLog, boolean saveHeartBeat, boolean doSaveInDatabase) {
         
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM HH:mm:ss");
         message= sdf.format( new Date())+" "+message;
@@ -165,13 +171,13 @@ public class MilkReportEngine {
             logger.fine(LOG_HEADER + message);
         // to not have an infinite or a negative loop,
         reduceLists();
-        saveReport( saveHeartBeat );
+        saveReport( saveHeartBeat, doSaveInDatabase );
 
     }
     /**
      * @return
      */
-    private synchronized List<BEvent> saveReport(boolean saveHeartBeat) {
+    private synchronized List<BEvent> saveReport(boolean saveHeartBeat, boolean doSaveInDatabase) {
         BonitaProperties bonitaProperties = new BonitaProperties(MilkSerializeProperties.BONITAPROPERTIESNAME);
 
         List<BEvent> listEvents = new ArrayList<>();
@@ -211,7 +217,8 @@ public class MilkReportEngine {
                 saveList( bonitaProperties, listKeys, BONITAPROPERTIES_REPORT, listSaveReportInformation);
             }
         }
-        listEvents.addAll(bonitaProperties.storeCollectionKeys(listKeys));
+        if (doSaveInDatabase)
+            listEvents.addAll(bonitaProperties.storeCollectionKeys(listKeys));
         return listEvents;
     }
 

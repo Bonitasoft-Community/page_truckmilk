@@ -8,6 +8,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.connector.ConnectorAPIAccessorImpl;
@@ -16,6 +17,7 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory.MilkFactoryOp;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
+import org.bonitasoft.truckmilk.job.MilkJob.SavedExecution;
 import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
@@ -30,7 +32,7 @@ public class MilkExecuteJobThread extends Thread {
 
     static MilkLog logger = MilkLog.getLogger(MilkExecuteJobThread.class.getName());
 
-    
+    private static String CST_TRUCKMILKNAME ="truckmilkjob";
     private SimpleDateFormat sdfSynthetic = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     private static BEvent eventPlugInViolation = new BEvent(MilkExecuteJobThread.class.getName(), 1, Level.ERROR,
@@ -60,7 +62,7 @@ public class MilkExecuteJobThread extends Thread {
      */
     public String checkAndStart(Date currentDate) {
         StringBuilder executionDescription = new StringBuilder();
-        executionDescription.append( "Job[" + milkJob.toString() + "]:" );
+        executionDescription.append( milkJob.getHtmlInfo() );
         boolean saveJob=false;
         tagTheDate = currentDate;
 
@@ -70,7 +72,7 @@ public class MilkExecuteJobThread extends Thread {
         }
 
         if (milkJob.inExecution()) {
-            executionDescription.append( "In execution;");
+            executionDescription.append( "<b>In execution</b>;");
             return executionDescription.toString();
         }
         // already logged in the toString() executionDescription.append( (milkJob.isEnable()? " ENABLE " : " Disable ") + (milkJob.isImmediateExecution()?" ImmediateExecution ":"") + ";");
@@ -104,8 +106,9 @@ public class MilkExecuteJobThread extends Thread {
             // if we start, job will be saved
             if (start) {
                 // now, it's locked on this node 
-                executionDescription.append( "  *** STARTED *** ;");
+                executionDescription.append( "<b>*** STARTED ***</b>;");
                 this.start();
+                this.setName(  getThreadName(milkJob) );
             } else if (saveJob) {
                 milkJob.milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceStartExecutionJob());
 
@@ -151,7 +154,7 @@ public class MilkExecuteJobThread extends Thread {
 
     /** now do the real execution */
     public void run() {
-
+        
         MilkJobFactory milkJobFactory = milkJob.milkJobFactory;
         MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
         // ConnectorAPIAccessorImpl connectorAccessorAPI = new ConnectorAPIAccessorImpl( milkJobFactory.getTenantId());
@@ -159,6 +162,7 @@ public class MilkExecuteJobThread extends Thread {
         List<BEvent> listEvents = new ArrayList<>();
         MilkPlugIn plugIn = milkJob.getPlugIn();
         MilkJobOutput milkJobOutput = null;
+        SavedExecution savedStartExecution=null;
         try {
             String hostName = "";
             try {
@@ -173,10 +177,11 @@ public class MilkExecuteJobThread extends Thread {
             // ----------------- Execution
             long timeBegin = System.currentTimeMillis();
             milkJobExecution.start();
+
             try {
 
-                milkReportEngine.reportHeartBeatInformation("Start Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")" );
-
+                milkReportEngine.reportHeartBeatInformation("Start Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")",false );
+                savedStartExecution = milkJob.registerExecution(new Date(timeBegin), ExecutionStatus.START, hostName, "Start");
                 // save the status in the database
                 // save the start Status (so general) and the track Status, plus askStop to false
                 listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceStartExecutionJob()));
@@ -244,6 +249,8 @@ public class MilkExecuteJobThread extends Thread {
 
             milkJobOutput.executionTimeInMs = (timeEnd - timeBegin);
 
+            String reportTime = "<p><i>Started at "+sdfSynthetic.format( new Date( timeBegin))+" end at "+sdfSynthetic.format( new Date( timeEnd ))+"</i>";
+            milkJobOutput.addReportInHtml(reportTime);;
             milkJobOutput.setMesure( MilkPlugInDescription.cstMesureTimeExecution, milkJobOutput.executionTimeInMs);
             milkJobOutput.setMesure( MilkPlugInDescription.cstMesureNbItemProcessed, milkJobOutput.nbItemsProcessed);
             
@@ -261,13 +268,12 @@ public class MilkExecuteJobThread extends Thread {
             if (milkJobOutput.executionStatus == ExecutionStatus.NOEXECUTION)
                 milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
 
-            milkJob.registerExecution(tagTheDate, milkJobOutput);
+            milkJob.replaceExecution(savedStartExecution, tagTheDate, milkJobOutput);
             listEvents.addAll(milkJobOutput.getListEvents());
         }
         // calculate the next time
-
         listEvents.addAll(milkJob.calculateNextExecution("End-Of-Execution-recalculate"));
-        milkReportEngine.reportHeartBeatInformation("End Job[" + milkJob.getName() + "] (" + milkJob.getId() + ") Status["+milkJobOutput.executionStatus.toString()+"] NewNextDate["+sdfSynthetic.format(milkJob.getNextExecutionDate())+"]");
+        milkReportEngine.reportHeartBeatInformation("End Job[" + milkJob.getName() + "] (" + milkJob.getId() + ") Status["+milkJobOutput.executionStatus.toString()+"] NewNextDate["+sdfSynthetic.format(milkJob.getNextExecutionDate())+"]",false);
 
         milkJob.setImmediateExecution(false);
         milkJob.setAskForStop(false);
@@ -276,5 +282,23 @@ public class MilkExecuteJobThread extends Thread {
         listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceEndExecutionJob()));
 
         // hum, nothing where to save the listEvent of the execution.
+    }
+    
+    public static String getThreadName(MilkJob milkJob) {
+        return CST_TRUCKMILKNAME+"-"+milkJob.getIdJob();
+    }
+    public static void collectStackTrace(MilkJob milkJob) {
+        String truckMilkThreadName = getThreadName(milkJob);
+        Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
+        for (Thread th : threadSet) {
+            // Bonita-Worker-1-10
+            if (th.getName().equals(truckMilkThreadName)) {
+                try {
+                    th.getStackTrace();
+                    th.getStackTrace();
+                }
+                catch(Exception e ) {}
+            }
+        }
     }
 }

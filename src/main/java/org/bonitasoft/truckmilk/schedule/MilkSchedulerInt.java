@@ -66,7 +66,7 @@ public abstract class MilkSchedulerInt {
      * return the scheduler type
      */
     public enum TypeScheduler {
-        QUARTZ, THREADSLEEP
+        QUARTZ, THREADSLEEP, PROCESS
     };
 
     public abstract TypeScheduler getType();
@@ -90,9 +90,9 @@ public abstract class MilkSchedulerInt {
      * 
      * @param forceDeploy the deployment has to be redone
      * @param pageDirectory
+     * @param tenantId
      * @param commandAPI
      * @param platFormAPI
-     * @param tenantId
      * @return
      */
     public abstract List<BEvent> checkAndDeploy(boolean forceDeploy, File pageDirectory, long tenantId);
