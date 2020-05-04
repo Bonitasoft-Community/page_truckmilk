@@ -99,6 +99,7 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
 
         String policy = jobExecution.getInputStringParameter(cstParamOperation);
 
+        List<Object> parameters = new ArrayList<>();
         StringBuilder sqlRequest = new StringBuilder();
         sqlRequest.append("select distinct b.id, b.rootcontainerid, b.name, b.reachedstatedate, pd.name as PROCESSNAME, pd.version as PROCESSVERSION ,pd.processid");
         sqlRequest.append(" from flownode_instance a, flownode_instance b, process_instance pi, process_definition pd");
@@ -108,7 +109,8 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
 
         sqlRequest.append("  and a.id < b.id ");
         sqlRequest.append("  and a.name = b.name and a.statename='ready' and b.statename='ready'");
-
+        sqlRequest.append("  and a.tenantid = ? ");
+        parameters.add( jobExecution.getTenantId());
         SearchOptionsBuilder sob = new SearchOptionsBuilder(0, 100);
 
         try {
@@ -121,7 +123,6 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
                 return milkJobOutput;
             }
             StringBuilder listProcessesId = new StringBuilder();
-            List<Object> parameters = new ArrayList<>();
             for (ProcessDeploymentInfo processDeployment : listProcessResult.listProcessDeploymentInfo) {
                 if (listProcessesId.length() > 0)
                     listProcessesId.append(", ");
@@ -181,6 +182,13 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
                     try (Connection con = BonitaEngineConnection.getConnection()) {
                         Chronometer purgeTasksMarker = milkJobOutput.beginChronometer("purgeTask");
 
+                        // add the tenantId
+                        executeQuery("update flownode_instance set STATECATEGORY='CANCELLING' where id=?", taskId, jobExecution.getTenantId(), con);
+                        con.commit();
+                        
+                        processAPI.setActivityStateByName(taskId, ActivityStates.CANCELLED_STATE);
+                        
+                        /*
                         executeQuery("delete pending_mapping where activityid=?", taskId, con);
 
                         executeQuery("delete data_instance where containerid=?", taskId, con);
@@ -188,6 +196,7 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
                         executeQuery("delete flownode_instance where id=?", taskId, con);
 
                         con.commit();
+                        */
                         milkJobOutput.endChronometer(purgeTasksMarker);
                         countCorrects++;
                         jobExecution.addManagedItems(1);
@@ -239,9 +248,10 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
         return milkJobOutput;
     }
 
-    private void executeQuery(String sqlUpdateRequest, Long taskId, Connection con) throws Exception {
+    private void executeQuery(String sqlUpdateRequest, Long taskId, Long tenantId, Connection con) throws Exception {
         try (PreparedStatement pstmt = con.prepareStatement(sqlUpdateRequest)) {
             pstmt.setObject(1, taskId);
+            pstmt.setObject(2, tenantId);
             pstmt.executeUpdate();
             pstmt.close();
         } catch (Exception e) {
