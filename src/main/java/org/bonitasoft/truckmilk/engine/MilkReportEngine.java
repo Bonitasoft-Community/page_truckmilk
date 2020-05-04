@@ -93,7 +93,7 @@ public class MilkReportEngine {
      */
     public void reportHeartBeatInformation(String message, boolean doSaveInDatabase) {
         
-        report(message, true, true, doSaveInDatabase );
+        report(message, false, true, doSaveInDatabase );
 
     }
     
