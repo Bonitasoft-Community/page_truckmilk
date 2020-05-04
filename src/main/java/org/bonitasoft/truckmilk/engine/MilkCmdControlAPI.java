@@ -107,7 +107,7 @@ public class MilkCmdControlAPI {
         CommandJarDependency cmdDependency;
         
         cmdDependency=commandDescription.addJarDependencyLastVersion(BonitaCommandDeployment.NAME, BonitaCommandDeployment.VERSION, BonitaCommandDeployment.JAR_NAME);
-        // cmdDependency.setForceDeploy( true );
+        cmdDependency.setForceDeploy( true );
         
             
         cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-event", "1.8.0", "bonita-event-1.8.0.jar");
