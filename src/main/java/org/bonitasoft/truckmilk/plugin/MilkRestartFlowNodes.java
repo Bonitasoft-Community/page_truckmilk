@@ -2,24 +2,22 @@ package org.bonitasoft.truckmilk.plugin;
 
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.bonitasoft.engine.api.ProcessAPI;
 import org.bonitasoft.log.event.BEvent;
-import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.radar.RadarFactory;
 import org.bonitasoft.radar.workers.RadarWorkers;
+import org.bonitasoft.radar.workers.RadarWorkers.StuckFlowNodes;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
+import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
@@ -122,20 +120,22 @@ WHERE (f.state_Executing = 1 OR f.stable = 0 OR f.terminal = 1 OR f.stateCategor
 ORDER BY id;
          */
         
-        List<Map<String,Object>> listFlowNodes = radarWorkers.getOldestFlowNodesWaitingForExecution(jobExecution.getTenantId(), jobExecution.getJobStopAfterMaxItems() +100, delayResult.delayInMs );
-   
-        if (listFlowNodes.isEmpty() || CSTOPERATION_GETINFORMATION.equals(policy))
+        StuckFlowNodes stuckFlowNodes = radarWorkers.getOldestFlowNodesWaitingForExecution(jobExecution.getTenantId(), jobExecution.getJobStopAfterMaxItems() +100, delayResult.delayInMs );
+        milkJobOutput.addEvents( stuckFlowNodes.listEvents);
+        milkJobOutput.addReportInHtml("SqlQuery to detect Stuck Flow node:"+stuckFlowNodes.sqlQuery);
+        
+        if (stuckFlowNodes.listStuckFlowNode.isEmpty() || CSTOPERATION_GETINFORMATION.equals(policy))
         {
             milkJobOutput.executionStatus =ExecutionStatus.SUCCESSNOTHING;
             milkJobOutput.setMesure(cstMesureTasksExecuted, 0);
             milkJobOutput.setMesure(cstMesureTasksError, 0);
             milkJobOutput.addReportTable( new String[] {"Indicator", "Value"});
-            milkJobOutput.addReportLine( new Object[] {"Number of tasks detected", listFlowNodes.size() });
+            milkJobOutput.addReportLine( new Object[] {"Number of tasks detected", stuckFlowNodes.listStuckFlowNode.size() });
             // show up the fist lines
             int max = jobExecution.getJobStopAfterMaxItems() ;
             if (max>50)
                 max=50;
-            for (Map<String,Object> flowNode : listFlowNodes) {
+            for (Map<String,Object> flowNode : stuckFlowNodes.listStuckFlowNode) {
                 milkJobOutput.addReportLine( new Object[] {"CaseId/FlowId", flowNode.get("ROOTCONTAINERID")+"/"+flowNode.get("ID") });
             }
             if (max < jobExecution.getJobStopAfterMaxItems())
@@ -147,18 +147,18 @@ ORDER BY id;
         }
         
         // restart somes nodes
-        jobExecution.setAvancementTotalStep(listFlowNodes.size());
+        jobExecution.setAvancementTotalStep(stuckFlowNodes.listStuckFlowNode.size());
         boolean oneErrorDetected=false;
         int countCorrects=0;
         int countErrors=0; 
-        for (int i=0;i<listFlowNodes.size();i++)
+        for (int i=0;i<stuckFlowNodes.listStuckFlowNode.size();i++)
         {
             if (jobExecution.pleaseStop())
                 break;
             jobExecution.setAvancementStep( i );
 
-            Long flowNodeId = TypesCast.getLong(listFlowNodes.get( i ).get("ID"), null);
-            Long rootContainerId = TypesCast.getLong( listFlowNodes.get( i ).get("ROOTCONTAINERID"), null);
+            Long flowNodeId = TypesCast.getLong(stuckFlowNodes.listStuckFlowNode.get( i ).get("ID"), null);
+            Long rootContainerId = TypesCast.getLong( stuckFlowNodes.listStuckFlowNode.get( i ).get("ROOTCONTAINERID"), null);
             if (flowNodeId!=null)
                 try {
                     processAPI.executeFlowNode( flowNodeId);
@@ -172,12 +172,12 @@ ORDER BY id;
                     countErrors++;
                 } 
             else {
-                milkJobOutput.addEvent(new BEvent(eventErrorExecuteFlownode, "FlowNodeId is not a Long["+listFlowNodes.get( i ).get("ID")+"] CaseId["+listFlowNodes.get( i ).get("ROOTCONTAINERID")+"]"));
+                milkJobOutput.addEvent(new BEvent(eventErrorExecuteFlownode, "FlowNodeId is not a Long["+stuckFlowNodes.listStuckFlowNode.get( i ).get("ID")+"] CaseId["+stuckFlowNodes.listStuckFlowNode.get( i ).get("ROOTCONTAINERID")+"]"));
                 countErrors++;
             }
         }
         milkJobOutput.addReportTable( new String[] {"Indicator", "Value"});
-        milkJobOutput.addReportLine( new Object[] {"Number of tasks detected", listFlowNodes.size() });
+        milkJobOutput.addReportLine( new Object[] {"Number of tasks detected", stuckFlowNodes.listStuckFlowNode.size() });
         milkJobOutput.addReportLine( new Object[] {"Task executed", countCorrects});
         milkJobOutput.addReportLine( new Object[] {"Task execution error", countErrors});
         milkJobOutput.addReportEndTable();
@@ -188,7 +188,7 @@ ORDER BY id;
         
         if (oneErrorDetected)
             milkJobOutput.executionStatus =ExecutionStatus.ERROR;
-        else if (listFlowNodes.size() > jobExecution.getJobStopAfterMaxItems())
+        else if (stuckFlowNodes.listStuckFlowNode.size() > jobExecution.getJobStopAfterMaxItems())
             milkJobOutput.executionStatus =ExecutionStatus.SUCCESSPARTIAL;
         else
             milkJobOutput.executionStatus =ExecutionStatus.SUCCESS;
