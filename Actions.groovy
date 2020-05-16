@@ -62,6 +62,7 @@ import org.bonitasoft.engine.search.Order;
 import org.bonitasoft.engine.api.TenantAPIAccessor;
 import org.bonitasoft.engine.bpm.flownode.HumanTaskInstance;
 import org.bonitasoft.engine.bpm.flownode.HumanTaskInstanceSearchDescriptor;
+import org.bonitasoft.engine.bpm.process.ActivationState
 import org.bonitasoft.engine.bpm.process.ArchivedProcessInstance;
 import org.bonitasoft.engine.bpm.process.ArchivedProcessInstancesSearchDescriptor;
 import org.bonitasoft.engine.bpm.process.ProcessInstance;
@@ -77,6 +78,7 @@ import org.bonitasoft.log.event.BEvent.Level;
 
 import org.bonitasoft.truckmilk.MilkAccessAPI;
 import org.bonitasoft.truckmilk.MilkAccessAPI.Parameter;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess
 
 
 public class Actions {
@@ -274,16 +276,26 @@ public class Actions {
             }
             else if ("queryprocess".equals(action))
             {
-                List listProcess = new ArrayList();
+                List listProcesses = new ArrayList();
                 Object jsonParam = (paramJsonSt==null ? null : JSONValue.parse(paramJsonSt));
                 String processFilter = (jsonParam == null ? "" : jsonParam.get("userfilter"));
+                String filterProcessSt = (jsonParam == null ? "" : jsonParam.get("filterProcess"));
                 SearchOptionsBuilder searchOptionsBuilder = new SearchOptionsBuilder(0,20);
                 // searchOptionsBuilder.greaterOrEquals(ProcessDeploymentInfoSearchDescriptor.NAME, processFilter);
                 // searchOptionsBuilder.lessOrEquals(ProcessDeploymentInfoSearchDescriptor.NAME, processFilter+"z");
                 searchOptionsBuilder.searchTerm(processFilter);
 
-                searchOptionsBuilder.sort(  ProcessDeploymentInfoSearchDescriptor.NAME,  Order.ASC);
-                searchOptionsBuilder.sort(  ProcessDeploymentInfoSearchDescriptor.VERSION,  Order.ASC);
+                if (FilterProcess.ONLYDISABLED.toString().equals(filterProcessSt))
+                {
+                    searchOptionsBuilder.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE, ActivationState.DISABLED.toString());
+                }
+                if (FilterProcess.ONLYENABLED.toString().equals(filterProcessSt))
+                {
+                        searchOptionsBuilder.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE, ActivationState.ENABLED.toString());
+                 }
+    
+                searchOptionsBuilder.sort( ProcessDeploymentInfoSearchDescriptor.NAME,  Order.ASC);
+                searchOptionsBuilder.sort( ProcessDeploymentInfoSearchDescriptor.VERSION,  Order.ASC);
                 Set<String> setProcessesWithoutVersion=new HashSet<String>();
 
                 SearchResult<ProcessDeploymentInfo> searchResult = processAPI.searchProcessDeploymentInfos(searchOptionsBuilder.done() );
@@ -294,7 +306,7 @@ public class Actions {
                     final Map<String, Object> oneRecord = new HashMap<String, Object>();
                     oneRecord.put("display", processDeploymentInfo.getName() + " (" + processDeploymentInfo.getVersion()+")");
                     oneRecord.put("id", processDeploymentInfo.getName() + " (" + processDeploymentInfo.getVersion()+")");
-                    listProcess.add( oneRecord );
+                    listProcesses.add( oneRecord );
                     setProcessesWithoutVersion.add(processDeploymentInfo.getName());
                 }
                 // add all processes without version
@@ -302,10 +314,19 @@ public class Actions {
                     final Map<String, Object> oneRecord = new HashMap<String, Object>();
                     oneRecord.put("display", processName);
                     oneRecord.put("id", processName);
-                    listProcess.add( oneRecord );
+                    listProcesses.add( oneRecord );
                 }
-
-                actionAnswer.responseMap.put("listProcess", listProcess);
+                // sort the result again to have the "process without version" at the correct place
+                
+                Collections.sort(listProcesses, new Comparator< Map<String, Object>>()
+                   {
+                     public int compare( Map<String, Object> s1,
+                                         Map<String, Object> s2)
+                     {
+                       return ((String)s1.get("display")).compareTo( ((String)s2.get("display")));
+                     }
+                   });
+                actionAnswer.responseMap.put("listProcess", listProcesses);
                 actionAnswer.responseMap.put("nbProcess", searchResult.getCount());
             }
             else if ("queryusers".equals(action))

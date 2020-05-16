@@ -20,6 +20,7 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput.Chronometer;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
@@ -45,7 +46,10 @@ public class MilkDeleteCases extends MilkPlugIn {
     private static BEvent eventDeletionFailed = new BEvent(MilkDeleteCases.class.getName(), 2, Level.ERROR,
             "Error during deletion", "An error arrived during the deletion of archived cases", "Cases are not deleted", "Check the exception");
 
-    private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Filter on process", TypeParameter.ARRAYPROCESSNAME, null, "Job manage only process which mach the filter. If no filter is given, all processes are inspected").withMandatory(true);
+    private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Filter on process", TypeParameter.ARRAYPROCESSNAME, null, "Job manage only process which mach the filter. If no filter is given, all processes are inspected")
+            .withMandatory(true)
+            .withFilterProcess(FilterProcess.ALL);
+
     private static PlugInParameter cstParamDelay = PlugInParameter.createInstanceDelay("Delay", "Delay to delete case, based on the Create date", DELAYSCOPE.MONTH, 6, "All cases started before this delay will be purged");
 
     /**
@@ -62,7 +66,7 @@ public class MilkDeleteCases extends MilkPlugIn {
      */
     public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
         return new ArrayList<>();
-    };
+    }
 
     @Override
     public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
@@ -173,7 +177,7 @@ public class MilkDeleteCases extends MilkPlugIn {
                     return totalNumberCaseDeleted;
                 try {
 
-                    int realCasePerDeletion = (int) (maximumArchiveDeletionPerRound - count);
+                    int realCasePerDeletion = maximumArchiveDeletionPerRound - count;
                     if (realCasePerDeletion > casePerDeletion)
                         realCasePerDeletion = casePerDeletion;
                         
@@ -181,18 +185,18 @@ public class MilkDeleteCases extends MilkPlugIn {
                     
                         // we can't trust the result
                         Chronometer processInstanceMarker = milkJobOutput.beginChronometer("deleteProcessInstance-"+processDefinition.getName()+"("+processDefinition.getVersion()+")");
-                        long numberActiveDeleted = processAPI.deleteProcessInstances(processDefinition.getProcessId(), 0, realCasePerDeletion * 3) / 3;
+                        long numberActiveDeleted = processAPI.deleteProcessInstances(processDefinition.getProcessId(), 0, realCasePerDeletion * 3);
                         milkJobOutput.endChronometer(processInstanceMarker);
                         
                         
                         Chronometer processArchiveMarker = milkJobOutput.beginChronometer("deleteArchiveProcessInstance-"+processDefinition.getName()+"("+processDefinition.getVersion()+")");
-                        long numberArchivedDeleted = processAPI.deleteArchivedProcessInstances(processDefinition.getProcessId(), 0, realCasePerDeletion * 3) / 3;
+                        long numberArchivedDeleted = processAPI.deleteArchivedProcessInstances(processDefinition.getProcessId(), 0, realCasePerDeletion * 3);
                         milkJobOutput.endChronometer(processArchiveMarker);
 
                         long caseAfter=getNumberProcessInstance(processDefinition.getProcessId(), processAPI);
                         
                         
-                        // logger.info("MilkDeleteCase - delete " + (numberActiveDeleted + numberArchivedDeleted) + " in " + (endTime - beginTime) + " ms");
+                        logger.fine("MilkDeleteCase - delete " + (numberActiveDeleted + numberArchivedDeleted) + " in " + processArchiveMarker.getTimeExecution() + " ms (Bonita record calculation:"+(numberActiveDeleted+numberArchivedDeleted)+")");
                         totalNumberCaseDeleted += (caseBefore - caseAfter);
                         countNumberThisPass+= (caseBefore - caseAfter);
                 } catch (Exception e) {

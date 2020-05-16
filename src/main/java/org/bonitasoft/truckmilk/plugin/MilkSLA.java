@@ -46,6 +46,7 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
@@ -175,7 +176,9 @@ public class MilkSLA extends MilkPlugIn {
             "Operation failed",
             "Check error and give the correct message definition");
 
-    private static PlugInParameter cstParamProcessName = PlugInParameter.createInstance("ProcessName", "Process Name", TypeParameter.PROCESSNAME, "", "Process name is mandatory. You can specify the process AND the version, or only the process name: all versions of this process is then checked").withMandatory(true);
+    private static PlugInParameter cstParamProcessName = PlugInParameter.createInstance("ProcessName", "Process Name", TypeParameter.PROCESSNAME, "", "Process name is mandatory. You can specify the process AND the version, or only the process name: all versions of this process is then checked")
+            .withMandatory(true)
+            .withFilterProcess(FilterProcess.ALL);
 
     private static PlugInParameter cstParamRuleSLA = PlugInParameter.createInstanceArrayMap("RuleSLA", "Rules SLA",
             Arrays.asList(
@@ -852,7 +855,7 @@ public class MilkSLA extends MilkPlugIn {
                 try {
                     
                     
-                    SearchResult<ProcessDeploymentInfo> listProcessDeploymenInfo = MilkPlugInToolbox.getListProcessDefinitionId(processNameVersion, processAPI);
+                    SearchResult<ProcessDeploymentInfo> listProcessDeploymenInfo = MilkPlugInToolbox.getListProcessDefinitionId(processNameVersion, FilterProcess.ONLYENABLED, processAPI);
                     if (listProcessDeploymenInfo.getCount() == 0)
                         listEvents.add(new BEvent(eventNoProcessMatchFilter, "ProcessName[" + processNameVersion + "]"));
                     else {
@@ -885,7 +888,7 @@ public class MilkSLA extends MilkPlugIn {
                 String jsonMessageCorrelation = st.hasMoreTokens() ? st.nextToken() : null;
                 ProcessDeploymentInfo processDeploymentInfo = null;
                 try {
-                    SearchResult<ProcessDeploymentInfo> listProcessDeploymenInfo = MilkPlugInToolbox.getListProcessDefinitionId(targetProcess, processAPI);
+                    SearchResult<ProcessDeploymentInfo> listProcessDeploymenInfo = MilkPlugInToolbox.getListProcessDefinitionId(targetProcess, FilterProcess.ONLYENABLED, processAPI);
                     if (listProcessDeploymenInfo.getCount() == 0)
                         listEvents.add(new BEvent(eventNoProcessMatchFilter, "ProcessName[" + targetProcess + "]"));
                     else {

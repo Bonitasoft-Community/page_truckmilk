@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.StringTokenizer;
 
 import org.bonitasoft.engine.api.ProcessAPI;
+import org.bonitasoft.engine.bpm.process.ActivationState;
 import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfo;
 import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfoSearchDescriptor;
 import org.bonitasoft.engine.exception.SearchException;
@@ -18,6 +19,7 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.DELAYSCOPE;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
@@ -77,7 +79,7 @@ public class MilkPlugInToolbox {
             for (int i=0;i<processParametersResult.listProcessNameVersion.size();i++) {
                   
                 String processNameVersion = processParametersResult.listProcessNameVersion.get( i );
-                SearchResult<ProcessDeploymentInfo> searchResult = getListProcessDefinitionId(processNameVersion, processAPI);
+                SearchResult<ProcessDeploymentInfo> searchResult = getListProcessDefinitionId(processNameVersion,  parameter.filterProcess, processAPI);
                 if (searchResult.getCount()==0)
                 {
                     processParametersResult.listEvents.add( new BEvent(eventNoProcessByTheFilter, "ProcessFilter["+processNameVersion+"]"));
@@ -114,7 +116,7 @@ public class MilkPlugInToolbox {
      * @return
      * @throws SearchException
      */
-    public static SearchResult<ProcessDeploymentInfo> getListProcessDefinitionId(String processNameVersion, ProcessAPI processAPI) throws SearchException {
+    public static SearchResult<ProcessDeploymentInfo> getListProcessDefinitionId(String processNameVersion, FilterProcess filterProcess, ProcessAPI processAPI) throws SearchException {
         if (processNameVersion==null)
             processNameVersion="";
         processNameVersion = processNameVersion.trim();
@@ -132,8 +134,14 @@ public class MilkPlugInToolbox {
         if (processVersionOnly != null) {
             searchOption.filter(ProcessDeploymentInfoSearchDescriptor.VERSION, processVersionOnly.trim());
         }
-        searchOption.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE, "ENABLED");
-
+        
+        if (filterProcess.equals(FilterProcess.ALL)) 
+        {} // no filter
+        else if (filterProcess.equals(FilterProcess.ONLYENABLED))
+                searchOption.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE, ActivationState.ENABLED.toString());
+        else if (filterProcess.equals(FilterProcess.ONLYDISABLED))
+                searchOption.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE, ActivationState.DISABLED.toString());
+        
         return processAPI.searchProcessDeploymentInfos(searchOption.done());
 
     }

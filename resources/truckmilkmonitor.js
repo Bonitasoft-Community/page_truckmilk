@@ -655,7 +655,7 @@
 			self.inprogress=true;
 			console.log("operationTour.query ["+queryName+"] on ["+textSearch+"] inprogress<=true");
 
-			var param={ 'userfilter' :  textSearch};
+			var param={ 'userfilter' :  textSearch, 'filterProcess':parameterDef.filterProcess};
 			
 			var json = encodeURI( angular.toJson( param, false));
 			// 7.6 : the server force a cache on all URL, so to bypass the

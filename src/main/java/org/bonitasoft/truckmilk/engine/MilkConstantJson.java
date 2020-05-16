@@ -106,7 +106,7 @@ public class MilkConstantJson {
 
     public final static String CSTJSON_PLUGIN_PARAMETERMANDATORY ="isMandatory";
     public final static String CSTJSON_PLUGIN_PARAMETERVISIBLECONDITION = "visibleCondition";
-
+    public final static String CSTJSON_PLUGIN_PARAMETERFILTERPROCESS="filterProcess";
 
     /* ******************************************************************************** */
     /*                                                                                  */

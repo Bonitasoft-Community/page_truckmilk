@@ -26,6 +26,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMeasurement;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
@@ -49,7 +50,10 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
     private static PlugInParameter cstParamOperation = PlugInParameter.createInstanceListValues("operation", "operation",
             new String[] { CSTOPERATION_GETLIST, CSTOPERATION_DELETE }, CSTOPERATION_GETLIST, "Detect the list of duplicate task or delete them");
 
-    private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Process Filter", TypeParameter.ARRAYPROCESSNAME, null, "Give a list of process name. Name must be exact, no version is given (all versions will be purged)").withMandatory(true);
+    private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Process Filter", TypeParameter.ARRAYPROCESSNAME, null, "Give a list of process name. Name must be exact, no version is given (all versions will be purged)")
+            .withMandatory(true)
+            .withFilterProcess(FilterProcess.ONLYENABLED);
+
 
     private final static PlugInMeasurement cstMesureTasksDeleted = PlugInMeasurement.createInstance("TasksDeleted", "Tasks deleted", "Number of task deleted");
     private final static PlugInMeasurement cstMesureTasksError = PlugInMeasurement.createInstance("TasksError", "Task deletion error", "Number of deletion error");
@@ -183,17 +187,17 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
                         Chronometer purgeTasksMarker = milkJobOutput.beginChronometer("purgeTask");
 
                         // add the tenantId
-                        executeQuery("update flownode_instance set STATECATEGORY='CANCELLING' where id=?", taskId, jobExecution.getTenantId(), con);
+                        executeQuery("update flownode_instance set STATECATEGORY='CANCELLING' where ID=? and TENANTID=?", taskId, jobExecution.getTenantId(), con);
                         con.commit();
                         
                         processAPI.setActivityStateByName(taskId, ActivityStates.CANCELLED_STATE);
                         
                         /*
-                        executeQuery("delete pending_mapping where activityid=?", taskId, con);
+                        executeQuery("delete pending_mapping where activityid=? and TENANTID=?", taskId, jobExecution.getTenantId(), con);
 
-                        executeQuery("delete data_instance where containerid=?", taskId, con);
+                        executeQuery("delete data_instance where containerid=? and TENANTID=?", taskId, jobExecution.getTenantId(), con);
 
-                        executeQuery("delete flownode_instance where id=?", taskId, con);
+                        executeQuery("delete flownode_instance where id=? and TENANTID=?", taskId, jobExecution.getTenantId(), con);
 
                         con.commit();
                         */

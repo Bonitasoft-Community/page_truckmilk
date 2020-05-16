@@ -28,6 +28,7 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
@@ -93,7 +94,8 @@ public class MilkCancelCases extends MilkPlugIn {
 
 
     private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Filter on process", TypeParameter.ARRAYPROCESSNAME, null, "Job manage only process which mach the filter. If no filter is given, all processes are inspected")            
-            .withVisibleCondition("milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_FROMLIST + "'");
+            .withVisibleCondition("milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_FROMLIST + "'")
+            .withFilterProcess(FilterProcess.ALL);
 
     private static PlugInParameter cstParamActionOnCases = PlugInParameter.createInstanceListValues("actiononcases", "Action on cases : cancellation or deletion",
             new String[] { CSTACTION_CANCELLATION, CSTACTION_DELETION }, CSTACTION_CANCELLATION, "Cases are cancelled or deleted");

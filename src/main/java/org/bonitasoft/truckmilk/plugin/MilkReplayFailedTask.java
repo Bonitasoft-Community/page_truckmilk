@@ -10,28 +10,27 @@ import org.bonitasoft.engine.bpm.comment.SearchCommentsDescriptor;
 import org.bonitasoft.engine.bpm.flownode.ActivityInstance;
 import org.bonitasoft.engine.bpm.flownode.ActivityInstanceSearchDescriptor;
 import org.bonitasoft.engine.bpm.flownode.ActivityStates;
-import org.bonitasoft.engine.bpm.process.ActivationState;
-import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfo;
-import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfoSearchDescriptor;
 import org.bonitasoft.engine.bpm.process.ProcessInstanceSearchDescriptor;
 import org.bonitasoft.engine.exception.SearchException;
 import org.bonitasoft.engine.search.Order;
 import org.bonitasoft.engine.search.SearchOptionsBuilder;
 import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
-import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkCmdControl;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
-import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
-import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
-import org.bonitasoft.truckmilk.engine.MilkJobOutput;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
-import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 
 public class MilkReplayFailedTask extends MilkPlugIn {
 
@@ -52,7 +51,8 @@ public class MilkReplayFailedTask extends MilkPlugIn {
     private static PlugInParameter cstParamDelay = PlugInParameter.createInstanceDelay("delay", "Delay", DELAYSCOPE.MN, 5, "Delay before asking to replay a failed task");
     private static PlugInParameter cstParamMaximumTentatives = PlugInParameter.createInstance("maxtentative", "Max tentatives", TypeParameter.LONG, 5, "Maximum tentative to replay a failed task. After this number of tentative, job will not try to replay it.");
     private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Process Filter", TypeParameter.ARRAYPROCESSNAME, null, "List of processes in the perimeter. If no filter is given, all processes are in the perimeter")
-            .withMandatory(true);
+            .withFilterProcess(FilterProcess.ONLYENABLED);
+
     private static PlugInParameter cstParamNumberOfTasks = PlugInParameter.createInstance("NumberOfTasks", "Number of tasks", TypeParameter.LONG, 1000, "Number of failed tasks detected, and replayed.");
     private static PlugInParameter cstParamOnlyDetection = PlugInParameter.createInstance("OnlyDetection", "Only Detection", TypeParameter.BOOLEAN, Boolean.FALSE, "Only detection, do not replay tasks");
     private static PlugInParameter cstParamTasksInReport = PlugInParameter.createInstance("TasksInReport", "Task and case in report", TypeParameter.BOOLEAN, Boolean.FALSE, "In the report, the list of Task/Case processed is saved");
@@ -81,8 +81,6 @@ public class MilkReplayFailedTask extends MilkPlugIn {
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         // get Input 
-        @SuppressWarnings("unchecked")
-
         Long maxTentatives = jobExecution.getInputLongParameter(cstParamMaximumTentatives);
         long retryFailed = 0;
         long retrySuccess = 0;
@@ -93,12 +91,10 @@ public class MilkReplayFailedTask extends MilkPlugIn {
 
         try {
 
-            List<Long> listProcessDefinitionId = new ArrayList<>();
-
             // Filter on process?
             SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, numberOfTasks == null ? 1000 : numberOfTasks.intValue());
 
-            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, true, searchActBuilder, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, jobExecution.getApiAccessor().getProcessAPI());
+            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, searchActBuilder, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, jobExecution.getApiAccessor().getProcessAPI());
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
                 plugTourOutput.addEvents(listProcessResult.listEvents);
@@ -129,22 +125,24 @@ public class MilkReplayFailedTask extends MilkPlugIn {
             Exception collectFirstException = null;
             for (ActivityInstance activityInstance : searchFailedActivityInstance.getResult()) {
                 try {
-                    String commentString = "PlugInMilk - reexecute  " + activityInstance.getName() + "(" + activityInstance.getParentContainerId() + ")";
+                    StringBuilder commentString = new StringBuilder();
+                    commentString.append("TruckMilk - reexecute[" + activityInstance.getName() + "], RootCaseId:" + activityInstance.getParentContainerId() + ", ");
                     // we need to first check how many time this activity was executed
                     long numberReexecution = 0;
                     SearchOptionsBuilder searchOptionCommentBuilder = new SearchOptionsBuilder(0, 1000);
                     searchOptionCommentBuilder.filter(SearchCommentsDescriptor.PROCESS_INSTANCE_ID, activityInstance.getParentProcessInstanceId());
                     SearchResult<Comment> searchComment = processAPI.searchComments(searchOptionCommentBuilder.done());
                     for (Comment comment : searchComment.getResult()) {
-                        if (comment.getContent().startsWith(commentString))
+                        if (comment.getContent().startsWith(commentString.toString()))
                             numberReexecution++;
                     }
+                    commentString.append( "Tentative: "+(numberReexecution+1) );
                     if (numberReexecution > maxTentatives) {
                         retrySkip++;
                     } else {
                         if ((onlyDetection != null) && Boolean.FALSE.equals(onlyDetection)) {
                             // add the comment
-                            processAPI.addProcessComment(activityInstance.getRootContainerId(), commentString);
+                            processAPI.addProcessComment(activityInstance.getRootContainerId(), commentString.toString());
                             processAPI.retryTask(activityInstance.getId());
                             listTasksCases.append(activityInstance.getId() + "/" + activityInstance.getRootContainerId() + ", ");
                             retrySuccess++;
@@ -181,16 +179,19 @@ public class MilkReplayFailedTask extends MilkPlugIn {
     @Override
     public MilkPlugInDescription getDefinitionDescription() {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
-        plugInDescription.setName( "ReplayFailedTask");
-        plugInDescription.setLabel( "Replay Failed Task");
-        plugInDescription.setExplanation( "Monitor all failed tasks. Then after a delay, replay them, if the number of tentative is not reach");
-        plugInDescription.setCategory( CATEGORY.TASKS);
+        plugInDescription.setName("ReplayFailedTask");
+        plugInDescription.setLabel("Replay Failed Task");
+        plugInDescription.setExplanation("Monitor all failed tasks. Then after a delay, replay them, if the number of tentative is not reach");
+        plugInDescription.setCategory(CATEGORY.TASKS);
         plugInDescription.addParameter(cstParamDelay);
         plugInDescription.addParameter(cstParamMaximumTentatives);
         plugInDescription.addParameter(cstParamProcessFilter);
         plugInDescription.addParameter(cstParamNumberOfTasks);
         plugInDescription.addParameter(cstParamOnlyDetection);
         plugInDescription.addParameter(cstParamTasksInReport);
+
+        plugInDescription.setJobCanBeStopped(JOBSTOPPER.BOTH);
+        
         return plugInDescription;
     }
 
