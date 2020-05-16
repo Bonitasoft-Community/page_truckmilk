@@ -56,7 +56,7 @@ public abstract class MilkPlugIn {
             "Error during plugin execution", "An error is detected", "No action executed.",
             "Check error");
 
-    private final static MilkLog logger = MilkLog.getLogger(MilkPlugIn.class.getName());
+    // private final static MilkLog logger = MilkLog.getLogger(MilkPlugIn.class.getName());
 
 
 
@@ -107,7 +107,7 @@ public abstract class MilkPlugIn {
      */
     public TYPE_PLUGIN getTypePlugin() {
         return typePlugIn;
-    };
+    }
 
     /**
      * check the PLUG IN environment, not the MilkJob environment
@@ -212,6 +212,11 @@ public abstract class MilkPlugIn {
         public boolean isMandatory= false;
         public String visibleCondition=null;
         
+        
+        public enum FilterProcess { ALL, ONLYENABLED, ONLYDISABLED }
+        public FilterProcess filterProcess;
+
+
         // a button have args : give it the number of args 
         public String buttonDescription;
         public List<String> argsName;
@@ -266,7 +271,16 @@ public abstract class MilkPlugIn {
             return this;
         }
         
-       
+        /**
+         * Default : only activated process
+         * @param withActivated
+         * @param withDeactived
+         * @return
+         */
+        public PlugInParameter withFilterProcess(FilterProcess filterOnProcess) {
+            this.filterProcess = filterOnProcess;
+            return this;
+        }
         public static PlugInParameter createInstanceArrayMap(String name, String label, List<ColDefinition> arrayMapDefinition, Object defaultValue, String explanation) {
             PlugInParameter plugInParameter = new PlugInParameter();
             plugInParameter.name = name;
@@ -350,6 +364,7 @@ public abstract class MilkPlugIn {
             map.put(MilkConstantJson.CSTJSON_PLUGIN_PARAMETERLABEL, label);
             map.put(MilkConstantJson.CSTJSON_PLUGIN_PARAMETERMANDATORY, isMandatory);
             map.put(MilkConstantJson.CSTJSON_PLUGIN_PARAMETERVISIBLECONDITION, visibleCondition);
+            map.put(MilkConstantJson.CSTJSON_PLUGIN_PARAMETERFILTERPROCESS, filterProcess==null ? "" : filterProcess.toString());
             
             map.put("type", typeParameter.toString());
             if (arrayMapDescription != null) {
