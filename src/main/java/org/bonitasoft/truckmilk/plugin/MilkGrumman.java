@@ -102,7 +102,7 @@ public class MilkGrumman extends MilkPlugIn {
         logger.fine("MilkGrumman: onlyDetection:["+onlyDetection+"] reconciliationIncomplete:["+reconciliationIncomplete+"] reconciliationComplete:["+reconciliationComplete+"]");
         
         try {
-            GrummanAPI grummanAPI = new GrummanAPI( jobExecution.getApiAccessor().getProcessAPI());
+            GrummanAPI grummanAPI = new GrummanAPI( jobExecution.getApiAccessor().getProcessAPI(), jobExecution.getTenantId());
 
             SynthesisOnMessage synthesis = grummanAPI.getSynthesisMessage();
              StringBuilder synthesisSt = new StringBuilder();
@@ -114,7 +114,7 @@ public class MilkGrumman extends MilkPlugIn {
              // detection             
              ReconcialiationFilter reconciliationFilter = new ReconcialiationFilter( TYPEFILTER.MAXMESSAGES);
              reconciliationFilter.numberOfMessages = (int) numberOfMessages;
-             ResultMessageOperation resultMessageOperation= grummanAPI.getIncompleteReconciliationMessage(reconciliationFilter, jobExecution.getApiAccessor().getProcessAPI());
+             ResultMessageOperation resultMessageOperation= grummanAPI.getIncompleteReconciliationMessage(reconciliationFilter);
              
              StringBuilder resultSynthesisSt = new StringBuilder();
              resultSynthesisSt.append( "Nb of messages detected: "+resultMessageOperation.getListMessages().size()+", ");
@@ -137,7 +137,7 @@ public class MilkGrumman extends MilkPlugIn {
              messagesList.setSendincomplete( reconciliationIncomplete );
              messagesList.setExecutecomplete( reconciliationComplete );
 
-             ResultExecution resultExecution = grummanAPI.executeReconcialiationMessage( messagesList, jobExecution.getApiAccessor().getProcessAPI());
+             ResultExecution resultExecution = grummanAPI.executeReconcialiationMessage( messagesList);
              StringBuilder resultExecutionSt = new StringBuilder();
              resultSynthesisSt.append( "Nb Messages corrected: "+resultExecution.getNbMessagesCorrects()+", ");
              if (resultExecution.getNbMessagesErrors()>0)
