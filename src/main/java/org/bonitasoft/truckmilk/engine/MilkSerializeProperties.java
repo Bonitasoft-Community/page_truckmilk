@@ -13,6 +13,7 @@ import org.bonitasoft.properties.BonitaProperties;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
+import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJob.MapContentParameter;
 import org.bonitasoft.truckmilk.schedule.MilkScheduleQuartz;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerFactory;
@@ -53,7 +54,7 @@ public class MilkSerializeProperties {
 
     public MilkSerializeProperties(MilkJobFactory milkPlugInTourFactory) {
         this.milkJobFactory = milkPlugInTourFactory;
-        bonitaProperties = new BonitaProperties(BONITAPROPERTIESNAME, milkPlugInTourFactory.getTenantId());
+        bonitaProperties = new BonitaProperties(BONITAPROPERTIESNAME, milkPlugInTourFactory.getMilkJobContext().getTenantId());
         bonitaProperties.setLogLevel(java.util.logging.Level.FINE);
 
     }
@@ -227,14 +228,14 @@ public class MilkSerializeProperties {
         return milkJob;
     }
 
-    public List<BEvent> dbSaveAllJobs() {
+    public List<BEvent> dbSaveAllJobs(MilkJobContext milkJobContext) {
         List<BEvent> listEvents = new ArrayList<>();
         bonitaProperties.setCheckDatabase(false);
         logger.info(".dbSaveAllJobs-begin ***");
 
         listEvents.addAll(bonitaProperties.loaddomainName(BONITAPROPERTIESDOMAIN));
         for (MilkJob milkJob : milkJobFactory.getMapJobsId().values()) {
-            dbSaveMilkJob(milkJob, SerializationJobParameters.getInstanceAllInformations());
+            dbSaveMilkJob(milkJob, milkJobContext, SerializationJobParameters.getInstanceAllInformations());
         }
         logger.info(".dbSaveAllJobs-end");
 
@@ -342,7 +343,7 @@ public class MilkSerializeProperties {
 
     //  public static String prefixPropertiesTrackStream = "_stream";
 
-    public List<BEvent> dbSaveMilkJob(MilkJob milkJob, SerializationJobParameters saveParameters) {
+    public List<BEvent> dbSaveMilkJob(MilkJob milkJob, MilkJobContext milkJobContext, SerializationJobParameters saveParameters) {
         List<BEvent> listEvents = new ArrayList<>();
 
         bonitaProperties.setCheckDatabase(false);
@@ -356,7 +357,7 @@ public class MilkSerializeProperties {
             mapContentParameter.savedExecution = false;
             mapContentParameter.trackExecution = false;
 
-            bonitaProperties.put(String.valueOf(milkJob.getId()) + CSTPREFIXPROPERTIES_BASE, getJsonSt( milkJob.getMap(mapContentParameter)));
+            bonitaProperties.put(String.valueOf(milkJob.getId()) + CSTPREFIXPROPERTIES_BASE, getJsonSt( milkJob.getMap(mapContentParameter, milkJobContext)));
             listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_BASE);
         }
         if (saveParameters.askStop) {

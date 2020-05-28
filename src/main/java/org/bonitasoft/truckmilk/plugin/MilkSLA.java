@@ -60,6 +60,7 @@ import org.bonitasoft.truckmilk.toolbox.SendMailParameters;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 import org.json.simple.JSONValue;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
+import org.bonitasoft.truckmilk.job.MilkJobContext;
 public class MilkSLA extends MilkPlugIn {
 
     static MilkLog logger = MilkLog.getLogger(MilkSLA.class.getName());
@@ -320,14 +321,14 @@ public class MilkSLA extends MilkPlugIn {
     /**
      * check the environment : for the milkEmailUsersTasks, we require to be able to send an email
      */
-    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
-        return SendMailEnvironment.checkEnvironment(jobExecution, this);
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution milkJobExecution) {
+        return SendMailEnvironment.checkEnvironment(milkJobExecution, this);
     };
 
     /**
      * check the Job's environment
      */
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution milkJobExecution) {
         return new ArrayList<>();
     };
 
@@ -347,7 +348,7 @@ public class MilkSLA extends MilkPlugIn {
     }
 
     @Override
-    public MilkPlugInDescription getDefinitionDescription() {
+    public MilkPlugInDescription getDefinitionDescription(MilkJobContext milkJobContext) {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
         plugInDescription.setName("SLA"); 
         plugInDescription.setLabel( "SLA" );

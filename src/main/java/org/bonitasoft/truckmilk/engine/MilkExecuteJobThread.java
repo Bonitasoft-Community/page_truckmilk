@@ -15,11 +15,13 @@ import org.bonitasoft.engine.connector.ConnectorAPIAccessorImpl;
 import org.bonitasoft.engine.service.TenantServiceAccessor;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory.MilkFactoryOp;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJob.SavedExecution;
 import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
+import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
@@ -45,13 +47,12 @@ public class MilkExecuteJobThread extends Thread {
 
     private MilkJob milkJob;
     private Date tagTheDate;
-    private APIAccessor apiAccessor;
-    private TenantServiceAccessor tenantServiceAccessor;
+    private MilkJobContext milkJobContext;
     
-    protected MilkExecuteJobThread(MilkJob milkJob, APIAccessor apiAccessor, TenantServiceAccessor tenantServiceAccessor) {
+    
+    protected MilkExecuteJobThread(MilkJob milkJob, MilkJobContext milkJobContext) {
         this.milkJob = milkJob;
-        this.apiAccessor = apiAccessor;
-        this.tenantServiceAccessor = tenantServiceAccessor;
+        this.milkJobContext = milkJobContext;
     }
 
     /**
@@ -172,7 +173,7 @@ public class MilkExecuteJobThread extends Thread {
                 logger.severe("MilkExecuteJobThread: can't get the ipAddress, synchronization on a cluster can't work");
             }
             // execute it!
-            MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob, milkJobFactory.getTenantId(), apiAccessor, tenantServiceAccessor );
+            MilkJobExecution milkJobExecution = new MilkJobExecution(milkJob, milkJobContext );
 
             // ----------------- Execution
             long timeBegin = System.currentTimeMillis();
@@ -207,6 +208,25 @@ public class MilkExecuteJobThread extends Thread {
                     }
                     milkJobOutput.addReportEndTable();
                     
+                } else {
+                    // a Report HTML exist, so complete it by errors if there are
+                    if (BEventFactory.isError(milkJobOutput.getListEvents())) {
+                        milkJobOutput.addReportTable( null);
+                        for (BEvent event : milkJobOutput.getListEvents()) {
+                            
+                            if (! event.isError())
+                                continue;
+                            String title = null;
+                            
+                            if (event.getLevel() == Level.CRITICAL || event.getLevel() == Level.ERROR) {
+                                title="<div class=\"label label-danger\" style=\"color:white;\">"+event.getTitle()+"</div>";
+                            } else { 
+                                title="<div class=\"label label-warning\" style=\"color:white;\" >"+event.getTitle()+"</div>";
+                            }
+                            milkJobOutput.addReportLine( new String[] { title,event.getParameters()});
+                        }
+                        milkJobOutput.addReportEndTable();
+                    }
                 }
                 milkJobOutput.hostName = hostName;
                 StringBuilder listEventsSt = new StringBuilder();

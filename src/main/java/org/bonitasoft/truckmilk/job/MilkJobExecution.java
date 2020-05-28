@@ -35,25 +35,19 @@ public class MilkJobExecution {
     /**
      * tenant where the job is running
      */
-    private long tenantId;
-    private APIAccessor apiAccessor;
-    private TenantServiceAccessor tenantServiceAccessor;
-
-    public MilkJobExecution(long tenantId, APIAccessor apiAccessor, TenantServiceAccessor tenantServiceAccessor) {
+    MilkJobContext milkJobContext;
+    
+    public MilkJobExecution(MilkJobContext milkJobContext) {
         this.milkJob = null;
         this.jobParameters = null;
-        this.tenantId = tenantId;
-        this.apiAccessor = apiAccessor;
-        this.tenantServiceAccessor = tenantServiceAccessor;
+        this.milkJobContext = milkJobContext;
     }
 
-    public MilkJobExecution(MilkJob milkJob, long tenantId, APIAccessor apiAccessor, TenantServiceAccessor tenantServiceAccessor) {
+    public MilkJobExecution(MilkJob milkJob, MilkJobContext milkJobContext) {
         this.milkJob = milkJob;
         this.jobParameters = milkJob.getJobParameters();
 
-        this.tenantId = tenantId;
-        this.apiAccessor = apiAccessor;
-        this.tenantServiceAccessor = tenantServiceAccessor;
+        this.milkJobContext = milkJobContext;
  
         if ( milkJob.getPlugIn().getDescription().isJobCanBeStopByMaxMinutes()) {
             if (milkJob.getStopAfterMaxMinutes() > 0)
@@ -171,15 +165,18 @@ public class MilkJobExecution {
      * getter 
      * 
      */
+    public MilkJobContext getMilkJobContext() {
+        return milkJobContext;
+    }
     public long getTenantId() {
-        return tenantId;
+        return milkJobContext.getTenantId();
     }
     public APIAccessor getApiAccessor() {
-        return apiAccessor;
+        return milkJobContext.getApiAccessor();
     }
     
     public TenantServiceAccessor getTenantServiceAccessor() {
-        return tenantServiceAccessor;
+        return milkJobContext.getTenantServiceAccessor();
     }
 
     /* ******************************************************************************** */

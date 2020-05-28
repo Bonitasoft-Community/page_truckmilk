@@ -7,6 +7,7 @@ import java.util.Date;
 
 import org.bonitasoft.engine.service.TenantServiceAccessor;
 import org.bonitasoft.truckmilk.job.MilkJob;
+import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerFactory;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
@@ -32,7 +33,7 @@ public class MilkHeartBeat {
 
     
     // to avoid any transaction issue in the command (a transaction is maybe opennend by the engine, and then the processAPI usage is forbiden), let's create a thread
-    public void executeOneTimeNewThread(MilkCmdControl milkCmdControl, boolean forceBeat, long tenantId) {
+    public void executeOneTimeNewThread(MilkCmdControl milkCmdControl, boolean forceBeat, MilkJobContext milkJobContext) {
         synchronized (synchronizeHeart) {
             // protection : does not start a new Thread if the current one is not finish (no two Hearthread in the same time)
             if (synchronizeHeart.heartBeatInProgress) {
@@ -49,7 +50,7 @@ public class MilkHeartBeat {
         }
         // the end will be done by the tread
 
-        MyTruckMilkHeartBeatThread mythread = new MyTruckMilkHeartBeatThread(this, milkCmdControl, tenantId);
+        MyTruckMilkHeartBeatThread mythread = new MyTruckMilkHeartBeatThread(this, milkCmdControl, milkJobContext);
         mythread.start();
     }
 
@@ -74,18 +75,19 @@ public class MilkHeartBeat {
     private class MyTruckMilkHeartBeatThread extends Thread {
         private MilkCmdControl milkCmdControl;
         private MilkHeartBeat milkHeartBeat;
-        private long tenantId;
+        private MilkJobContext milkJobContext;
 
-        protected MyTruckMilkHeartBeatThread(MilkHeartBeat milkHeartBeat, MilkCmdControl milkCmdControl, long tenantId) {
+
+        protected MyTruckMilkHeartBeatThread(MilkHeartBeat milkHeartBeat, MilkCmdControl milkCmdControl, MilkJobContext milkJobContext) {
             this.milkCmdControl = milkCmdControl;
             this.milkHeartBeat = milkHeartBeat;
-            this.tenantId = tenantId;
+            this.milkJobContext = milkJobContext;
         }
 
         @Override
         public void run() {
             // New thread : create the new object
-            MilkPlugInFactory milkPlugInFactory = MilkPlugInFactory.getInstance(tenantId);
+            MilkPlugInFactory milkPlugInFactory = MilkPlugInFactory.getInstance(milkJobContext);
             // the getInstance reload everything from the database
             MilkJobFactory milkJobFactory = MilkJobFactory.getInstance(milkPlugInFactory);
             MilkSchedulerFactory milkSchedulerFactory = MilkSchedulerFactory.getInstance();
@@ -118,14 +120,16 @@ public class MilkHeartBeat {
             thisThreadId = synchronizeThreadId.countThreadId;
 
         }
-        long tenantId = milkJobFactory.getMilkPlugInFactory().getTenantId();
+        // Recreate a new job context here, with the local apiAccessor and TenantServiceAccessor
+        MilkJobContext milkJobContext= new MilkJobContext(milkJobFactory.getMilkPlugInFactory().getMilkJobContext().getTenantId(), milkCmdControl.getApiAccessor(), milkCmdControl.getTenantServiceAccessor());
+        
         // Advance the scheduler that we run now !
-        milkSchedulerFactory.informRunInProgress(tenantId);
+        milkSchedulerFactory.informRunInProgress(milkJobContext.getTenantId());
 
         // MilkPlugInFactory milkPlugInFactory = milkJobFactory.getMilkPlugInFactory();
         // maybe this is the first call after a restart ? 
         if ( ! milkCmdControl.isInitialized()) {
-            milkCmdControl.initialization(false, false, tenantId, milkJobFactory);
+            milkCmdControl.initialization(false, false, milkJobContext.getTenantId(), milkJobFactory);
         }
 
         long timeBeginHearth = System.currentTimeMillis();
@@ -144,8 +148,8 @@ public class MilkHeartBeat {
         try {
             // check all the Job now
             for (MilkJob milkJob : milkJobFactory.getListJobs()) {
-
-                MilkExecuteJobThread milkExecuteJobThread = new MilkExecuteJobThread(milkJob, milkCmdControl.getApiAccessor(), milkCmdControl.getTenantServiceAccessor());
+                
+                MilkExecuteJobThread milkExecuteJobThread = new MilkExecuteJobThread(milkJob, milkJobContext);
 
                 executionDescription.append( milkExecuteJobThread.checkAndStart(currentDate)+"<br>");
             }
@@ -163,7 +167,7 @@ public class MilkHeartBeat {
         // logger.info("MickCmdControl.beathearth #" + thisThreadId + " : Start at " + sdf.format(currentDate) + ", End in " + (timeEndHearth - timeBeginHearth) + " ms on [" + (ip == null ? "" : ip.getHostAddress()) + "] " + executionDescription);
         MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
         milkReportEngine.reportHeartBeatInformation(executionDescription.toString(),true);
-        milkSchedulerFactory.savedScheduler(tenantId);
+        milkSchedulerFactory.savedScheduler(milkJobContext.getTenantId());
     }
     
 

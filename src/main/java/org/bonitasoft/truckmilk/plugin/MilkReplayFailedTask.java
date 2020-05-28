@@ -29,6 +29,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
+import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
@@ -64,14 +65,14 @@ public class MilkReplayFailedTask extends MilkPlugIn {
     /**
      * check the environment : for the milkEmailUsersTasks, we require to be able to send an email
      */
-    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution milkJobExecution) {
         return new ArrayList<>();
     }
 
     /**
      * check the Job's environment
      */
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution milkJobExecution) {
         return new ArrayList<>();
     }
 
@@ -177,7 +178,7 @@ public class MilkReplayFailedTask extends MilkPlugIn {
     }
 
     @Override
-    public MilkPlugInDescription getDefinitionDescription() {
+    public MilkPlugInDescription getDefinitionDescription(MilkJobContext milkJobContext) {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
         plugInDescription.setName("ReplayFailedTask");
         plugInDescription.setLabel("Replay Failed Task");

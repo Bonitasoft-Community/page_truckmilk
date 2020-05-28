@@ -14,6 +14,7 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkCmdControl;
 import org.bonitasoft.truckmilk.engine.MilkHeartBeat;
 import org.bonitasoft.truckmilk.engine.MilkReportEngine;
+import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 public class MilkScheduleThreadSleep extends MilkSchedulerInt {
@@ -114,7 +115,7 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
 
             // already register ? 
             synchronized (listSchedulerThread) {
-                SchedulerThread sch = getSchedulerThread(tenantId);
+                SchedulerThread sch = getSchedulerThread( tenantId);
                 if (sch != null) {
                     if (forceReset) {
                         if (sch.status == TypeStatus.STARTED)
@@ -127,7 +128,7 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
                 }
 
                 // Create a new thread in any case : a thread can be start only one time
-                sch = new SchedulerThread(tenantId);
+                sch = new SchedulerThread( tenantId );
                 listSchedulerThread.add(sch);
                 sch.start();
                 listEvents.add(eventSchedulerStarted);
@@ -260,8 +261,8 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
                     // so 
                     // -  Any initialisation is already done (first call the command is called)
                     // -  Command start the thread, so the thread is correctly directly on the server side
-
-                    milkHeartBeat.executeOneTimeNewThread(milkCmdControl, false, tenantId);
+                    MilkJobContext milkJobContext = new MilkJobContext(tenantId, null, null);
+                    milkHeartBeat.executeOneTimeNewThread(milkCmdControl, false, milkJobContext);
                     nextHeartBeat = new Date(System.currentTimeMillis() + 60000);
                     Thread.sleep(60000);
                 } catch (InterruptedException e) {

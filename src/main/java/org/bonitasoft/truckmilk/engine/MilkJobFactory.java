@@ -10,6 +10,7 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
+import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 
 public class MilkJobFactory {
@@ -28,7 +29,7 @@ public class MilkJobFactory {
 
     // private static MilkPlugInTourFactory milkPlugInTourFactory = new MilkPlugInTourFactory();
     private MilkPlugInFactory milkPlugInFactory = null;
-    private List<BEvent> listInitialiseEvent = new ArrayList<BEvent>();
+    private List<BEvent> listInitialiseEvent = new ArrayList<>();
 
     /**
      * this class is in charge to load/save tour
@@ -64,8 +65,8 @@ public class MilkJobFactory {
         return listInitialiseEvent;
     }
 
-    public long getTenantId() {
-        return milkPlugInFactory.getTenantId();
+    public  MilkJobContext getMilkJobContext() {
+        return milkPlugInFactory.getMilkJobContext();
     }
 
     /**
@@ -199,7 +200,7 @@ public class MilkJobFactory {
      * @param tenantId
      * @return
      */
-    public List<BEvent> checkAndUpdateEnvironment(long tenantId) {
+    public List<BEvent> checkAndUpdateEnvironment( MilkJobContext milkJobContext) {
         return milkSerialize.checkAndUpdateEnvironment();
     }
 
@@ -229,7 +230,7 @@ public class MilkJobFactory {
      * @return
      */
     public List<BEvent> dbSaveAllJobs() {
-        return milkSerialize.dbSaveAllJobs();
+        return milkSerialize.dbSaveAllJobs( getMilkJobContext());
     }
 
     /**
@@ -282,7 +283,7 @@ public class MilkJobFactory {
      * @return
      */
     public List<BEvent> dbSaveJob(MilkJob job, SerializationJobParameters saveParameters) {
-        return milkSerialize.dbSaveMilkJob(job, saveParameters);
+        return milkSerialize.dbSaveMilkJob(job, getMilkJobContext(), saveParameters);
     }
 
     /**

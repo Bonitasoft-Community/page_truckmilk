@@ -91,6 +91,7 @@ public class Index implements PageController {
     public void doGet(HttpServletRequest request, HttpServletResponse response, PageResourceProvider pageResourceProvider, PageContext pageContext) {
         
         try {
+            long beginTimeIndex = System.currentTimeMillis();
             String requestParamJson= request.getParameter("paramjson");
             String requestParamJsonSt ="";
             try
@@ -132,10 +133,12 @@ public class Index implements PageController {
                 
                 PrintWriter out = response.getWriter();
                 String jsonSt;
-                if (actionAnswer.responseMap.size()>0)
+                if (actionAnswer.responseMap.size()>0) {
+                    actionAnswer.responseMap.put("calculinms", System.currentTimeMillis() - beginTimeIndex);
                      jsonSt= JSONValue.toJSONString( actionAnswer.responseMap );
-                else
+                } else {
                     jsonSt= actionAnswer.responseJsonSt ;
+                }
                 out.write( jsonSt );
                 loggerCustomPage.fine("#### "+pageName+": return json["+jsonSt+"]" );
                 out.flush();

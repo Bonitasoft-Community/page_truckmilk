@@ -28,6 +28,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
+import org.bonitasoft.truckmilk.job.MilkJobContext;
 /* ******************************************************************************** */
 /*                                                                                  */
 /* MilkUnassignTasks */
@@ -69,14 +70,14 @@ public class MilkUnassignTasks extends MilkPlugIn {
      * @return a list of Events.
      */
     @Override
-    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution milkJobExecution) {
         return new ArrayList<>();
     }
 
     /**
      * check the Job's environment
      */
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution milkJobExecution) {
         return new ArrayList<>();
     }
 
@@ -84,7 +85,7 @@ public class MilkUnassignTasks extends MilkPlugIn {
      * return the description of ping job
      */
     @Override
-    public MilkPlugInDescription getDefinitionDescription() {
+    public MilkPlugInDescription getDefinitionDescription(MilkJobContext milkJobContext) {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
 
         plugInDescription.setName( "Unassign Tasks" );

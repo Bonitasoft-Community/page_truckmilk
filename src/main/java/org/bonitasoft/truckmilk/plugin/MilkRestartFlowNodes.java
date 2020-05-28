@@ -20,6 +20,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
+import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
@@ -55,17 +56,17 @@ public class MilkRestartFlowNodes  extends MilkPlugIn {
 
 
     @Override
-    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution milkJobExecution) {
         return new ArrayList<>();
     }
 
     @Override
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution milkJobExecution) {
         return new ArrayList<>();
     }
 
     @Override
-    public MilkPlugInDescription getDefinitionDescription() {
+    public MilkPlugInDescription getDefinitionDescription(MilkJobContext milkJobContext) {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
         plugInDescription.setName( "ReplayFlowNodes");
         plugInDescription.setLabel( "Replay (Stuck) Flow Nodes");

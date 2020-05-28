@@ -34,6 +34,7 @@ import org.bonitasoft.truckmilk.toolbox.SendMail;
 import org.bonitasoft.truckmilk.toolbox.SendMailEnvironment;
 import org.bonitasoft.truckmilk.toolbox.SendMailParameters;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
+import org.bonitasoft.truckmilk.job.MilkJobContext;
 
 public class MilkEmailUsersTasks extends MilkPlugIn {
 
@@ -69,20 +70,20 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
     /**
      * check the plugin environment : for the milkEmailUsersTasks, we require to be able to send an email
      */
-    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
-        return SendMailEnvironment.checkEnvironment(jobExecution, this);
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution milkJobExecution) {
+        return SendMailEnvironment.checkEnvironment(milkJobExecution, this);
     };
 
     /**
      * check the Job's environment
      */
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution milkJobExecution) {
         List<BEvent> listEvents = new ArrayList<>();
         return listEvents;
     };
 
     @Override
-    public MilkPlugInDescription getDefinitionDescription() {
+    public MilkPlugInDescription getDefinitionDescription(MilkJobContext milkJobContext) {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
         plugInDescription.setName( "EmailUsersTasks");
         plugInDescription.setLabel( "Emails users tasks");

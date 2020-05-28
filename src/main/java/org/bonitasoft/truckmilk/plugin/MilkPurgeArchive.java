@@ -3,9 +3,15 @@ package org.bonitasoft.truckmilk.plugin;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -28,6 +34,11 @@ import org.bonitasoft.engine.search.SearchOptionsBuilder;
 import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.properties.BonitaEngineConnection;
+import org.bonitasoft.radar.archive.RadarCleanArchivedDross;
+import org.bonitasoft.radar.archive.RadarCleanArchivedDross.DrossExecution;
+import org.bonitasoft.radar.archive.RadarCleanArchivedDross.TypeDross;
+import org.bonitasoft.radar.workers.RadarWorkers;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput.Chronometer;
@@ -42,6 +53,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
+import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.CSVOperation;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
@@ -53,10 +65,8 @@ public class MilkPurgeArchive extends MilkPlugIn {
     static Logger logger = Logger.getLogger(MilkPurgeArchive.class.getName());
     private final static String LOGGER_LABEL = "MilkPurgeArchive ";
 
-    
-    public final static String CST_PLUGIN_NAME= "PurgeArchivedCase";
-    
-    
+    public final static String CST_PLUGIN_NAME = "PurgeArchivedCase";
+
     private final static String CSTOPERATION_GETLIST = "Get List (No operation)";
     private final static String CSTOPERATION_DIRECT = "Purge";
     private final static String CSTOPERATION_FROMLIST = "Purge from the CSV list";
@@ -81,16 +91,24 @@ public class MilkPurgeArchive extends MilkPlugIn {
     private static BEvent eventReportError = new BEvent(MilkPurgeArchive.class.getName(), 7, Level.APPLICATIONERROR,
             "Error in source file", "The source file is not correct", "Check the source file, caseid is expected inside", "Check the error");
 
+    private final static BEvent eventErrorExecutionQuery = new BEvent(MilkPurgeArchive.class.getName(), 8,
+            Level.ERROR,
+            "Error during the SqlQuery", "The SQL Query to detect a stuck flow node failed", "No stick flow nodes can be detected",
+            "Check exception");
+
     private static PlugInParameter cstParamOperation = PlugInParameter.createInstanceListValues("operation", "operation: Build a list of cases to operate, do directly the operation, or do the operation from a list",
             new String[] { CSTOPERATION_GETLIST, CSTOPERATION_DIRECT, CSTOPERATION_FROMLIST }, CSTOPERATION_DIRECT, "Result is a purge, or build a list, or used the uploaded list");
 
-    private static PlugInParameter cstParamDelay = PlugInParameter.createInstanceDelay("delayinday", "Delay", DELAYSCOPE.MONTH,3, "The case must be older than this number, in days. 0 means all archived case is immediately in the perimeter")
+    private static PlugInParameter cstParamDelay = PlugInParameter.createInstanceDelay("delayinday", "Delay", DELAYSCOPE.MONTH, 3, "The case must be older than this number, in days. 0 means all archived case is immediately in the perimeter")
             .withMandatory(true)
             .withVisibleCondition("milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_FROMLIST + "'");
 
-    private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Process Filter", TypeParameter.ARRAYPROCESSNAME, null, "Give a list of process name. Name must be exact, no version is given (all versions will be purged)")            
+    private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Process Filter", TypeParameter.ARRAYPROCESSNAME, null, "Give a list of process name. Name must be exact, no version is given (all versions will be purged)")
             .withVisibleCondition("milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_FROMLIST + "'")
             .withFilterProcess(FilterProcess.ALL);
+
+    private static PlugInParameter cstParamOperationOnSubProcess = PlugInParameter.createInstance("subprocess", "Partial SubProcess purge", TypeParameter.BOOLEAN, Boolean.FALSE, "When setted, the sub process information will be purge, but not the root case. For example, you have a process FUNDTRANSFERT, call in a EXPENSE process. Reference the process FUNDTRANSFERT and check this option. Sub process information on FUNDTRANSFERT will be purged, but not EXPENSE")
+            .withVisibleCondition("milkJob.parametersvalue[ 'processfilter' ].length > 0");
 
     private static PlugInParameter cstParamSeparatorCSV = PlugInParameter.createInstance("separatorCSV", "Separator CSV", TypeParameter.STRING, ",", "CSV use a separator. May be ; or ,").withVisibleCondition("milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_DIRECT + "'");
 
@@ -104,44 +122,42 @@ public class MilkPurgeArchive extends MilkPlugIn {
         super(TYPE_PLUGIN.EMBEDED);
     }
 
-    
     @Override
-    public ReplacementPlugIn getReplacement( String plugInName, Map<String,Object> parameters) {
+    public ReplacementPlugIn getReplacement(String plugInName, Map<String, Object> parameters) {
 
-        if ("ListPurgeCase".equals(plugInName))  {
+        if ("ListPurgeCase".equals(plugInName)) {
             ReplacementPlugIn replacementPlugIn = new ReplacementPlugIn(this, parameters);
             replacementPlugIn.parameters.put(cstParamOperation.name, CSTOPERATION_GETLIST);
             return replacementPlugIn;
         }
-        if ("PurgeCaseFromList".equals(plugInName))  {
+        if ("PurgeCaseFromList".equals(plugInName)) {
             ReplacementPlugIn replacementPlugIn = new ReplacementPlugIn(this, parameters);
             replacementPlugIn.parameters.put(cstParamOperation.name, CSTOPERATION_FROMLIST);
             return replacementPlugIn;
-        }            
-        
+        }
+
         return null;
 
     }
-    
-    
+
     /**
      * check the environment : for the milkEmailUsersTasks, we require to be able to send an email
      */
-    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution milkJobExecution) {
         return new ArrayList<>();
     }
 
     /**
      * check the Job's environment
      */
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution milkJobExecution) {
         return new ArrayList<>();
     }
 
     @Override
-    public MilkPlugInDescription getDefinitionDescription() {
+    public MilkPlugInDescription getDefinitionDescription(MilkJobContext milkJobContext) {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
-        plugInDescription.setName( CST_PLUGIN_NAME );
+        plugInDescription.setName(CST_PLUGIN_NAME);
         plugInDescription.setLabel("Purge Archived Case");
         plugInDescription.setCategory(CATEGORY.CASES);
         plugInDescription.setExplanation("3 operations: PURGE/ GET LIST / PURGE FROM LIST. Purge (or get the list of) archived case according the filter. Filter based on different process, and purge cases older than the delai. At each round with Purge / Purge From list, a maximum case are deleted. If the maximum is over than 100000, it's reduce to this limit.");
@@ -149,6 +165,8 @@ public class MilkPurgeArchive extends MilkPlugIn {
         plugInDescription.addParameter(cstParamOperation);
         plugInDescription.addParameter(cstParamDelay);
         plugInDescription.addParameter(cstParamProcessFilter);
+        plugInDescription.addParameter(cstParamOperationOnSubProcess);
+
         plugInDescription.addParameter(cstParamSeparatorCSV);
         plugInDescription.addParameter(cstParamListOfCasesDocument);
 
@@ -170,7 +188,6 @@ public class MilkPurgeArchive extends MilkPlugIn {
             return getList(jobExecution);
         else if (CSTOPERATION_FROMLIST.equals(operation))
             return fromList(jobExecution);
-
 
         MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
         milkJobOutput.addEvent(new BEvent(eventUnknowOperation, "Operation[" + operation + "]"));
@@ -197,7 +214,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
         SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, (int) maximumArchiveDeletionPerRound + 1);
 
         try {
-            
+
             // List of process ENABLE AND DISABLE
             ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, searchActBuilder, ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, jobExecution.getApiAccessor().getProcessAPI());
 
@@ -207,8 +224,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
                 milkJobOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
                 return milkJobOutput;
             }
-            
-            
+
             // Delay
             DelayResult delayResult = MilkPlugInToolbox.getTimeFromDelay(jobExecution, cstParamDelay, new Date(), false);
             if (BEventFactory.isError(delayResult.listEvents)) {
@@ -219,7 +235,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
             if (delayResult.delayInMs == 0) {
                 purgeArchiveNoDelay(listProcessResult, jobExecution, milkJobOutput);
             } else {
-                
+
                 purgeArchivesWithDelay(listProcessResult, delayResult, jobExecution, searchActBuilder, milkJobOutput);
             }
             if (milkJobOutput.nbItemsProcessed == 0 && milkJobOutput.executionStatus == ExecutionStatus.SUCCESS)
@@ -262,7 +278,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
         // default value is 1 Million
         if (maximumArchiveDeletionPerRound == null || maximumArchiveDeletionPerRound.equals(MilkJob.CSTDEFAULT_STOPAFTER_MAXITEMS))
             maximumArchiveDeletionPerRound = 1000000;
-        int totalNumberCaseDeleted = 0;
+        milkJobOutput.nbItemsProcessed = 0;
         String currentProcessToLog = "";
         List<ProcessDeploymentInfo> listProcesses = listProcessResult.listProcessDeploymentInfo;
         // base on the original filter : the filter can be set by no process found (process deleted)
@@ -271,11 +287,11 @@ public class MilkPurgeArchive extends MilkPlugIn {
             listProcesses = processAPI.getProcessDeploymentInfos(0, 10000, ProcessDeploymentInfoCriterion.NAME_ASC);
         }
         StringBuilder buildTheSQLRequest = new StringBuilder();
-        
+
         try {
 
             int countNumberThisPass = 1;
-            while (totalNumberCaseDeleted < maximumArchiveDeletionPerRound && countNumberThisPass > 0) {
+            while (milkJobOutput.nbItemsProcessed < maximumArchiveDeletionPerRound && countNumberThisPass > 0) {
                 if (jobExecution.pleaseStop())
                     break;
                 countNumberThisPass = 0;
@@ -285,21 +301,21 @@ public class MilkPurgeArchive extends MilkPlugIn {
                         break;
 
                     currentProcessToLog = processDeploymentInfo.getName() + "(" + processDeploymentInfo.getVersion() + ")";
-                    int realCasePerDeletion = (int) (maximumArchiveDeletionPerRound - totalNumberCaseDeleted);
+                    int realCasePerDeletion = (int) (maximumArchiveDeletionPerRound - milkJobOutput.nbItemsProcessed);
                     if (realCasePerDeletion > casePerDeletion)
                         realCasePerDeletion = casePerDeletion;
 
                     DeletionItemProcess deletionItemProcess = deletionPerProcess.getDeletionProcessFromProcessDeployment(processDeploymentInfo.getProcessId(), processDeploymentInfo);
 
                     // to estimate the number of case deleted, first get the list
-                    buildTheSQLRequest.append("Process ["+processDeploymentInfo.getName()+"("+processDeploymentInfo.getVersion()+") id=["+processDeploymentInfo.getProcessId()+"] ");
+                    buildTheSQLRequest.append("Process [" + processDeploymentInfo.getName() + "(" + processDeploymentInfo.getVersion() + ") id=[" + processDeploymentInfo.getProcessId() + "] ");
                     SearchOptionsBuilder sob = new SearchOptionsBuilder(0, 1);
                     sob.filter(ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, processDeploymentInfo.getProcessId());
                     SearchResult<ArchivedProcessInstance> searchResultArchived = processAPI.searchArchivedProcessInstances(sob.done());
 
                     long beforeNbCase = searchResultArchived.getCount();
-                    buildTheSQLRequest.append("Nb Archives="+beforeNbCase+"] ");
-                    
+                    buildTheSQLRequest.append("Nb Archives=" + beforeNbCase + "] ");
+
                     // we can't trust this information: by default, it's 3 per case 
                     // BUT if the case has sub process, it will be 3 per sub process 
                     // Example : a case call 10 times a subprocess? It will be 3+10*3 for one case
@@ -310,17 +326,32 @@ public class MilkPurgeArchive extends MilkPlugIn {
                     long afterNbCase = searchResultArchived.getCount();
                     if (numberArchivedDeleted > 0)
                         numberArchivedDeleted = beforeNbCase - afterNbCase;
-                    buildTheSQLRequest.append("After="+afterNbCase+"] = "+numberArchivedDeleted+";<br>");
-                    
+                    buildTheSQLRequest.append("After=" + afterNbCase + "] = " + numberArchivedDeleted + ";<br>");
+
                     deletionItemProcess.nbCaseDeleted += numberArchivedDeleted;
 
-                    totalNumberCaseDeleted += numberArchivedDeleted;
+                    milkJobOutput.nbItemsProcessed += numberArchivedDeleted;
                     countNumberThisPass += numberArchivedDeleted;
                 }
             }
             milkJobOutput.addReportInHtml(buildTheSQLRequest.toString());
+
+            // Manage now the sub process purge
+            if (jobExecution.getInputBooleanParameter( cstParamOperationOnSubProcess)) {
+                SubProcessOperationCollect subProcessOperationCollect = new SubProcessOperationCollect();
+                ManagePurgeResult managePurgeResult = detectPurgeSubProcessOnly(listProcessResult, 0L, jobExecution.getTenantId(),jobExecution.getJobStopAfterMaxItems(),  subProcessOperationCollect );
+                milkJobOutput.addEvents(managePurgeResult.listEvents);
+
+                managePurgeResult = purgeSubProcess( subProcessOperationCollect.listArchSourceProcessId, jobExecution.getTenantId());
+                milkJobOutput.nbItemsProcessed += managePurgeResult.nbRecords;
+                milkJobOutput.addEvents(managePurgeResult.listEvents);
+                
+            }
             
-            if (totalNumberCaseDeleted == 0)
+            
+            if (BEventFactory.isError(milkJobOutput.getListEvents())) {
+                milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            } else if (milkJobOutput.nbItemsProcessed == 0)
                 milkJobOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
             else
                 milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
@@ -331,9 +362,8 @@ public class MilkPurgeArchive extends MilkPlugIn {
             milkJobOutput.addEvent(new BEvent(eventDeletionFailed, e, "Purge:" + currentProcessToLog));
         }
         // produce the report now
-        milkJobOutput.setMesure(cstMesureCasePurged, totalNumberCaseDeleted);
+        milkJobOutput.setMesure(cstMesureCasePurged, milkJobOutput.nbItemsProcessed);
 
-        milkJobOutput.setNbItemsProcessed(totalNumberCaseDeleted);
         deletionPerProcess.addInReport(milkJobOutput);
 
     }
@@ -349,22 +379,11 @@ public class MilkPurgeArchive extends MilkPlugIn {
     private void purgeArchivesWithDelay(ListProcessesResult listProcessResult, DelayResult delayResult, MilkJobExecution jobExecution, SearchOptionsBuilder searchActBuilder, MilkJobOutput milkJobOutput) {
         List<Long> sourceProcessInstanceIds = new ArrayList<>();
         DeletionPerProcess deletionPerProcess = new DeletionPerProcess();
-        StringBuilder buildTheSQLRequest=new StringBuilder();
+        StringBuilder buildTheSQLRequest = new StringBuilder();
         try {
             // ---------------------  Deployment
-            buildTheSQLRequest.append("select * from ARCH_PROCESS_INSTANCE where ");
-            if (! listProcessResult.listProcessDeploymentInfo.isEmpty()) {
-                buildTheSQLRequest.append(" (");
-                for (int i=0;i<listProcessResult.listProcessDeploymentInfo.size();i++) {
-                    if (i>0)
-                        buildTheSQLRequest.append(" or ");
-                    buildTheSQLRequest.append( "PROCESSDEFINITIONID = "+listProcessResult.listProcessDeploymentInfo.get(i).getProcessId());
-                }
-                buildTheSQLRequest.append(" ) and ");
-            }
+            buildSelectArchProcessInstance(buildTheSQLRequest, listProcessResult, delayResult.delayDate.getTime(), jobExecution.getTenantId());
 
-            
-            
             long timeSearch = delayResult.delayDate.getTime();
             SearchResult<ArchivedProcessInstance> searchArchivedProcessInstance;
 
@@ -374,25 +393,16 @@ public class MilkPurgeArchive extends MilkPlugIn {
             // Now, search items to delete
             searchActBuilder.lessOrEquals(ArchivedProcessInstancesSearchDescriptor.ARCHIVE_DATE, timeSearch);
             searchActBuilder.sort(ArchivedProcessInstancesSearchDescriptor.ARCHIVE_DATE, Order.ASC);
-            buildTheSQLRequest.append(" ARCHIVEDATE <= "+timeSearch );
-            buildTheSQLRequest.append(" and TENANTID="+jobExecution.getTenantId());
-            buildTheSQLRequest.append(" and STATEID=6"); // only archive case
+
             buildTheSQLRequest.append(" and ROOTPROCESSINSTANCEID = SOURCEOBJECTID"); // only root case
 
             searchArchivedProcessInstance = processAPI.searchArchivedProcessInstances(searchActBuilder.done());
-            if (searchArchivedProcessInstance.getCount() == 0) {
-                milkJobOutput.addReportInHtml(buildTheSQLRequest.toString());
-
-                milkJobOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
-                milkJobOutput.nbItemsProcessed = 0;
-                return;
-            }
             milkJobOutput.endChronometer(startSearch);
             // do the purge now
-            
+
             Chronometer startMarker = milkJobOutput.beginChronometer("Purge");
-            buildTheSQLRequest.append(" nbResult="+searchArchivedProcessInstance.getCount());
-            
+            buildTheSQLRequest.append(" nbResult=" + searchArchivedProcessInstance.getCount());
+
             for (ArchivedProcessInstance archivedProcessInstance : searchArchivedProcessInstance.getResult()) {
                 if (jobExecution.pleaseStop())
                     break;
@@ -420,13 +430,28 @@ public class MilkPurgeArchive extends MilkPlugIn {
 
                 milkJobOutput.nbItemsProcessed += sourceProcessInstanceIds.size();
             }
-            milkJobOutput.endChronometer( startMarker );
+            milkJobOutput.endChronometer(startMarker);
 
             milkJobOutput.addReportInHtml(buildTheSQLRequest.toString());
 
-            milkJobOutput.addEvent(new BEvent(eventDeletionSuccess, "Purge:" + milkJobOutput.nbItemsProcessed + " in " + TypesCast.getHumanDuration(startMarker.getTimeExecution(), true)));
+            // purge now subprocess operation
+            if (jobExecution.getInputBooleanParameter( cstParamOperationOnSubProcess)) {
+                SubProcessOperationCollect subProcessOperationCollect = new SubProcessOperationCollect();
+                ManagePurgeResult managePurgeResult = detectPurgeSubProcessOnly(listProcessResult, 0L, jobExecution.getTenantId(),jobExecution.getJobStopAfterMaxItems(),  subProcessOperationCollect );
+                milkJobOutput.addEvents(managePurgeResult.listEvents);
+
+                managePurgeResult = purgeSubProcess( subProcessOperationCollect.listArchSourceProcessId, jobExecution.getTenantId());
+                milkJobOutput.nbItemsProcessed += managePurgeResult.nbRecords;
+                milkJobOutput.addEvents(managePurgeResult.listEvents);
+                
+            }
             
-            milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
+            milkJobOutput.addEvent(new BEvent(eventDeletionSuccess, "Purge:" + milkJobOutput.nbItemsProcessed + " in " + TypesCast.getHumanDuration(startMarker.getTimeExecution(), true)));
+
+            if (milkJobOutput.nbItemsProcessed==0)
+                milkJobOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+            else
+                milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
 
         } catch (SearchException e1) {
             milkJobOutput.addEvent(new BEvent(eventSearchFailed, e1, ""));
@@ -516,6 +541,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
      */
     /* ******************************************************************************** */
     protected static String cstColCaseId = "caseid";
+    protected static String cstColProcessDefinitionId = "processDefinitionId";
     protected static String cstColProcessName = "processname";
     protected static String cstColProcessVersion = "processversion";
     protected static String cstColArchivedDate = "archiveddate";
@@ -534,7 +560,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
 
         // 20 for the preparation, 100 to collect cases
         // Time to run the query take time, and we don't want to show 0% for a long time
-        jobExecution.setAvancementTotalStep(120);
+        jobExecution.setAvancementTotalStep(140);
         try {
 
             SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, jobExecution.getJobStopAfterMaxItems() + 1);
@@ -549,12 +575,12 @@ public class MilkPurgeArchive extends MilkPlugIn {
             }
             StringBuilder buildTheSQLRequest = new StringBuilder();
             buildTheSQLRequest.append("select * from ARCH_PROCESS_INSTANCE where ");
-            if (! listProcessResult.listProcessDeploymentInfo.isEmpty()) {
+            if (!listProcessResult.listProcessDeploymentInfo.isEmpty()) {
                 buildTheSQLRequest.append(" (");
-                for (int i=0;i<listProcessResult.listProcessDeploymentInfo.size();i++) {
-                    if (i>0)
+                for (int i = 0; i < listProcessResult.listProcessDeploymentInfo.size(); i++) {
+                    if (i > 0)
                         buildTheSQLRequest.append(" or ");
-                    buildTheSQLRequest.append( "PROCESSDEFINITIONID = "+listProcessResult.listProcessDeploymentInfo.get(i).getProcessId());
+                    buildTheSQLRequest.append("PROCESSDEFINITIONID = " + listProcessResult.listProcessDeploymentInfo.get(i).getProcessId());
                 }
                 buildTheSQLRequest.append(" ) and ");
             }
@@ -572,14 +598,12 @@ public class MilkPurgeArchive extends MilkPlugIn {
             // -------------- now get the list of cases
             searchActBuilder.lessOrEquals(ArchivedProcessInstancesSearchDescriptor.ARCHIVE_DATE, timeSearch);
             searchActBuilder.sort(ArchivedProcessInstancesSearchDescriptor.ARCHIVE_DATE, Order.ASC);
-            
-            buildTheSQLRequest.append(" ARCHIVEDATE <= "+timeSearch );
-            buildTheSQLRequest.append(" and TENANTID="+jobExecution.getTenantId());
+
+            buildTheSQLRequest.append(" ARCHIVEDATE <= " + timeSearch);
+            buildTheSQLRequest.append(" and TENANTID=" + jobExecution.getTenantId());
             buildTheSQLRequest.append(" and STATEID=6"); // only archive case
             buildTheSQLRequest.append(" and ROOTPROCESSINSTANCEID = SOURCEOBJECTID"); // only root case
 
-    
-            
             SearchResult<ArchivedProcessInstance> searchArchivedProcessInstance;
             searchArchivedProcessInstance = processAPI.searchArchivedProcessInstances(searchActBuilder.done());
 
@@ -592,12 +616,12 @@ public class MilkPurgeArchive extends MilkPlugIn {
             csvOperationOuput.writeCsvDocument(new String[] { cstColCaseId, cstColProcessName, cstColProcessVersion, cstColArchivedDate, cstColStatus }, separatorCSV);
 
             // loop on archive
-            int countInArchive = 0;
+            milkJobOutput.nbItemsProcessed=0;
             for (ArchivedProcessInstance archivedProcessInstance : searchArchivedProcessInstance.getResult()) {
 
                 if (jobExecution.pleaseStop())
                     break;
-                countInArchive++;
+                milkJobOutput.nbItemsProcessed++;
 
                 Map<String, String> recordCsv = new HashMap<>();
                 recordCsv.put(cstColCaseId, String.valueOf(archivedProcessInstance.getSourceObjectId()));
@@ -619,11 +643,20 @@ public class MilkPurgeArchive extends MilkPlugIn {
 
                 jobExecution.addManagedItems(1);
 
-                jobExecution.setAvancementStep(20L + (long) (100 * countInArchive / searchArchivedProcessInstance.getResult().size()));
+                jobExecution.setAvancementStep(20L + (long) (100 * milkJobOutput.nbItemsProcessed / searchArchivedProcessInstance.getResult().size()));
 
             }
-
-            milkJobOutput.nbItemsProcessed = countInArchive;
+            jobExecution.setAvancementStep(120);
+            // Manage now the sub process purge
+            if (jobExecution.getInputBooleanParameter( cstParamOperationOnSubProcess)) {
+                
+                SubProcessOperation subProcessOperation = new SubProcessOperationCSV(cacheProcessDefinition, csvOperationOuput, processAPI);
+                ManagePurgeResult managePurgeResult = detectPurgeSubProcessOnly(listProcessResult, timeSearch, jobExecution.getTenantId(), jobExecution.getJobStopAfterMaxItems(), subProcessOperation);
+                milkJobOutput.nbItemsProcessed += managePurgeResult.nbRecords;
+                milkJobOutput.addEvents( managePurgeResult.listEvents);
+            }
+            jobExecution.setAvancementStep(140);
+            
             milkJobOutput.setMesure(cstMesureCaseDetected, searchArchivedProcessInstance.getCount());
 
             csvOperationOuput.closeAndWriteToParameter(milkJobOutput, cstParamListOfCasesDocument);
@@ -632,14 +665,13 @@ public class MilkPurgeArchive extends MilkPlugIn {
 
             milkJobOutput.addReportTable(new String[] { "Label", "Value" });
             milkJobOutput.addReportLine(new Object[] { "Total cases detected", searchArchivedProcessInstance.getCount() });
-            milkJobOutput.addReportLine(new Object[] { "Total cases in CSV file", countInArchive });
+            milkJobOutput.addReportLine(new Object[] { "Total cases in CSV file", milkJobOutput.nbItemsProcessed });
             milkJobOutput.addReportEndTable();
 
-            milkJobOutput.addEvent(new BEvent(eventSynthesisReport, "Total cases:" + searchArchivedProcessInstance.getCount() + ", In list:" + countInArchive));
+            milkJobOutput.addEvent(new BEvent(eventSynthesisReport, "Total cases:" + milkJobOutput.nbItemsProcessed + ", In list:" + searchArchivedProcessInstance.getCount()));
 
-            if (searchArchivedProcessInstance.getCount() == 0) {
+            if (milkJobOutput.nbItemsProcessed == 0) {
                 milkJobOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
-                milkJobOutput.nbItemsProcessed = 0;
                 return milkJobOutput;
             }
 
@@ -904,7 +936,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
 
     public int purgeList(List<Long> sourceProcessInstanceIds, Statistic statistic, MilkJobOutput milkJobOutput, ProcessAPI processAPI) throws DeletionException, SearchException {
         Chronometer searchArchivedMarker = milkJobOutput.beginChronometer("searchArchived");
-        long startTimeSearch = System.currentTimeMillis();
+
         SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, sourceProcessInstanceIds.size());
         for (int i = 0; i < sourceProcessInstanceIds.size(); i++) {
             if (i > 0)
@@ -936,6 +968,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
 
         Chronometer deleteMarker = milkJobOutput.beginChronometer("deleteArchived");
         long nbCaseDeleted = 0;
+
         if (!listRealId.isEmpty()) {
             // we can't trust this information
             nbCaseDeleted += processAPI.deleteArchivedProcessInstancesInAllStates(listRealId);
@@ -969,5 +1002,228 @@ public class MilkPurgeArchive extends MilkPlugIn {
             return 0;
         }
 
+    }
+
+    /* ******************************************************************************** */
+    /*                                                                                  */
+    /*
+     * Sub Process Options
+     * /*
+     */
+    /* ******************************************************************************** */
+    public interface SubProcessOperation {
+
+        public List<BEvent> detectOneSubprocessInstance(Map<String, Object> recordSubProcess);
+    }
+
+    /**
+     * Do a simple collect
+     *
+     */
+    public class SubProcessOperationCollect implements SubProcessOperation {
+        public List<Long> listArchSourceProcessId = new ArrayList<>();
+                public List<BEvent> detectOneSubprocessInstance(Map<String, Object> recordSubProcess) {
+                    listArchSourceProcessId.add( TypesCast.getLong( recordSubProcess.get("SOURCEOBJECTID"), 0L));
+                    return new ArrayList<>();
+                }
+    }
+    /**
+     * Write the result in a CSV Ouput
+     * 
+     */
+    public class SubProcessOperationCSV implements SubProcessOperation {
+
+        private Map<Long, ProcessDefinition> cacheProcessDefinition;
+        private ProcessAPI processAPI;
+        CSVOperation csvOperationOuput = new CSVOperation();
+
+        SubProcessOperationCSV(Map<Long, ProcessDefinition> cacheProcessDefinition, CSVOperation csvOperationOuput, ProcessAPI processAPI) {
+            this.cacheProcessDefinition = cacheProcessDefinition;
+            this.csvOperationOuput = csvOperationOuput;
+            this.processAPI = processAPI;
+        }
+
+        public List<BEvent> detectOneSubprocessInstance(Map<String, Object> recordSubProcess) {
+            List<BEvent> listEvents = new ArrayList<>();
+            Long processId = TypesCast.getLong(recordSubProcess.get("PROCESSDEFINITIONID"), null);
+
+            if ((processId != null) && !cacheProcessDefinition.containsKey(processId)) {
+                try {
+                    ProcessDefinition processDefinition = processAPI.getProcessDefinition(processId);
+                    cacheProcessDefinition.put(processId, processDefinition);
+                } catch (Exception e) {
+                    cacheProcessDefinition.put(processId, null);
+                }
+            }
+
+            try {
+                Map<String, String> recordCsv = new HashMap<String, String>();
+                recordCsv.put(cstColCaseId, recordSubProcess.get("SOURCEOBJECTID").toString());
+                recordCsv.put(cstColProcessName, cacheProcessDefinition.get(processId) == null ? "" : cacheProcessDefinition.get(processId).getName());
+                recordCsv.put(cstColProcessVersion, cacheProcessDefinition.get(processId) == null ? "" : cacheProcessDefinition.get(processId).getVersion());
+                Long archiveDate = TypesCast.getLong(recordSubProcess.get("ARCHIVEDATE"), null);
+                if (archiveDate != null)
+                    recordCsv.put(cstColArchivedDate, TypesCast.sdfCompleteDate.format(new Date(archiveDate)));
+                recordSubProcess.put(cstColStatus, ""); // status
+                csvOperationOuput.writeRecord(recordCsv);
+            } catch (IOException e) {
+                listEvents.add(new BEvent(eventWriteReportError, e, ""));
+
+            }
+            return listEvents;
+        }
+
+    }
+
+    private class ManagePurgeResult {
+
+        int nbRecords = 0;
+        List<BEvent> listEvents = new ArrayList<>();
+    }
+
+    /**
+     * 
+     * @param listProcessResult
+     * @param delay
+     * @param tenantId
+     * @param maxCount
+     * @param subProcessOperation
+     * @return
+     */
+    private ManagePurgeResult detectPurgeSubProcessOnly(ListProcessesResult listProcessResult, long delay, long tenantId, long maxCount, SubProcessOperation subProcessOperation) {
+        ManagePurgeResult managePurgeResult = new ManagePurgeResult();
+        // Search all subprocess informations
+        StringBuilder sqlQuery = new StringBuilder();
+        if (maxCount==0)
+            maxCount=10000;
+        
+        buildSelectArchProcessInstance(sqlQuery, listProcessResult, delay, tenantId);
+        sqlQuery.append(" and ROOTPROCESSINSTANCEID != SOURCEOBJECTID"); // only root case
+
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        try (Connection con = BonitaEngineConnection.getConnection();) {
+            pstmt = con.prepareStatement(sqlQuery.toString());
+
+            rs = pstmt.executeQuery();
+            ResultSetMetaData rmd = pstmt.getMetaData();
+            managePurgeResult.nbRecords = 0;
+            while (rs.next() && managePurgeResult.nbRecords < maxCount) {
+                managePurgeResult.nbRecords++;
+                Map<String, Object> recordSubProcess = new HashMap<>();
+
+                for (int column = 1; column <= rmd.getColumnCount(); column++)
+                    recordSubProcess.put(rmd.getColumnName(column).toUpperCase(), rs.getObject(column));
+                subProcessOperation.detectOneSubprocessInstance(recordSubProcess);
+            }
+            return managePurgeResult;
+
+        } catch (Exception e) {
+            final StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            logger.severe(LOGGER_LABEL + "During getCountOfFlowNode : " + e.toString() + " SqlQuery[" + sqlQuery + "] at " + sw.toString());
+            managePurgeResult.listEvents.add(new BEvent(eventErrorExecutionQuery, e, " SqlQuery[" + sqlQuery + "]"));
+            return managePurgeResult;
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                    rs = null;
+                } catch (final SQLException localSQLException) {
+                    logger.severe(LOGGER_LABEL + "During close : " + localSQLException.toString());
+                }
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                    pstmt = null;
+                } catch (final SQLException localSQLException) {
+                    logger.severe(LOGGER_LABEL + "During close : " + localSQLException.toString());
+                }
+            }
+
+        }
+    }
+
+    /**
+     * from the list, to the operation now
+     * @param listArchSourceProcessId
+     * @param tenantId
+     * @return
+     */
+    private ManagePurgeResult purgeSubProcess(List<Long> listArchSourceProcessId, long tenantId) {
+        ManagePurgeResult managePurgeResult = new ManagePurgeResult();
+
+            String sqlQuery="delete ARCH_PROCESS_INSTANCE where SOURCEOBJECTID=?";
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+         
+        
+        
+        try (Connection con = BonitaEngineConnection.getConnection();) {
+            
+            for (long id : listArchSourceProcessId) {
+                
+                // First, delete the Arch Process instance
+                pstmt = con.prepareStatement( sqlQuery );
+                pstmt.setLong(1,  id);
+                pstmt.executeUpdate();
+                
+                con.commit();
+                managePurgeResult.nbRecords++;
+                }
+        } catch (Exception e) {
+            final StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            logger.severe(LOGGER_LABEL + "During getCountOfFlowNode : " + e.toString() + " SqlQuery[" + sqlQuery + "] at " + sw.toString());
+            managePurgeResult.listEvents.add(new BEvent(eventErrorExecutionQuery, e, " SqlQuery[" + sqlQuery + "]"));
+            return managePurgeResult;
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                    rs = null;
+                } catch (final SQLException localSQLException) {
+                    logger.severe(LOGGER_LABEL + "During close : " + localSQLException.toString());
+                }
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                    pstmt = null;
+                } catch (final SQLException localSQLException) {
+                    logger.severe(LOGGER_LABEL + "During close : " + localSQLException.toString());
+                }
+            }
+
+        }
+        
+        // we generate a lot of dross : manage them now
+        DrossExecution drossExecution = RadarCleanArchivedDross.deleteDross(tenantId );
+        managePurgeResult.listEvents.addAll( drossExecution.listEvents );
+        return managePurgeResult;
+    }
+    
+    
+    /**
+     * Build the SQL Request to search in the ARCH_PROCESS_INSTANCE
+     * 
+     * @param buildTheSQLRequest
+     */
+    private void buildSelectArchProcessInstance(StringBuilder buildTheSQLRequest, ListProcessesResult listProcessResult, long timeSearch, long tenantId) {
+        buildTheSQLRequest.append("select * from ARCH_PROCESS_INSTANCE where ");
+        if (!listProcessResult.listProcessDeploymentInfo.isEmpty()) {
+            buildTheSQLRequest.append(" (");
+            for (int i = 0; i < listProcessResult.listProcessDeploymentInfo.size(); i++) {
+                if (i > 0)
+                    buildTheSQLRequest.append(" or ");
+                buildTheSQLRequest.append("PROCESSDEFINITIONID = " + listProcessResult.listProcessDeploymentInfo.get(i).getProcessId());
+            }
+            buildTheSQLRequest.append(" ) and ");
+        }
+        buildTheSQLRequest.append(" TENANTID=" + tenantId);
+        if (timeSearch>0)
+            buildTheSQLRequest.append(" and ARCHIVEDATE <= " + timeSearch);
+        buildTheSQLRequest.append(" and STATEID=6"); // only archive case
     }
 }

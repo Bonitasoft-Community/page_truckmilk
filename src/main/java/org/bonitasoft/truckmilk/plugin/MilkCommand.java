@@ -16,6 +16,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
+import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 
 /* ******************************************************************************** */
@@ -44,7 +45,7 @@ public class MilkCommand extends MilkPlugIn {
      * @return a list of Events.
      */
     @Override
-    public List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution) {
+    public List<BEvent> checkPluginEnvironment(MilkJobExecution milkJobExecution) {
         return new ArrayList<>();
     }
 
@@ -52,7 +53,7 @@ public class MilkCommand extends MilkPlugIn {
      * check the environment of the job: is the command exist?
      */
     @Override
-    public List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution) {
+    public List<BEvent> checkJobEnvironment(MilkJobExecution milkJobExecution) {
         // is the command Exist ? 
         return new ArrayList<>();
     }
@@ -61,7 +62,7 @@ public class MilkCommand extends MilkPlugIn {
      * return the description of job
      */
     @Override
-    public MilkPlugInDescription getDefinitionDescription() {
+    public MilkPlugInDescription getDefinitionDescription(MilkJobContext milkJobContext) {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
 
         plugInDescription.setName( "Command");

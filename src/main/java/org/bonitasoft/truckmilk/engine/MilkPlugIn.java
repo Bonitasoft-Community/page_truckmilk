@@ -12,6 +12,7 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.DELAYSCOPE;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
+import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
@@ -111,19 +112,19 @@ public abstract class MilkPlugIn {
 
     /**
      * check the PLUG IN environment, not the MilkJob environment
-     * @param jobExecution 
+     * @param milkJobExecution 
      * 
      * @return
      */
-    public abstract List<BEvent> checkPluginEnvironment(MilkJobExecution jobExecution);
+    public abstract List<BEvent> checkPluginEnvironment(MilkJobExecution milkJobExecution);
 
     /**
      * check the JOB environnement, with the job parameters
      * 
-     * @param jobExecution
+     * @param milkJobExecution
      * @return
      */
-    public abstract List<BEvent> checkJobEnvironment(MilkJobExecution jobExecution);
+    public abstract List<BEvent> checkJobEnvironment(MilkJobExecution milkJobExecution);
 
     /**
      * Initialise. This method is call by the Factory, after the object is created.
@@ -131,12 +132,14 @@ public abstract class MilkPlugIn {
      * @param tenantId
      * @return
      */
-    protected List<BEvent> initialize(Long tenantId) {
+    protected List<BEvent> initialize(MilkJobExecution milkJobExecution ) {
         List<BEvent> listEvents = new ArrayList<>();
 
         // if isEmbeded, just get the description and save it localy
-        if (typePlugIn == TYPE_PLUGIN.EMBEDED || typePlugIn == TYPE_PLUGIN.LOCAL)
-            description = getDefinitionDescription();
+        if (typePlugIn == TYPE_PLUGIN.EMBEDED || typePlugIn == TYPE_PLUGIN.LOCAL) {
+
+            description = getDefinitionDescription(milkJobExecution.getMilkJobContext());
+        }
         else if (typePlugIn == TYPE_PLUGIN.COMMAND) {
             // collect the description by calling the command
 
@@ -159,7 +162,7 @@ public abstract class MilkPlugIn {
      * FILEREADWRITE : plug in and administrator can read and write the file
      */
     public enum TypeParameter {
-        USERNAME, PROCESSNAME, ARRAYPROCESSNAME, STRING, TEXT, DELAY, JSON, LONG, OBJECT, ARRAY, BOOLEAN, ARRAYMAP, BUTTONARGS, FILEREAD, FILEWRITE, FILEREADWRITE, LISTVALUES, SEPARATOR
+        USERNAME, PROCESSNAME, ARRAYPROCESSNAME, STRING, TEXT, DELAY, JSON, LONG, OBJECT, ARRAY, BOOLEAN, ARRAYMAP, BUTTONARGS, FILEREAD, FILEWRITE, FILEREADWRITE, LISTVALUES, SEPARATOR, INFORMATION
     }
     public enum DELAYSCOPE { YEAR, MONTH, WEEK, DAY, HOUR, MN }
     public static String getDelayValue( DELAYSCOPE delay, int value ) {
@@ -208,6 +211,7 @@ public abstract class MilkPlugIn {
         public String label;
         public Object defaultValue;
         public String explanation;
+        public String information;
         public TypeParameter typeParameter;
         public boolean isMandatory= false;
         public String visibleCondition=null;
@@ -266,6 +270,12 @@ public abstract class MilkPlugIn {
             this.isMandatory = isMandatory;
             return this;
         }
+        /**
+         * In Javascript, something like
+         * milkJob.parametersvalue[ 'operation' ] != 'hello'
+         * @param visibleCondition
+         * @return
+         */
         public PlugInParameter withVisibleCondition( String visibleCondition ) {
             this.visibleCondition = visibleCondition;
             return this;
@@ -352,6 +362,16 @@ public abstract class MilkPlugIn {
 
             return plugInParameter;
         }
+        
+        public static PlugInParameter createInstanceInformation(String name, String label, String information) {
+            PlugInParameter plugInParameter = new PlugInParameter();
+            plugInParameter.name = name;
+            plugInParameter.label = label;
+            plugInParameter.typeParameter = TypeParameter.INFORMATION;
+            plugInParameter.information = information;
+            return plugInParameter;
+            
+        }
 
         /**
          * here the JSON returned to the HTML to build the parameters display
@@ -394,6 +414,7 @@ public abstract class MilkPlugIn {
             }
 
             map.put("explanation", explanation);
+            map.put("information", information);
             map.put("defaultValue", defaultValue);
             return map;
         }
@@ -509,10 +530,11 @@ public abstract class MilkPlugIn {
 
     /**
      * return a unique description
+     * @param jobExecution TODO
      * 
      * @return
      */
-    public abstract MilkPlugInDescription getDefinitionDescription();
+    public abstract MilkPlugInDescription getDefinitionDescription(MilkJobContext milkJobContext);
 
     public abstract MilkJobOutput execute(MilkJobExecution input);
 

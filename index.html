@@ -90,7 +90,7 @@
 					<div style="font-style: italic;">
 					The <span style="color: red;font-weight: bold;">B</span>onita <span style="color: red;font-weight: bold;">SC</span>heduler&nbsp;
 					</div>
-					<a href="" >V2.4.5</a>
+					<a href="" >V2.4.6</a>
 				</center>
 			</td></tr>
 			<tr><td>
@@ -102,7 +102,7 @@
 					2.1.3 2019 Sept<br>
 					2.2 2019 Dec<br>
 					2.3 2020 March<br>
-					2.4 2020 April
+					2.4 2020 June
 				</div>
 			</td></tr>
 		</table>
@@ -725,6 +725,9 @@
 													<div ng-if="parameterdef.type ==='SEPARATOR'">
 														<div class="alert alert-info"><center><h4>{{parameterdef.label}}</h4></center></div>
 													</div>
+													<div ng-if="parameterdef.type ==='INFORMATION'">												
+														<div ng-bind-html="ctrl.getHtml(parameterdef.information, 'information')"></div>
+													</div>
 													<div ng-if="parameterdef.type ==='LISTVALUES'">
 														
 														<select ng-model="plugtour.parametersvalue[ parameterdef.name ]"  >
@@ -1161,7 +1164,8 @@
 												<th>Date</th>
 												<th ng-repeat="measurement in plugtour.measurement.def" style="text-align:center">{{measurement.label}}</th>
 											</tr>
-											<tbody ng-repeat="measurement in plugtour.measurement.history">												
+											<tbody ng-repeat="measurement in plugtour.measurement.history">	
+																						
 											<tr>
 												<td>{{measurement.datest}}</td>
 												<!--  track by index is mandatory when value have multiple 0 -->
@@ -1171,7 +1175,9 @@
 										</table>
 										
 										
-										
+										<p>
+										<p>
+										<p>
 										
 										
 									</div> <!-- panel SHOW DASHBOARD -->

@@ -313,6 +313,7 @@
 							localPlugTour.askForStop						= serverPlugTour.askForStop;
 							localPlugTour.listevents						= serverPlugTour.listevents;
 							localPlugTour.parameters						= serverPlugTour.parameters;
+							localPlugTour.measurement						= serverPlugTour.measurement;
 							
 							// console.log("Values does not change:"+angular.toJson(localPlugTour.parametersvalue));
 						}

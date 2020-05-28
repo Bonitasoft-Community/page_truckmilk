@@ -233,12 +233,25 @@ public class MilkJobOutput {
 
     }
 
-    public double getMesure(PlugInMeasurement poi) {
+    public Double getMesure(PlugInMeasurement poi) {
         return mesures.get(poi);
     }
 
     public Map<PlugInMeasurement, Double> getAllMesures() {
         return mesures;
     }
-
+    
+    
+    public void addMeasuresInReport(boolean keepMesureValueNotDefine) {
+        addReportTable(new String[] { "Measure", "Value" });
+        
+        for (PlugInMeasurement measure : milkJob.getPlugIn().getDescription().getMeasures()) {
+            Double measureValue = getMesure(measure);
+            if (measureValue == null && ! keepMesureValueNotDefine)
+                continue;
+            addReportLine(new Object [] { measure.name, measureValue==null ? Double.valueOf(0) : measureValue });
+        }
+        addReportEndTable();
+    }
+        
 }

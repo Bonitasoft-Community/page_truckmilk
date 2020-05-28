@@ -135,7 +135,7 @@ public @Data class MilkPlugInDescription {
             listMesures.add(mesure);
         }
     }
-    public List<PlugInMeasurement> getMesures() {
+    public List<PlugInMeasurement> getMeasures() {
         return listMesures;
     }
 

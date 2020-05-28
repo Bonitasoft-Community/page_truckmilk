@@ -9,11 +9,13 @@ import java.util.Map;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.ReplacementPlugIn;
-
+import org.bonitasoft.truckmilk.job.MilkJobContext;
+import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.plugin.MilkCancelCases;
+import org.bonitasoft.truckmilk.plugin.MilkCleanArchivedDross;
 import org.bonitasoft.truckmilk.plugin.MilkDeleteCases;
 import org.bonitasoft.truckmilk.plugin.MilkDeleteDuplicateTasks;
-
+import org.bonitasoft.truckmilk.plugin.MilkDirectory;
 import org.bonitasoft.truckmilk.plugin.MilkEmailUsersTasks;
 import org.bonitasoft.truckmilk.plugin.MilkGrumman;
 import org.bonitasoft.truckmilk.plugin.MilkMeteor;
@@ -43,7 +45,8 @@ public class MilkPlugInFactory {
     private static BEvent eventNotInitialized = new BEvent(MilkPlugInFactory.class.getName(), 2, Level.ERROR,
             "Not initialized", "Factory is not initialized", "PlugIn does not work", "Call administrator");
 
-    private long tenantId;
+    
+    private MilkJobContext milkJobContext;
     private List<MilkPlugIn> listPlugIns = new ArrayList<>();
 
     private List<BEvent> listInitialiseEvent = new ArrayList<>();
@@ -55,21 +58,21 @@ public class MilkPlugInFactory {
      * @param tenantId
      * @return
      */
-    public static MilkPlugInFactory getInstance(long tenantId) {
-        MilkPlugInFactory milkPlugInFactory = new MilkPlugInFactory(tenantId);
-        milkPlugInFactory.initialise();
+    public static MilkPlugInFactory getInstance(MilkJobContext milkJobContext ) {
+        MilkPlugInFactory milkPlugInFactory = new MilkPlugInFactory( milkJobContext);
+        milkPlugInFactory.initialise( milkJobContext);
 
         return milkPlugInFactory;
     }
 
-    private MilkPlugInFactory(long tenantId) {
-        this.tenantId = tenantId;
+    private MilkPlugInFactory(MilkJobContext milkJobContext) {
+        this.milkJobContext =  milkJobContext;
         listInitialiseEvent.add(eventNotInitialized);
 
     }
 
-    public long getTenantId() {
-        return tenantId;
+    public MilkJobContext getMilkJobContext() {
+        return milkJobContext;
     }
 
     /**
@@ -78,16 +81,15 @@ public class MilkPlugInFactory {
      * @param tenantId
      * @return
      */
-    private void collectListPlugIn(long tenantId) {
+    private void collectListPlugIn(MilkJobContext milkJobContext) {
         listPlugIns = new ArrayList<>(); // clean it
         listPlugIns.add(new MilkDeleteCases());
-        // listPlugIns.add(new MilkDirectory());
+        listPlugIns.add(new MilkDirectory());
         listPlugIns.add(new MilkEmailUsersTasks());
         // listPlugIns.add(new MilkMail());
         listPlugIns.add(new MilkPing());
         listPlugIns.add(new MilkPurgeArchive());
-        // listPlugIns.add(new MilkPurgeArchivedListPurge());
-        // listPlugIns.add(new MilkPurgeArchivedListGetList());
+        listPlugIns.add(new MilkCleanArchivedDross() );
         listPlugIns.add(new MilkReplayFailedTask());
         listPlugIns.add(new MilkSLA());
         listPlugIns.add(new MilkUnassignTasks() );
@@ -132,13 +134,14 @@ public class MilkPlugInFactory {
         return listPlugIns;
     }
 
-    public List<BEvent> initialise() {
+    public List<BEvent> initialise(MilkJobContext milkJobContext) {
         listInitialiseEvent = new ArrayList<>();
-        collectListPlugIn(tenantId);
+        collectListPlugIn( milkJobContext );
         try {
+            MilkJobExecution milkJobExecution = new MilkJobExecution(  milkJobContext);
             for (MilkPlugIn plugIn : listPlugIns) {
                 // call the plug in, and init all now
-                listInitialiseEvent.addAll(plugIn.initialize(tenantId));
+                listInitialiseEvent.addAll(plugIn.initialize( milkJobExecution));
             }
         } catch (Exception e) {
             StringWriter sw = new StringWriter();

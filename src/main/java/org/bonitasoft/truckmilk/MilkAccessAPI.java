@@ -22,6 +22,7 @@ import org.bonitasoft.truckmilk.engine.MilkJobFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
+import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 import org.json.simple.JSONValue;
@@ -246,8 +247,9 @@ public class MilkAccessAPI {
         Long plugInTourId = TypesCast.getLong(parameter.information.get("plugintour"), 0L);
         long tenantId = parameter.apiSession.getTenantId();
         String paramname = TypesCast.getString(parameter.information.get("parametername"), null);
+        MilkJobContext milkJobContext = new MilkJobContext( tenantId );
 
-        MilkPlugInFactory milkPlugInFactory = MilkPlugInFactory.getInstance(tenantId);
+        MilkPlugInFactory milkPlugInFactory = MilkPlugInFactory.getInstance(milkJobContext);
         MilkJobFactory milkPlugInTourFactory = MilkJobFactory.getInstance(milkPlugInFactory);
 
         MilkJob milkPlugInTour = milkPlugInTourFactory.getJobById(plugInTourId);
@@ -278,9 +280,11 @@ public class MilkAccessAPI {
 
         Long plugInTourId = TypesCast.getLong(parameter.information.get("plugintour"), 0L);
         long tenantId = parameter.apiSession.getTenantId();
+        MilkJobContext milkJobContext = new MilkJobContext( tenantId );
+
         String paramname = TypesCast.getString(parameter.information.get("parametername"), null);
 
-        MilkPlugInFactory milkPlugInFactory = MilkPlugInFactory.getInstance(tenantId);
+        MilkPlugInFactory milkPlugInFactory = MilkPlugInFactory.getInstance(milkJobContext);
         MilkJobFactory milkPlugInTourFactory = MilkJobFactory.getInstance(milkPlugInFactory);
 
         MilkJob milkPlugInTour = milkPlugInTourFactory.getJobById(plugInTourId);

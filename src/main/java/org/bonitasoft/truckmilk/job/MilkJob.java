@@ -41,9 +41,12 @@ import lombok.Data;
 
 /* ******************************************************************************** */
 /*                                                                                  */
-/* PlugInTour */
+/* MilkJob */
 /*                                                                                  */
-/*
+/* The milkJob is a container, to describe information on the job.
+ * Execution under the responsability of the MilkPlugIn class
+ * Execution information is manage via the MilkJobExecution container
+ * 
  * A new plugin instance is requested, to be start every 5 mn for example.
  * A plugInTour reference a PlugIn (embeded or not), a Schedule (frequency and next start) and
  * parameters
@@ -972,7 +975,7 @@ public @Data class MilkJob {
      * 
      * @return
      */
-    public Map<String, Object> getMap(MapContentParameter mapContent) {
+    public Map<String, Object> getMap(MapContentParameter mapContent, MilkJobContext milkJobContext) {
 
         Map<String, Object> map = new HashMap<>();
         map.put(MilkConstantJson.CSTJSON_JOB_NAME, getName());
@@ -1001,10 +1004,10 @@ public @Data class MilkJob {
         map.put(MilkConstantJson.CSTJSON_PARAMETERS, mapParametersValue);
 
         // parameter definition
-        map.put(MilkConstantJson.CSTJSON_PARAMETERS_DEF, collectParameterList(plugIn.getDefinitionDescription().getInputParameters(), mapParametersValue));
+        map.put(MilkConstantJson.CSTJSON_PARAMETERS_DEF, collectParameterList(plugIn.getDefinitionDescription(milkJobContext).getInputParameters(), mapParametersValue));
 
         // Analysis definition
-        map.put(MilkConstantJson.CSTJSON_ANALYSISDEF, collectParameterList(plugIn.getDefinitionDescription().getAnalysisParameters(), mapParametersValue));
+        map.put(MilkConstantJson.CSTJSON_ANALYSISDEF, collectParameterList(plugIn.getDefinitionDescription(milkJobContext).getAnalysisParameters(), mapParametersValue));
 
         map.put(MilkConstantJson.CSTJSON_ENABLE, isEnable);
 
@@ -1054,7 +1057,7 @@ public @Data class MilkJob {
         
         Map<String, Object> listMesures = new HashMap<>();
         List<Map<String,Object>> listDef = new ArrayList<>();
-        for (PlugInMeasurement plugInMesure : plugIn.getDescription().getMesures())
+        for (PlugInMeasurement plugInMesure : plugIn.getDescription().getMeasures())
         {
             listDef.add( plugInMesure.getMap());
         }
