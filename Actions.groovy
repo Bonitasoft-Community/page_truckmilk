@@ -171,7 +171,12 @@ public class Actions {
             {
                 parameter.information.put("userId", apiSession.getUserId());
                 actionAnswer.responseMap = milkAccessAPI.resetJob( parameter);
-            }
+            }            
+            else if ("threadDumpJob".equals(action))
+            {
+                 parameter.information.put("userId", apiSession.getUserId());
+                 actionAnswer.responseMap = milkAccessAPI.threadDumpJob( parameter);
+             }                
             else if ("collect_reset".equals(action))
             {
                 String paramJsonPartial = request.getParameter("paramjsonpartial");

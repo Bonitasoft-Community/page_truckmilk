@@ -427,10 +427,14 @@ public abstract class MilkPlugIn {
     /*                                                                                  */
     /* ******************************************************************************** */
 
+    public enum TypeMeasure {DOUBLE, LONG, DATE }
+    
     public static @Data class PlugInMeasurement {
         public String name;
         public String label;
         public String explanation;
+        public TypeMeasure  typeMeasure = TypeMeasure.DOUBLE;
+        public boolean isEmbeded=false;
         
         public static PlugInMeasurement createInstance(String name, String label, String explanation ) {
             PlugInMeasurement plugInMesure = new PlugInMeasurement();
@@ -439,6 +443,16 @@ public abstract class MilkPlugIn {
             plugInMesure.explanation = explanation;
             return plugInMesure;
         }
+        public PlugInMeasurement withTypeMeasure( TypeMeasure type ) {
+            this.typeMeasure = type;
+            return this;
+        }
+        
+        public PlugInMeasurement withEmbeded( boolean isEmbeded ) {
+            this.isEmbeded = isEmbeded;
+            return this;
+        }
+        
         public Map<String,Object> getMap() {
             Map<String,Object> result = new HashMap<>();
             result.put( MilkConstantJson.CSTJSON_MEASUREMENT_PLUGIN_NAME, name);

@@ -690,9 +690,10 @@
 		// Show information
 		// -----------------------------------------------------------------------------------------
 		this.hideall = function(milkJob) {
-			console.log("hideall:Start");
+			console.log("hideall");
 			milkJob.show = {
 				'schedule' : false,
+				'threaddump' : false,
 				'parameters' : false,
 				'report' : false,
 				'analysis' : false,
@@ -700,7 +701,43 @@
 				'dashboard':false
 			};
 		}
+		this.showthreaddump = function( milkJob ) {
+			console.log("showthreaddump milkJob="+angular.toJson( milkJob));
+			var self=this;
+			self.inprogress=true;
+			
+			this.hideall(milkJob);
+			milkJob.show.threaddump=true;
+			
+			var param={"id": milkJob.id };
+			var milkJobSelf = milkJob;
+			milkJob.threadDump="";
+			
+			var json = encodeURI( angular.toJson( param, false));
+			// 7.6 : the server force a cache on all URL, so to bypass the
+			// cache, then create a different URL
+			var d = new Date();
+			
+			// console.log("query Call HTTP")
+			return $http.get( '?page=custompage_truckmilk&action=threadDumpJob&paramjson='+json+'&t='+d.getTime() )
+			.then( function ( jsonResult, statusHttp, headers, config ) {
+				
+				// connection is lost ?
+				if (statusHttp==401 || typeof jsonResult === 'string') {
+					console.log("Redirected to the login page !");
+					window.location.reload();
 
+				}
+				self.inprogress=false;
+				console.log("showthreaddump result="+angular.toJson(jsonResult.data, false));
+				milkJobSelf.threadDump 			=  jsonResult.data.threadDump;
+				return;
+			}, function ( jsonResult ) {
+				console.log("showthreaddump HTTP THEN");
+				self.inprogress=false;
+			});
+
+		}
 		this.showSchedule = function(milkJob) {
 			console.log("showSchedule:Start");
 			this.hideall(milkJob);
@@ -1192,7 +1229,7 @@
 		// -----------------------------------------------------------------------------------------
 
 		this.getHtml = function(listevents, sourceContext) {
-			// console.log("getHtml:Start (r/o) source="+sourceContext);
+			console.log("getHtml:Start (r/o) source="+sourceContext);
 			return $sce.trustAsHtml(listevents);
 		}
 

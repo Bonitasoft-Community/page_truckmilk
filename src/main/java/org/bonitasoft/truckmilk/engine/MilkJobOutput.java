@@ -1,6 +1,7 @@
 package org.bonitasoft.truckmilk.engine;
 
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -12,6 +13,7 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.plugin.MilkPing;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeMeasure;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMeasurement;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
@@ -120,9 +122,11 @@ public class MilkJobOutput {
         }
         this.report.append("</tr>");
     }
+
     public void addReportLine(String htmlLine) {
-        this.report.append( htmlLine );
+        this.report.append(htmlLine);
     }
+
     public void addReportEndTable() {
         this.report.append("</table>");
     }
@@ -148,14 +152,16 @@ public class MilkJobOutput {
             this.operationName = operationName;
             this.beginTime = System.currentTimeMillis();
         }
-        /** 
-         * Must call MilkJobOutput.endMarker() 
+
+        /**
+         * Must call MilkJobOutput.endMarker()
          */
         protected void stopTracker() {
-            endTime=System.currentTimeMillis();
+            endTime = System.currentTimeMillis();
         }
+
         public long getTimeExecution() {
-           return endTime - beginTime; 
+            return endTime - beginTime;
         }
     }
 
@@ -168,11 +174,12 @@ public class MilkJobOutput {
 
     /**
      * return the time in MS of this mark (diff between the startMarker and the endMarker)
+     * 
      * @param marker
      * @return
      */
     public long endChronometer(Chronometer marker) {
-        if (marker==null)
+        if (marker == null)
             return 0;
         long sumTime = sumTimeOperation.get(marker.operationName) == null ? 0 : sumTimeOperation.get(marker.operationName);
         long nbOccurences = nbOccurencesOperation.get(marker.operationName) == null ? 0 : nbOccurencesOperation.get(marker.operationName);
@@ -196,9 +203,10 @@ public class MilkJobOutput {
         }
         return result.toString();
     }
-    
+
     /**
      * Add the markers in the report
+     * 
      * @param keepOperationNoOccurrence
      */
     public void addChronometersInReport(boolean keepOperationNoOccurrence, boolean addAverage) {
@@ -208,9 +216,9 @@ public class MilkJobOutput {
             long nbOccurences = nbOccurencesOperation.get(operationName);
             if (nbOccurences == 0 && !keepOperationNoOccurrence)
                 continue;
-            addReportLine(new Object [] { operationName, TypesCast.getHumanDuration(sumTime, true) });
+            addReportLine(new Object[] { operationName, TypesCast.getHumanDuration(sumTime, true) });
             if (nbOccurences > 0 && addAverage)
-                addReportLine(new Object [] { operationName+ " ms/operation", sumTime / nbOccurences });
+                addReportLine(new Object[] { operationName + " ms/operation", sumTime / nbOccurences });
         }
         addReportEndTable();
     }
@@ -225,6 +233,9 @@ public class MilkJobOutput {
     /*                                                                                  */
     /*                                                                                  */
     /* ******************************************************************************** */
+    /**
+     * Mesure are saved as a Double format, but the caller can ask to restitute them as LONG
+     */
     private Map<PlugInMeasurement, Double> mesures = new HashMap<>();
 
     public void setMesure(PlugInMeasurement poi, double value) {
@@ -240,18 +251,30 @@ public class MilkJobOutput {
     public Map<PlugInMeasurement, Double> getAllMesures() {
         return mesures;
     }
-    
-    
-    public void addMeasuresInReport(boolean keepMesureValueNotDefine) {
+
+    public static SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:MM:ss");
+
+    public void addMeasuresInReport(boolean keepMesureValueNotDefine, boolean withEmbededMeasure) {
         addReportTable(new String[] { "Measure", "Value" });
-        
+
         for (PlugInMeasurement measure : milkJob.getPlugIn().getDescription().getMeasures()) {
-            Double measureValue = getMesure(measure);
-            if (measureValue == null && ! keepMesureValueNotDefine)
+            if (measure.isEmbeded && ! withEmbededMeasure) 
                 continue;
-            addReportLine(new Object [] { measure.name, measureValue==null ? Double.valueOf(0) : measureValue });
+            
+            Double measureValue = getMesure(measure);
+            if (measureValue == null && !keepMesureValueNotDefine)
+                continue;
+
+            if (measure.typeMeasure == TypeMeasure.DOUBLE)
+                addReportLine(new Object[] { measure.name, measureValue == null ? Double.valueOf(0) : measureValue });
+            else if (measure.typeMeasure == TypeMeasure.LONG)
+                addReportLine(new Object[] { measure.name, measureValue == null ? Long.valueOf(0) : measureValue.longValue() });
+            else if (measure.typeMeasure == TypeMeasure.DATE)
+                addReportLine(new Object[] { measure.name, measureValue == null ? "" : sdf.format(new Date(measureValue.longValue())) });
+            else
+                addReportLine(new Object[] { measure.name, measureValue == null ? Double.valueOf(0) : measureValue });
         }
         addReportEndTable();
     }
-        
+
 }

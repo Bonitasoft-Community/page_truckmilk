@@ -43,13 +43,13 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
 
     private static String operationDetection = "Only detection";
     private static String operationPurge = "Purge";
-  
-    private static PlugInParameter cstParamOperation = PlugInParameter.createInstanceListValues("operation", "Operation", 
+
+    private static PlugInParameter cstParamOperation = PlugInParameter.createInstanceListValues("operation", "Operation",
             new String[] { operationDetection, operationPurge },
-            operationDetection, 
+            operationDetection,
             "Detect or clean all Drosses in archived table  "
-            + operationDetection + ": Only detect. "
-            + operationPurge + ": Purge records.");
+                    + operationDetection + ": Only detect. "
+                    + operationPurge + ": Purge records.");
 
     public MilkCleanArchivedDross() {
         super(TYPE_PLUGIN.EMBEDED);
@@ -62,21 +62,19 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
         plugInDescription.setLabel("Clean Archived Dross");
         plugInDescription.setExplanation("Check dross in archived tables");
         plugInDescription.setCategory(CATEGORY.CASES);
-        
-        
+
         plugInDescription.addParameter(cstParamOperation);
 
-        for (TypeDross typeDross : RadarCleanArchivedDross.getListTypeDross() )
-        {
-            plugInDescription.addMesure( PlugInMeasurement.createInstance( typeDross.name, typeDross.label, typeDross.explanation));
-            String sqlQuery=typeDross.sqlQuery;
-            sqlQuery = sqlQuery.replaceAll("\\?", String.valueOf( milkJobContext.getTenantId()));
-            plugInDescription.addParameter( PlugInParameter.createInstanceInformation( typeDross.name, typeDross.label, 
-                    typeDross.explanation+"<p>"
-                    +"<div class='well'>select count(*) "+ sqlQuery+"</div>"));
+        for (TypeDross typeDross : RadarCleanArchivedDross.getListTypeDross()) {
+            plugInDescription.addMesure(PlugInMeasurement.createInstance(typeDross.name, typeDross.label, typeDross.explanation).withTypeMeasure(TypeMeasure.LONG));
+            String sqlQuery = typeDross.sqlQuery;
+            sqlQuery = sqlQuery.replaceAll("\\?", String.valueOf(milkJobContext.getTenantId()));
+            plugInDescription.addParameter(PlugInParameter.createInstanceInformation(typeDross.name, typeDross.label,
+                    typeDross.explanation + "<p>"
+                            + "<div class='well'>select count(*) " + sqlQuery + "</div>"));
 
         }
-        
+
         return plugInDescription;
     }
 
@@ -98,35 +96,44 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
     public MilkJobOutput execute(MilkJobExecution jobExecution) {
         MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
         MilkPlugInDescription plugInDescription = getDefinitionDescription(jobExecution.getMilkJobContext());
-            
-        
+
         milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
 
-
         String operation = jobExecution.getInputStringParameter(cstParamOperation);
-        DrossExecution drossExecution =null;
-        if (operationDetection.equals( operation ))
-            drossExecution = RadarCleanArchivedDross.getStatus(jobExecution.getTenantId() );
-        else
-            drossExecution = RadarCleanArchivedDross.deleteDross(jobExecution.getTenantId() );
-        
-        milkJobOutput.addEvents( drossExecution.listEvents);
-        
+        TypeDross[] listTypeDross = RadarCleanArchivedDross.getListTypeDross();
+        jobExecution.setAvancementTotalStep(listTypeDross.length);
+        DrossExecution drossExecution = new DrossExecution();
 
-        int totalDross=0;
-        for (TypeDross typeDross : drossExecution.listDross) {
-            PlugInMeasurement measure = plugInDescription.getMesureFromName( typeDross.name);
-            
-            milkJobOutput.setMesure(measure, typeDross.nbRecordsDetected);
-            
-            totalDross+= typeDross.nbRecordsDetected;
+        for (TypeDross typeDross : listTypeDross) {
+            jobExecution.setAvancementStep(1);
+
+            DrossExecution drossExecutionOne = null;
+            if (operationDetection.equals(operation)) {
+                drossExecutionOne = RadarCleanArchivedDross.getStatus(jobExecution.getTenantId(), typeDross);
+            } else {
+                drossExecutionOne = RadarCleanArchivedDross.deleteDross(jobExecution.getTenantId(), typeDross);
+            }
+            if (drossExecutionOne != null) {
+                drossExecution.listDross.addAll(drossExecutionOne.listDross);
+                drossExecution.listEvents.addAll(drossExecution.listEvents);
+            }
+        }
+
+        milkJobOutput.addEvents(drossExecution.listEvents);
+
+        int totalDross = 0;
+        for (TypeDross typeDrossStatus : drossExecution.listDross) {
+            PlugInMeasurement measure = plugInDescription.getMeasureFromName(typeDrossStatus.name);
+
+            milkJobOutput.setMesure(measure, typeDrossStatus.nbRecordsDetected);
+
+            totalDross += typeDrossStatus.nbRecordsDetected;
 
         }
-        milkJobOutput.addMeasuresInReport(true);
-        
+        milkJobOutput.addMeasuresInReport(true, false);
+
         milkJobOutput.setNbItemsProcessed(totalDross);
-        
-        
+
         return milkJobOutput;
     }
     /* ******************************************************************************** */
@@ -140,7 +147,7 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
         List<IndicatorPhoto> list = radarPhotoResult.getIndicators(mesure.name);
         double value = 0;
         for (IndicatorPhoto photo : list) {
-                value += photo.getValue();
+            value += photo.getValue();
         }
         plugTourOutput.setMesure(mesure, value);
         return value;

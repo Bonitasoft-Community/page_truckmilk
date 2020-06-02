@@ -90,7 +90,7 @@
 					<div style="font-style: italic;">
 					The <span style="color: red;font-weight: bold;">B</span>onita <span style="color: red;font-weight: bold;">SC</span>heduler&nbsp;
 					</div>
-					<a href="" >V2.4.6</a>
+					<a href="" >V2.4.7</a>
 				</center>
 			</td></tr>
 			<tr><td>
@@ -359,6 +359,28 @@
 					<!--  SECOND LINE : parameters 								-->
 					<!--                                                      	-->
 					<!--                                                      	-->
+						<tr ng-if="plugtour.show.threaddump">
+						<td ></td>
+						<td colspan="7">
+							<div  style="box-shadow: 1px 1px 12px #555;">
+								<div class="panel panel-info">
+									<div class="panel-heading">
+										<h5 class="panel-title">ThreadDump</h5>
+										<div  style="position: relative; top: -25px; right: 0px; font-size: 18px; float:right"">
+												<a  ng-click="ctrl.hideall( plugtour )" >
+												<span class="glyphicon glyphicon-remove" ></span>
+												</a>
+										</div>
+									</div>
+									<div class="panel-body"></div>
+										<div ng-bind-html="ctrl.getHtml(plugtour.threadDump, 'threaddump')"></div>
+									</div> <!-- panel body -->
+								</div> <!--  panel info -->
+							</div> <!--  shadow -->
+						</td>
+						<td style="{{ctrl.getJobStyle(plugtour)}}"></td>
+						
+					</tr>
 					<tr ng-if="plugtour.show.schedule">
 						<td ></td>
 						<td colspan="7">
@@ -605,6 +627,7 @@
 											<!--  ----------------------------- Parameters Job ---------------------------------- -->
 											<!-- <td colspan="2">Parameters value = {{plugtour.parametersdef}}</td> -->
 											<tbody ng-repeat="parameterdef in plugtour.parametersdef">
+											<!--  <tr><td>name:{{parameterdef.name}} / Visible{{ctrl.isVisibleParameter( plugtour, parameterdef )}}</td></tr> -->
 											<tr ng-if="ctrl.isVisibleParameter( plugtour, parameterdef )">
 												<td style="vertical-align: top; border-top: 1px solid #ddd;" title="{{parameterdef.name}}">
 													<div ng-if="parameterdef.type !=='SEPARATOR'">{{parameterdef.label}}

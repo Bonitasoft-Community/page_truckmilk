@@ -116,7 +116,7 @@ public class MilkCmdControlAPI {
 
         commandDescription.addJarDependencyLastVersion("mail", "1.5.0", "mail-1.5.0-b01.jar");
         commandDescription.addJarDependencyLastVersion("activation", "1.1.1", "activation-1.1.1.jar");
-        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-worker", "1.6.0", "CustomPageWorker-1.6.0.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-worker", "1.7.0", "CustomPageWorker-1.7.0.jar");
         cmdDependency.setForceDeploy( true );
         
         cmdDependency= commandDescription.addJarDependencyLastVersion("custompage-grumman", "1.1.0", "CustomPageGrumman-1.1.0.jar");

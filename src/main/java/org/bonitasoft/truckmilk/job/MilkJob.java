@@ -612,7 +612,7 @@ public @Data class MilkJob {
                 mesureAtDate.values = new HashMap<>();
 
                 for (Entry<String, Double> entry : ((Map<String, Double>) pointMap.get(MilkConstantJson.CSTJSON_MEASUREMENTATDATE_VALUEMAP)).entrySet()) {
-                    PlugInMeasurement mesure = getPlugIn().getDescription().getMesureFromName(entry.getKey());
+                    PlugInMeasurement mesure = getPlugIn().getDescription().getMeasureFromName(entry.getKey());
                     if (mesure != null)
                         mesureAtDate.values.put(mesure, entry.getValue());
                 }

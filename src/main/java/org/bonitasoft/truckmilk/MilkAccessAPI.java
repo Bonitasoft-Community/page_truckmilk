@@ -218,6 +218,13 @@ public class MilkAccessAPI {
         return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.RESETJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
     }
 
+    
+    public Map<String, Object> threadDumpJob(Parameter parameter) {
+        MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
+        return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.THREADDUMPJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
+    }
+    
+    
     public Map<String, Object> updateJob(Parameter parameter) {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.UPDATEJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());

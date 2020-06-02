@@ -33,6 +33,7 @@ import org.bonitasoft.truckmilk.job.MilkJob.MapContentParameter;
 import org.bonitasoft.truckmilk.job.MilkJob.SAVEDEXECUTIONPOLICY;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJobMonitor;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerFactory;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt.StatusScheduler;
@@ -125,7 +126,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
      * GETSTATUS : refresh + check environment
      */
     public enum VERBE {
-        GETSTATUS, REFRESH, CHECKUPDATEENVIRONMENT, DEPLOYPLUGIN, DELETEPLUGIN, ADDJOB, REMOVEJOB, ACTIVATEJOB, DEACTIVATEJOB, UPDATEJOB, IMMEDIATEJOB, ABORTJOB, RESETJOB, SCHEDULERSTARTSTOP, SCHEDULERDEPLOY, SCHEDULERRESET, SCHEDULERCHANGE, SCHEDULEROPERATION, TESTBUTTONARGS, HEARTBEAT
+        GETSTATUS, REFRESH, CHECKUPDATEENVIRONMENT, DEPLOYPLUGIN, DELETEPLUGIN, ADDJOB, REMOVEJOB, ACTIVATEJOB, DEACTIVATEJOB, UPDATEJOB, IMMEDIATEJOB, ABORTJOB, RESETJOB, THREADDUMPJOB, SCHEDULERSTARTSTOP, SCHEDULERDEPLOY, SCHEDULERRESET, SCHEDULERCHANGE, SCHEDULEROPERATION, TESTBUTTONARGS, HEARTBEAT
     };
 
     public final static String CST_PAGE_DIRECTORY = "pagedirectory";
@@ -541,6 +542,18 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     milkJob.killJob( );
                     executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceAllInformations()));
                     executeAnswer.listEvents.add(new BEvent(eventJobUpdated, "Job updated[" + milkJob.getName() + "]"));
+                }
+                executeAnswer.result.put(cstResultListJobs, getListMilkJobsMap(milkJobFactory, milkJobContext));
+            } else if (VERBE.THREADDUMPJOB.equals(verbEnum)) {
+                Long idJob = executeParameters.getParametersLong("id");
+                MilkJob milkJob = idJob == null ? null : milkJobFactory.getJobById(idJob);
+
+                if (idJob == null) {
+                    executeAnswer.listEvents.add(eventMissingID);
+                } else if (milkJob == null) {
+                    executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
+                } else {
+                    executeAnswer.result.put("threadDump", new MilkJobMonitor(milkJob).getThreadDump());                    
                 }
                 executeAnswer.result.put(cstResultListJobs, getListMilkJobsMap(milkJobFactory, milkJobContext));
             } else if (VERBE.TESTBUTTONARGS.equals(verbEnum)) {

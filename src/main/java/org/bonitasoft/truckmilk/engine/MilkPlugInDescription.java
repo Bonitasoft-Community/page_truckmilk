@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMeasurement;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeMeasure;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 
 import org.json.simple.JSONValue;
@@ -15,8 +16,8 @@ import lombok.Data;
 
 public @Data class MilkPlugInDescription {
 
-    public final static PlugInMeasurement cstMesureTimeExecution         = PlugInMeasurement.createInstance( "timeexecution", "Time Execution", "Time to execute the plug in (in ms)");
-    public final static PlugInMeasurement cstMesureNbItemProcessed       = PlugInMeasurement.createInstance( "nbItemsprocessed", "Nb items processed", "Number of item the job processed during the execution");
+    public final static PlugInMeasurement cstMesureTimeExecution         = PlugInMeasurement.createInstance( "timeexecution", "Time Execution", "Time to execute the plug in (in ms)").withTypeMeasure(TypeMeasure.LONG).withEmbeded( true );
+    public final static PlugInMeasurement cstMesureNbItemProcessed       = PlugInMeasurement.createInstance( "nbItemsprocessed", "Nb items processed", "Number of items the job processed during the execution").withTypeMeasure(TypeMeasure.LONG).withEmbeded( true );
 
     String name;
     private String version;
@@ -145,7 +146,7 @@ public @Data class MilkPlugInDescription {
     public boolean hasMesures() {
         return ! mapMesures.isEmpty();
     }
-    public PlugInMeasurement getMesureFromName(String name ) {
+    public PlugInMeasurement getMeasureFromName(String name ) {
         return mapMesures.get( name );
     }
        

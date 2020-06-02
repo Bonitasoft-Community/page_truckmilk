@@ -23,6 +23,7 @@ import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobP
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJobMonitor;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 /**
@@ -34,7 +35,6 @@ public class MilkExecuteJobThread extends Thread {
 
     static MilkLog logger = MilkLog.getLogger(MilkExecuteJobThread.class.getName());
 
-    private static String CST_TRUCKMILKNAME ="truckmilkjob";
     private SimpleDateFormat sdfSynthetic = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     private static BEvent eventPlugInViolation = new BEvent(MilkExecuteJobThread.class.getName(), 1, Level.ERROR,
@@ -305,7 +305,7 @@ public class MilkExecuteJobThread extends Thread {
     }
     
     public static String getThreadName(MilkJob milkJob) {
-        return CST_TRUCKMILKNAME+"-"+milkJob.getIdJob();
+        return new MilkJobMonitor(milkJob).getThreadName();
     }
     public static void collectStackTrace(MilkJob milkJob) {
         String truckMilkThreadName = getThreadName(milkJob);
