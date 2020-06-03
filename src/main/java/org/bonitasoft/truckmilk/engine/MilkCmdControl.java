@@ -608,6 +608,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                         listEventsAction.addAll(milkSchedulerFactory.getScheduler().shutdown(executeParameters.tenantId));
                 }
                 StatusScheduler statusScheduler = milkSchedulerFactory.getStatus(executeParameters.tenantId);
+                
                 // so, if the status return an error, do not return the listEventActions, only errors
                 if (BEventFactory.isError(statusScheduler.listEvents)) {
                     for (BEvent event : listEventsAction) {

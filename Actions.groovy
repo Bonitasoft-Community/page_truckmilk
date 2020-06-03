@@ -275,6 +275,10 @@ public class Actions {
             {
                 actionAnswer.responseMap = milkAccessAPI.commandReploy( parameter);
             }
+            else  if ("uninstall".equals(action))
+            {
+                    actionAnswer.responseMap = milkAccessAPI.uninstall( parameter);
+            }
             else  if ("schedulermaintenance".equals(action))
             {
                 actionAnswer.responseMap = milkAccessAPI.schedulerMaintenance( parameter);

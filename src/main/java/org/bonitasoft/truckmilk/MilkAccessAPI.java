@@ -167,6 +167,35 @@ public class MilkAccessAPI {
 
     }
 
+    public Map<String, Object> uninstall(Parameter parameter) {
+        // first, deploy the command if needed
+        List<BEvent> listEvents = new ArrayList<>();
+        Map<String, Object> result = new HashMap<>();
+
+        MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
+        
+        // stop the scheduler
+        Map<String,Object> param = new HashMap<>();
+        param.put("start", Boolean.FALSE);
+        milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.SCHEDULERSTARTSTOP, param, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
+        
+        // Purge BonitaProperties
+
+        // undeploy
+        DeployStatus deployStatus = milkCmdControlAPI.unDeployCommand(parameter.information, parameter.pageDirectory, parameter.commandAPI,
+                parameter.platFormAPI, parameter.getTenantId());
+        listEvents.addAll(deployStatus.listEvents);
+        if (BEventFactory.isError(listEvents)) {
+            result.put(cstJsonListEvents, BEventFactory.getHtml(listEvents));
+            result.put(cstJsonDeploimenterr, "Error during undeployment");
+            return result;
+        }
+        
+        
+        result.put(cstJsonDeploimentsuc, "Command undeployed;");
+        return result;
+
+    }
     public Map<String, Object> getRefreshInformation(Parameter parameter) {
         // first, deploy the command if needed
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();

@@ -87,7 +87,21 @@ public class MilkCmdControlAPI {
         return deployStatus;
 
     }
-
+    /**
+     * 
+     * @param parameter
+     * @param pageDirectory
+     * @param commandAPI
+     * @param platFormAPI
+     * @param tenantId
+     * @return
+     */
+    public DeployStatus unDeployCommand(Map<String, Object> parameter, File pageDirectory, CommandAPI commandAPI, PlatformAPI platFormAPI,
+            long tenantId) {
+        BonitaCommandDescription commandDescription = getMilkCommandDescription(pageDirectory);
+        BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(commandDescription);
+        return bonitaCommand.undeployCommand(commandDescription, true, tenantId, commandAPI, platFormAPI);        
+    }
     /**
      * geth the command description
      * 
@@ -99,7 +113,7 @@ public class MilkCmdControlAPI {
         BonitaCommandDescription commandDescription = new BonitaCommandDescription(MilkCmdControl.cstCommandName, pageDirectory);
         commandDescription.forceDeploy = false;
         commandDescription.mainCommandClassName = MilkCmdControl.class.getName();
-        commandDescription.mainJarFile = "TruckMilk-2.4-Page.jar";
+        commandDescription.mainJarFile = "TruckMilk-2.5-Page.jar";
         commandDescription.commandDescription = MilkCmdControl.cstCommandDescription;
 
 

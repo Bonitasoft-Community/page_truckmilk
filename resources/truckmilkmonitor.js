@@ -1061,6 +1061,38 @@
 				});
 			}	
 		}
+		this.Uninstall = function() {
+			var result = confirm("Do you want to uninstall TruckMilk?");
+			if (result) {
+				var self=this;
+				self.inprogress=true;
+				self.listevents="";
+			
+				console.log("Uninstall confirmed");
+				$http.get('?page=custompage_truckmilk&action=uninstall&t='+Date.now())
+				.success(function(jsonResult, statusHttp, headers, config) {
+					
+					// connection is lost ?
+					if (statusHttp==401 || typeof jsonResult === 'string') {
+						console.log("Redirected to the login page !");
+						window.location.reload();
+
+					}
+					self.inprogress = false;
+					confirm("Uninstall confirmed. Page are not undeployed. Redirect to the administrator page, else the page will be re-installed");
+					
+
+				}).error(function(jsonResult, statusHttp, headers, config) {
+					console.log("commandRedeploy.error HTTP statusHttp="+statusHttp);
+					// connection is lost ?
+					if (statusHttp==401) {
+						console.log("Redirected to the login page !");
+						window.location.reload();
+					}
+					self.inprogress = false;
+				});
+			}	
+		}
 		
 		// -----------------------------------------------------------------------------------------
 		// Scheduler
@@ -1088,8 +1120,10 @@
 				self.inprogress = false;
 				console.log("scheduler.receiveData HTTP inprogress<=false jsonResult="+angular.toJson(jsonResult));
 
-				self.scheduler.status 		= jsonResult.status;
-				self.scheduler.listevents	= jsonResult.listevents;
+				self.scheduler.status 						= jsonResult.status;
+				self.scheduler.listevents					= jsonResult.listevents;
+				self.scheduler.dashboardlistevents			= jsonResult.scheduler.dashboardlistevents;
+				self.scheduler.dashboardsyntheticlistevents	= jsonResult.scheduler.dashboardsyntheticlistevents;
 			}).error(function(jsonResult, statusHttp, headers, config) {
 				console.log("Scheduler.error HTTP statusHttp="+statusHttp);
 				// connection is lost ?

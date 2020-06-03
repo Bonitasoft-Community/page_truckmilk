@@ -533,8 +533,6 @@ public class MilkScheduleQuartz extends MilkSchedulerInt {
     /* ******************************************************************************** */
 
     public List<BEvent> checkAndDeploy(boolean forceDeploy, File pageDirectory, long tenantId) {
-        // File fileQuartzJar = new File(pageDirectory.getAbsolutePath() + "/lib/TruckMilk-2.2-Quartzjob.jar");
-        // signature=getSignature(fileQuartzJar);
         return new ArrayList<>();
     }
 
