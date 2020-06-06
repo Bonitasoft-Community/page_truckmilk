@@ -570,7 +570,9 @@
 																<tr ng-if="plugtour.jobCanBeStoppedItems">
 																	<td style="padding: 15px" >Stop after x items processed</td>
 																	<td>
-																		<input ng-model="plugtour.stopafterNbItems" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >												
+																	
+																		<input ng-model="plugtour.stopafterNbItemsIN" type="checkbox" ng-change="ctrl.setLimitationItems(plugtour)">
+																		<input ng-model="plugtour.stopafterNbItems" ng-if="plugtour.stopafterNbItemsIN" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >												
 																
 																	</td>
 																</tr>
@@ -584,7 +586,9 @@
 																<tr  ng-if="plugtour.jobCanBeStoppedDelay">
 																	<td style="padding: 15px" >Stop after x minutes</td>
 																	<td>
-																	<input ng-model="plugtour.stopafterNbMinutes" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >
+																		<input ng-model="plugtour.stopafterNbMinutesIN" type="checkbox" ng-change="ctrl.setLimitationHour(plugtour)">
+																	<input ng-model="plugtour.stopafterNbMinutes" ng-if="plugtour.stopafterNbMinutesIN" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >
+																	
 																	</td>
 																</tr>
 																<tr ng-if="plugtour.show.parametersexpl">

@@ -271,8 +271,8 @@ public class MilkExecuteJobThread extends Thread {
 
             String reportTime = "<p><i>Started at "+sdfSynthetic.format( new Date( timeBegin))+" end at "+sdfSynthetic.format( new Date( timeEnd ))+"</i>";
             milkJobOutput.addReportInHtml(reportTime);;
-            milkJobOutput.setMesure( MilkPlugInDescription.cstMesureTimeExecution, milkJobOutput.executionTimeInMs);
-            milkJobOutput.setMesure( MilkPlugInDescription.cstMesureNbItemProcessed, milkJobOutput.nbItemsProcessed);
+            milkJobOutput.setMeasure( MilkPlugInDescription.cstMesureTimeExecution, milkJobOutput.executionTimeInMs);
+            milkJobOutput.setMeasure( MilkPlugInDescription.cstMesureNbItemProcessed, milkJobOutput.nbItemsProcessed);
             
             milkJob.addMesureValues( new Date(), milkJobOutput.getAllMesures());
             // executionDescription += "(" + output.executionStatus + ") " + output.nbItemsProcessed + " in " + output.executionTimeInMs + ";";

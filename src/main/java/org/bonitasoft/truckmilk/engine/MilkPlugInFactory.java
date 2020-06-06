@@ -18,6 +18,7 @@ import org.bonitasoft.truckmilk.plugin.MilkDeleteDuplicateTasks;
 import org.bonitasoft.truckmilk.plugin.MilkDirectory;
 import org.bonitasoft.truckmilk.plugin.MilkEmailUsersTasks;
 import org.bonitasoft.truckmilk.plugin.MilkGrumman;
+import org.bonitasoft.truckmilk.plugin.MilkLogObserver;
 import org.bonitasoft.truckmilk.plugin.MilkMeteor;
 import org.bonitasoft.truckmilk.plugin.MilkPing;
 import org.bonitasoft.truckmilk.plugin.MilkPurgeArchive;
@@ -99,6 +100,7 @@ public class MilkPlugInFactory {
         listPlugIns.add(new MilkCancelCases() );
         listPlugIns.add(new MilkRadarBonitaEngine() );
         listPlugIns.add(new MilkDeleteDuplicateTasks() );
+        listPlugIns.add(new MilkLogObserver() );
     }
 
     /**

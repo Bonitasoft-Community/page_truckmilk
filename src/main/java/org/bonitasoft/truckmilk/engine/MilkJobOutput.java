@@ -238,7 +238,7 @@ public class MilkJobOutput {
      */
     private Map<PlugInMeasurement, Double> mesures = new HashMap<>();
 
-    public void setMesure(PlugInMeasurement poi, double value) {
+    public void setMeasure(PlugInMeasurement poi, double value) {
         if (milkJob.getPlugIn().getDescription().containsMesure(poi))
             mesures.put(poi, value);
 

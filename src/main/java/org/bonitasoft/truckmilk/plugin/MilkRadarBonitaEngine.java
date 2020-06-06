@@ -180,7 +180,7 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
         for (IndicatorPhoto photo : list) {
                 value += photo.getValue();
         }
-        plugTourOutput.setMesure(mesure, value);
+        plugTourOutput.setMeasure(mesure, value);
         return value;
     }
 

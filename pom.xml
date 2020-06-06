@@ -47,13 +47,19 @@
 		<dependency>
 			<groupId>org.bonitasoft.custompage</groupId>
 			<artifactId>CustomPageWorker</artifactId>
-			<version>1.7.0</version>
+			<version>1.8.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.bonitasoft.custompage</groupId>
 			<artifactId>CustomPageGrumman</artifactId>
 			<version>1.1.0</version>
 		</dependency>
+		<dependency>
+			<groupId>org.bonitasoft.custompage</groupId>
+			<artifactId>CustomPageLogAccess</artifactId>
+			<version>2.6.0</version>
+		</dependency>
+		
 		
 		<dependency>
 			<groupId>org.bonitasoft.command</groupId>

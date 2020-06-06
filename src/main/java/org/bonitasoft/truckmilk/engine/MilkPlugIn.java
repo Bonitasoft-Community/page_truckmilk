@@ -9,12 +9,9 @@ import java.util.Map;
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.DELAYSCOPE;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
-import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 import lombok.Data;
 

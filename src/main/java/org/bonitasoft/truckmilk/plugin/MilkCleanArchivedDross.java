@@ -1,45 +1,26 @@
 package org.bonitasoft.truckmilk.plugin;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import org.bonitasoft.log.event.BEvent;
-import org.bonitasoft.log.event.BEvent.Level;
-import org.bonitasoft.radar.RadarFactory;
-import org.bonitasoft.radar.RadarPhoto;
-import org.bonitasoft.radar.Radar.RadarPhotoResult;
-import org.bonitasoft.radar.Radar.RadarResult;
-import org.bonitasoft.radar.RadarPhoto.IndicatorPhoto;
 import org.bonitasoft.radar.archive.RadarCleanArchivedDross;
-import org.bonitasoft.radar.archive.RadarCleanArchivedDross.DrossExecution;
-import org.bonitasoft.radar.archive.RadarCleanArchivedDross.TypeDross;
-import org.bonitasoft.radar.connector.RadarTimeTrackerConnector;
-import org.bonitasoft.radar.connector.RadarTimeTrackerConnector.TimeTrackerParameter;
-import org.bonitasoft.radar.workers.RadarWorkers;
+import org.bonitasoft.radar.archive.RadarCleanArchivedDross.StopPurge;
+import org.bonitasoft.radar.archive.RadarCleanArchivedDross.TypeDrossDefinition;
+import org.bonitasoft.radar.archive.RadarCleanArchivedDross.TypeDrossExecution;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.DELAYSCOPE;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMeasurement;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.TYPE_PLUGIN;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
-import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
+import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 public class MilkCleanArchivedDross extends MilkPlugIn {
 
     static MilkLog logger = MilkLog.getLogger(MilkCleanArchivedDross.class.getName());
-
-    private final static String RADAR_NAME_CONNECTORTIMETRACKER = "connectorTimeTracker";
-
-    private static BEvent eventErrorNoRadarCleanArchiveDross = new BEvent(MilkRadarBonitaEngine.class.getName(), 1, Level.ERROR,
-            "Clean Dross Radar not found", "The Radar Clean Dross is not found", "information can't be calculated", "Check library and dependency");
 
     private static String operationDetection = "Only detection";
     private static String operationPurge = "Purge";
@@ -65,16 +46,17 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
 
         plugInDescription.addParameter(cstParamOperation);
 
-        for (TypeDross typeDross : RadarCleanArchivedDross.getListTypeDross()) {
-            plugInDescription.addMesure(PlugInMeasurement.createInstance(typeDross.name, typeDross.label, typeDross.explanation).withTypeMeasure(TypeMeasure.LONG));
+        for (TypeDrossDefinition typeDross : RadarCleanArchivedDross.getListTypeDross()) {
+            plugInDescription.addMesure(PlugInMeasurement.createInstance(typeDross.name, typeDross.name, typeDross.explanation).withTypeMeasure(TypeMeasure.LONG));
             String sqlQuery = typeDross.sqlQuery;
             sqlQuery = sqlQuery.replaceAll("\\?", String.valueOf(milkJobContext.getTenantId()));
-            plugInDescription.addParameter(PlugInParameter.createInstanceInformation(typeDross.name, typeDross.label,
-                    typeDross.explanation + "<p>"
+            plugInDescription.addParameter(PlugInParameter.createInstanceInformation(typeDross.name,
+                    typeDross.name,
+                    typeDross.label + "<p>" + typeDross.explanation + "<p>"
                             + "<div class='well'>select count(*) " + sqlQuery + "</div>"));
 
         }
-
+        plugInDescription.setJobCanBeStopped(JOBSTOPPER.BOTH);
         return plugInDescription;
     }
 
@@ -94,62 +76,102 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
 
     @Override
     public MilkJobOutput execute(MilkJobExecution jobExecution) {
+        List<BEvent> listEvents = new ArrayList<>();
+
         MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
         MilkPlugInDescription plugInDescription = getDefinitionDescription(jobExecution.getMilkJobContext());
 
         milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
 
         String operation = jobExecution.getInputStringParameter(cstParamOperation);
-        TypeDross[] listTypeDross = RadarCleanArchivedDross.getListTypeDross();
-        jobExecution.setAvancementTotalStep(listTypeDross.length);
-        DrossExecution drossExecution = new DrossExecution();
+        TypeDrossDefinition[] listTypeDross = RadarCleanArchivedDross.getListTypeDross();
+        // Double in case of purge
+        jobExecution.setAvancementTotalStep((long) listTypeDross.length + (operationPurge.equals(operation) ? listTypeDross.length : 0L));
 
-        for (TypeDross typeDross : listTypeDross) {
-            jobExecution.setAvancementStep(1);
+        List<TypeDrossExecution> listDrossExecution = new ArrayList<>();
+        int advancementStep = 0;
 
-            DrossExecution drossExecutionOne = null;
-            if (operationDetection.equals(operation)) {
-                drossExecutionOne = RadarCleanArchivedDross.getStatus(jobExecution.getTenantId(), typeDross);
-            } else {
-                drossExecutionOne = RadarCleanArchivedDross.deleteDross(jobExecution.getTenantId(), typeDross);
-            }
-            if (drossExecutionOne != null) {
-                drossExecution.listDross.addAll(drossExecutionOne.listDross);
-                drossExecution.listEvents.addAll(drossExecution.listEvents);
-            }
+        // first pass, calculate the number of items
+        for (TypeDrossDefinition typeDross : listTypeDross) {
+            if (jobExecution.pleaseStop())
+                break;
+
+            advancementStep++;
+            jobExecution.setAvancementStep(advancementStep);
+
+            TypeDrossExecution typeDrossExecution = RadarCleanArchivedDross.getStatus(jobExecution.getTenantId(), typeDross);
+            listEvents.addAll(typeDrossExecution.listEvents);
+            listDrossExecution.add(typeDrossExecution);
         }
-
-        milkJobOutput.addEvents(drossExecution.listEvents);
-
         int totalDross = 0;
-        for (TypeDross typeDrossStatus : drossExecution.listDross) {
-            PlugInMeasurement measure = plugInDescription.getMeasureFromName(typeDrossStatus.name);
+        if (operationDetection.equals(operation)) {
+            // update measurement
+            milkJobOutput.addReportInHtml("<h4>Detection</h4><br>");
+            for (TypeDrossExecution typeDrossExecution : listDrossExecution) {
+                PlugInMeasurement measure = plugInDescription.getMeasureFromName(typeDrossExecution.typeDrossDefinition.name);
 
-            milkJobOutput.setMesure(measure, typeDrossStatus.nbRecordsDetected);
+                milkJobOutput.setMeasure(measure, typeDrossExecution.nbRecords);
+                totalDross += typeDrossExecution.nbRecords;
+            }
+            milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
+        }
 
-            totalDross += typeDrossStatus.nbRecordsDetected;
+        // do we have the purge now ? 
+        if (operationPurge.equals(operation)) {
+            milkJobOutput.addReportInHtml("<h4>Purge</h4><br>");
+            totalDross = 0; // we want to count the number of deletion 
+            // first get the
+            for (TypeDrossExecution typeDrossExecution : listDrossExecution) {
+                if (jobExecution.pleaseStop()) {
+                    break;
+                }
+
+                advancementStep++;
+                jobExecution.setAvancementStep(advancementStep);
+
+                TypeDrossExecution typeDrossDeletion = RadarCleanArchivedDross.deleteDross(jobExecution.getTenantId(),
+                        typeDrossExecution.typeDrossDefinition,
+                        new StopPurgeBaseOnJob(jobExecution));
+                listEvents.addAll(typeDrossDeletion.listEvents);
+                // Already added during the stopPurgeBaseOnJob jobExecution.addManagedItems( typeDrossDeletion.nbRecords);
+
+                PlugInMeasurement measure = plugInDescription.getMeasureFromName(typeDrossExecution.typeDrossDefinition.name);
+                milkJobOutput.setMeasure(measure, typeDrossDeletion.nbRecords);
+
+                totalDross += typeDrossDeletion.nbRecords;
+            }
 
         }
-        milkJobOutput.addMeasuresInReport(true, false);
 
+        milkJobOutput.addEvents(listEvents);
+        milkJobOutput.addMeasuresInReport(true, false);
         milkJobOutput.setNbItemsProcessed(totalDross);
 
         return milkJobOutput;
     }
+
     /* ******************************************************************************** */
     /*                                                                                  */
     /* Private method */
     /*                                                                                  */
     /*                                                                                  */
     /* ******************************************************************************** */
+    public class StopPurgeBaseOnJob implements StopPurge {
 
-    private double addMesureFromIndicator(PlugInMeasurement mesure, RadarPhotoResult radarPhotoResult, MilkJobOutput plugTourOutput) {
-        List<IndicatorPhoto> list = radarPhotoResult.getIndicators(mesure.name);
-        double value = 0;
-        for (IndicatorPhoto photo : list) {
-            value += photo.getValue();
+        MilkJobExecution jobExecution;
+
+        public StopPurgeBaseOnJob(MilkJobExecution jobExecution) {
+            this.jobExecution = jobExecution;
         }
-        plugTourOutput.setMesure(mesure, value);
-        return value;
+
+        public int getMaxNumberToProcess() {
+            return jobExecution.getJobStopAfterMaxItems() - jobExecution.getManagedItems();
+        }
+        
+        public boolean pleaseStop(int numberOfDeletion) {
+            jobExecution.addManagedItems(numberOfDeletion);
+            return jobExecution.pleaseStop();
+        }
     }
+
 }

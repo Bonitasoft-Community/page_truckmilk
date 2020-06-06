@@ -220,8 +220,8 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
                 milkJobOutput.addReportLine(new Object[] { "Task deletion error", countErrors });
                 milkJobOutput.addReportEndTable();
 
-                milkJobOutput.setMesure(cstMesureTasksDeleted, countCorrects);
-                milkJobOutput.setMesure(cstMesureTasksError, countErrors);
+                milkJobOutput.setMeasure(cstMesureTasksDeleted, countCorrects);
+                milkJobOutput.setMeasure(cstMesureTasksError, countErrors);
                 milkJobOutput.setNbItemsProcessed(countCorrects);
 
                 if (oneErrorDetected)

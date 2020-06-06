@@ -115,10 +115,10 @@ public class MilkPing extends MilkPlugIn {
         long valuePoint = (System.currentTimeMillis() % 1000) - 250;
         if (valuePoint<250)
             valuePoint=0;
-        plugTourOutput.setMesure( cstMesureMS, valuePoint);
+        plugTourOutput.setMeasure( cstMesureMS, valuePoint);
         
         Calendar c = Calendar.getInstance();
-        plugTourOutput.setMesure( cstMesureHourOfDay, c.get( Calendar.HOUR_OF_DAY));
+        plugTourOutput.setMeasure( cstMesureHourOfDay, c.get( Calendar.HOUR_OF_DAY));
         
         jobExecution.setAvancementStep(totalMinutesExecution);
 

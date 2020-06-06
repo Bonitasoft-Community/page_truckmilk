@@ -17,7 +17,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.logging.Logger;
 
 import org.bonitasoft.engine.api.ProcessAPI;
@@ -34,17 +33,14 @@ import org.bonitasoft.engine.search.SearchOptionsBuilder;
 import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.properties.BonitaEngineConnection;
 import org.bonitasoft.radar.archive.RadarCleanArchivedDross;
 import org.bonitasoft.radar.archive.RadarCleanArchivedDross.DrossExecution;
-import org.bonitasoft.radar.archive.RadarCleanArchivedDross.TypeDross;
-import org.bonitasoft.radar.workers.RadarWorkers;
-import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput.Chronometer;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.ReplacementPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
@@ -379,7 +375,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
             milkJobOutput.addEvent(new BEvent(eventDeletionFailed, e, "Purge:" + currentProcessToLog));
         }
         // produce the report now
-        milkJobOutput.setMesure(cstMesureCasePurged, milkJobOutput.nbItemsProcessed);
+        milkJobOutput.setMeasure(cstMesureCasePurged, milkJobOutput.nbItemsProcessed);
 
         deletionPerProcess.addInReport(milkJobOutput);
 
@@ -492,7 +488,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
             milkJobOutput.addEvent(new BEvent(eventDeletionFailed, e, "Purge:" + sourceProcessInstanceIds));
         }
         deletionPerProcess.addInReport(milkJobOutput);
-        milkJobOutput.setMesure(cstMesureCasePurged, milkJobOutput.nbItemsProcessed);
+        milkJobOutput.setMeasure(cstMesureCasePurged, milkJobOutput.nbItemsProcessed);
 
     }
     /* ******************************************************************************** */
@@ -678,7 +674,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
                     jobExecution.setAvancementStep(20L + (long) (100 * milkJobOutput.nbItemsProcessed / searchArchivedProcessInstance.getResult().size()));
 
                 }
-                milkJobOutput.setMesure(cstMesureCaseDetected, searchArchivedProcessInstance.getCount());
+                milkJobOutput.setMeasure(cstMesureCaseDetected, searchArchivedProcessInstance.getCount());
                 totalCasesDetected = searchArchivedProcessInstance.getCount();
             }
 
@@ -942,7 +938,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
 
             milkJobOutput.addChronometersInReport(false, false);
 
-            milkJobOutput.setMesure(cstMesureCasePurged, statistic.countNbItems);
+            milkJobOutput.setMeasure(cstMesureCasePurged, statistic.countNbItems);
 
             BEvent eventFinal = (statistic.countBadDefinition == 0) ? new BEvent(eventDeletionSuccess, reportEvent.toString()) : new BEvent(eventReportError, reportEvent.toString());
 
@@ -1241,8 +1237,8 @@ public class MilkPurgeArchive extends MilkPlugIn {
         }
 
         // we generate a lot of dross : manage them now
-        DrossExecution drossExecution = RadarCleanArchivedDross.deleteDrossAll(tenantId);
-        managePurgeResult.listEvents.addAll(drossExecution.listEvents);
+        DrossExecution drossExecution = RadarCleanArchivedDross.deleteDrossAll(tenantId,10000);
+        managePurgeResult.listEvents.addAll(drossExecution.getListEvents());
         return managePurgeResult;
     }
 

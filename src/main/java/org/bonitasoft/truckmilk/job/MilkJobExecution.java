@@ -87,7 +87,7 @@ public class MilkJobExecution {
     }
 
     public Boolean getInputBooleanParameter(String name, Boolean defaultValue) {
-        return TypesCast.getBoolean(jobParameters.get(name).toString(), defaultValue);
+        return TypesCast.getBoolean(jobParameters.get(name) ==null ? defaultValue : jobParameters.get(name).toString(), defaultValue);
 
     }
 
@@ -215,6 +215,9 @@ public class MilkJobExecution {
         return pleaseStopAfterMaxMinutes;
     }
     
+    public int getManagedItems() {
+        return this.nbManagedItems;
+    }
     public void addManagedItems(long managedItems) {
         this.nbManagedItems += managedItems;
     }

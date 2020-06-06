@@ -128,8 +128,8 @@ ORDER BY id;
         if (stuckFlowNodes.listStuckFlowNode.isEmpty() || CSTOPERATION_GETINFORMATION.equals(policy))
         {
             milkJobOutput.executionStatus =ExecutionStatus.SUCCESSNOTHING;
-            milkJobOutput.setMesure(cstMesureTasksExecuted, 0);
-            milkJobOutput.setMesure(cstMesureTasksError, 0);
+            milkJobOutput.setMeasure(cstMesureTasksExecuted, 0);
+            milkJobOutput.setMeasure(cstMesureTasksError, 0);
             milkJobOutput.addReportTable( new String[] {"Indicator", "Value"});
             milkJobOutput.addReportLine( new Object[] {"Number of tasks detected", stuckFlowNodes.listStuckFlowNode.size() });
             // show up the fist lines
@@ -183,8 +183,8 @@ ORDER BY id;
         milkJobOutput.addReportLine( new Object[] {"Task execution error", countErrors});
         milkJobOutput.addReportEndTable();
         
-        milkJobOutput.setMesure(cstMesureTasksExecuted, countCorrects);
-        milkJobOutput.setMesure(cstMesureTasksError, countErrors);
+        milkJobOutput.setMeasure(cstMesureTasksExecuted, countCorrects);
+        milkJobOutput.setMeasure(cstMesureTasksError, countErrors);
         milkJobOutput.setNbItemsProcessed(countCorrects);
         
         if (oneErrorDetected)

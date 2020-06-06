@@ -356,6 +356,19 @@
 			this.operationJob('addJob', param, null, true);
 		}
 
+		
+		this.setLimitationItems = function(milkjob) {
+			if (! milkjob.stopafterNbItemsIN) { 
+				milkjob.stopafterNbItems=0
+			}			
+		}
+		
+		this.setLimitationHour = function(milkjob) {
+			if (! milkjob.stopafterNbMinutesIN) { 
+				milkjob.stopafterNbMinutes=0
+			}			
+		}
+		
 		this.removeJob = function(milkJob) {
 			var result = confirm("Do you want to remove this job?");
 			if (result) {
@@ -431,6 +444,7 @@
 
 			this.operationJob('immediateExecution', param, milkJob, true);		
 		}
+		
 		this.abortJob = function(milkJob) {
 			console.log("abortJob:begin");
 			var param = {
@@ -440,6 +454,7 @@
 
 			this.operationJob('abortJob', param, milkJob, true);		
 		}
+		
 		this.resetJob = function(milkJob) {
 			console.log("resetJob:begin");
 			var param = {
@@ -569,10 +584,15 @@
 						milkJob.parametersvalue[ parameterName ] = [];
 					}
 				}
-				
-				
-				
 			}
+			if (milkJob.stopafterNbItems == 0)
+				milkJob.stopafterNbItemsIN = false;
+			else
+				milkJob.stopafterNbItemsIN = true;
+			if (milkJob.stopafterNbMinutes == 0)
+				milkJob.stopafterNbMinutesIN = false;
+			else
+				milkJob.stopafterNbMinutesIN = true;
 			console.log("milkJobPreration END " + milkJob.name+" milkJob.parametersvalue="+angular.toJson( milkJob.parametersvalue,true ));
 
 		}

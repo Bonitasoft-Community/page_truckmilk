@@ -499,8 +499,8 @@ public @Data class MilkJob {
      * @return
      */
     public boolean isAskedForStop() {
-        // we update the status from the database every 30 s, else maximum of the CPU is take into a load the properties
-        if (System.currentTimeMillis() - lastTimeWeAskedForAStop < 1000*30)
+        // we update the status from the database every 60 s, else maximum of the CPU is take into a load the properties
+        if (System.currentTimeMillis() - lastTimeWeAskedForAStop < 1000*60)
             return  trackExecution.askForStop;
         lastTimeWeAskedForAStop = System.currentTimeMillis();
         // load on the database
