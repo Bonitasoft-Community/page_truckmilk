@@ -671,9 +671,9 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 Long nbSavedHeartBeat = executeParameters.getParametersLong( MilkConstantJson.CSTJSON_NBSAVEDHEARTBEAT);
           
 
-                executeAnswer.listEvents.addAll(milkSchedulerFactory.changeScheduler(newSchedulerChange, executeParameters.tenantId));
                 milkReportEngine.setNbSavedHeartBeat(nbSavedHeartBeat==null ? 60 : nbSavedHeartBeat);
                 milkReportEngine.setLogHeartBeat(logHeartbeat==null ? true : logHeartbeat);
+                executeAnswer.listEvents.addAll(milkSchedulerFactory.changeScheduler(newSchedulerChange, executeParameters.tenantId));
                 
                 
                 // get information on the new Scheduler then

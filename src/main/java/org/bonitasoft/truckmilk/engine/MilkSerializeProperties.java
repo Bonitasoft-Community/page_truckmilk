@@ -472,6 +472,8 @@ public class MilkSerializeProperties {
 
     private final static String BONITAPROPERTIES_DOMAINSCHEDULER = "scheduler";
     private final static String BONITAPROPERTIES_SCHEDULERTYPE = "schedulertype";
+    private final static String BONITAPROPERTIES_REPORTLOGHEART = "reportheart";
+    
 
     public SerializeOperation getCurrentScheduler(MilkSchedulerFactory schedulerFactory) {
         SerializeOperation serializeOperation = new SerializeOperation();
@@ -481,6 +483,10 @@ public class MilkSerializeProperties {
         String valueSt = (String) bonitaProperties.get(BONITAPROPERTIES_SCHEDULERTYPE);
         serializeOperation.scheduler = schedulerFactory.getFromType(valueSt, true);
 
+        MilkReportEngine reportEngine = MilkReportEngine.getInstance();
+        Object reportHeart= bonitaProperties.get(BONITAPROPERTIES_REPORTLOGHEART);
+        reportEngine.setLogHeartBeat( reportHeart==null ? false : "true".equals( reportHeart.toString() ));
+        
         return serializeOperation;
     }
 
@@ -494,7 +500,11 @@ public class MilkSerializeProperties {
         
         bonitaProperties.put(BONITAPROPERTIES_SCHEDULERTYPE, currentScheduler.getType().toString());
         listKeys.add(BONITAPROPERTIES_SCHEDULERTYPE);
-        
+       
+        MilkReportEngine reportEngine = MilkReportEngine.getInstance();
+        bonitaProperties.put(BONITAPROPERTIES_REPORTLOGHEART, reportEngine.isLogHeartBeat()? "true" : "false");
+        listKeys.add(BONITAPROPERTIES_REPORTLOGHEART);
+
         serializeOperation.listEvents.addAll(bonitaProperties.storeCollectionKeys(listKeys));
 
         logger.fine(".saveCurrentScheduler-end");

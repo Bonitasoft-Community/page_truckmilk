@@ -49,7 +49,7 @@ public class MilkReportEngine {
     /**
      * Each Log Beart will be log as INFO
      */
-    private boolean logHeartBeat;
+    private boolean logHeartBeat = false;
 
     public boolean isLogHeartBeat() {
         return logHeartBeat;
