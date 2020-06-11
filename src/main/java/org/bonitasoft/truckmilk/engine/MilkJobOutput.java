@@ -189,6 +189,18 @@ public class MilkJobOutput {
         return marker.getTimeExecution();
     }
 
+    /**
+     * add some time in a dedicated chronometer
+     * @param operationName
+     * @param timeInMs
+     */
+    public void addTimeChronometer(String operationName, long timeInMs) {
+        long sumTime = sumTimeOperation.get(operationName) == null ? 0 : sumTimeOperation.get(operationName);
+        long nbOccurences = nbOccurencesOperation.get(operationName) == null ? 0 : nbOccurencesOperation.get(operationName);
+        
+        sumTimeOperation.put(operationName, sumTime + timeInMs);
+        nbOccurencesOperation.put(operationName, nbOccurences + 1);
+    }
     public String collectPerformanceSynthesis(boolean keepOperationNoOccurrence) {
         StringBuilder result = new StringBuilder();
         for (String operationName : sumTimeOperation.keySet()) {
@@ -218,7 +230,7 @@ public class MilkJobOutput {
                 continue;
             addReportLine(new Object[] { operationName, TypesCast.getHumanDuration(sumTime, true) });
             if (nbOccurences > 0 && addAverage)
-                addReportLine(new Object[] { operationName + " ms/operation", sumTime / nbOccurences });
+                addReportLine(new Object[] { operationName + " ms/operation ("+nbOccurences+")", sumTime / nbOccurences });
         }
         addReportEndTable();
     }
