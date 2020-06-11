@@ -5,12 +5,13 @@ import java.util.List;
 
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.radar.archive.RadarCleanArchivedDross;
-import org.bonitasoft.radar.archive.RadarCleanArchivedDross.StopPurge;
+import org.bonitasoft.radar.archive.RadarCleanArchivedDross.MonitorPurge;
 import org.bonitasoft.radar.archive.RadarCleanArchivedDross.TypeDrossDefinition;
 import org.bonitasoft.radar.archive.RadarCleanArchivedDross.TypeDrossExecution;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput.Chronometer;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
@@ -21,7 +22,8 @@ import org.bonitasoft.truckmilk.toolbox.MilkLog;
 public class MilkCleanArchivedDross extends MilkPlugIn {
 
     static MilkLog logger = MilkLog.getLogger(MilkCleanArchivedDross.class.getName());
-
+    private static String loggerHeader = "CleanArchivedDross ";
+    
     private static String operationDetection = "Only detection";
     private static String operationPurge = "Purge";
 
@@ -91,20 +93,21 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
         List<TypeDrossExecution> listDrossExecution = new ArrayList<>();
         int advancementStep = 0;
 
-        // first pass, calculate the number of items
-        for (TypeDrossDefinition typeDross : listTypeDross) {
-            if (jobExecution.pleaseStop())
-                break;
-
-            advancementStep++;
-            jobExecution.setAvancementStep(advancementStep);
-
-            TypeDrossExecution typeDrossExecution = RadarCleanArchivedDross.getStatus(jobExecution.getTenantId(), typeDross);
-            listEvents.addAll(typeDrossExecution.listEvents);
-            listDrossExecution.add(typeDrossExecution);
-        }
         int totalDross = 0;
+
+        //------------------------------- detection
         if (operationDetection.equals(operation)) {
+            for (TypeDrossDefinition typeDross : listTypeDross) {
+                if (jobExecution.pleaseStop())
+                    break;
+
+                advancementStep++;
+                jobExecution.setAvancementStep(advancementStep);
+
+                TypeDrossExecution typeDrossExecution = RadarCleanArchivedDross.getStatus(jobExecution.getTenantId(), typeDross);
+                listEvents.addAll(typeDrossExecution.listEvents);
+                listDrossExecution.add(typeDrossExecution);
+            }
             // update measurement
             milkJobOutput.addReportInHtml("<h4>Detection</h4><br>");
             for (TypeDrossExecution typeDrossExecution : listDrossExecution) {
@@ -116,35 +119,42 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
             milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
         }
 
-        // do we have the purge now ? 
+        // ----------------------------- Purge
         if (operationPurge.equals(operation)) {
             milkJobOutput.addReportInHtml("<h4>Purge</h4><br>");
             totalDross = 0; // we want to count the number of deletion 
             // first get the
-            for (TypeDrossExecution typeDrossExecution : listDrossExecution) {
+            for (TypeDrossDefinition typeDross : listTypeDross) {
                 if (jobExecution.pleaseStop()) {
+                    logger.info(loggerHeader+"Stop Asked["+typeDross.name+"] "+jobExecution.getStopExplanation());
                     break;
                 }
 
                 advancementStep++;
                 jobExecution.setAvancementStep(advancementStep);
-
+                logger.info(loggerHeader+"Start type["+typeDross.name+"]");
+                
                 TypeDrossExecution typeDrossDeletion = RadarCleanArchivedDross.deleteDross(jobExecution.getTenantId(),
-                        typeDrossExecution.typeDrossDefinition,
-                        new StopPurgeBaseOnJob(jobExecution));
+                        typeDross,
+                        new MonitorPurgeBaseOnJob(jobExecution,milkJobOutput ));
+                logger.info(loggerHeader+"Clean type["+typeDross.name+"] Delete["+typeDrossDeletion.nbRecords+"]");
+                
                 listEvents.addAll(typeDrossDeletion.listEvents);
                 // Already added during the stopPurgeBaseOnJob jobExecution.addManagedItems( typeDrossDeletion.nbRecords);
 
-                PlugInMeasurement measure = plugInDescription.getMeasureFromName(typeDrossExecution.typeDrossDefinition.name);
+                PlugInMeasurement measure = plugInDescription.getMeasureFromName(typeDross.name);
                 milkJobOutput.setMeasure(measure, typeDrossDeletion.nbRecords);
 
                 totalDross += typeDrossDeletion.nbRecords;
             }
-
+            logger.info(loggerHeader+"Stop DrossClean: "+jobExecution.getStopExplanation());
         }
 
         milkJobOutput.addEvents(listEvents);
         milkJobOutput.addMeasuresInReport(true, false);
+        
+        milkJobOutput.addChronometersInReport(false, true);
+
         milkJobOutput.setNbItemsProcessed(totalDross);
 
         return milkJobOutput;
@@ -156,21 +166,46 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
     /*                                                                                  */
     /*                                                                                  */
     /* ******************************************************************************** */
-    public class StopPurgeBaseOnJob implements StopPurge {
+    public class MonitorPurgeBaseOnJob implements MonitorPurge {
 
         MilkJobExecution jobExecution;
-
-        public StopPurgeBaseOnJob(MilkJobExecution jobExecution) {
+        MilkJobOutput milkJobOutput;
+        public MonitorPurgeBaseOnJob(MilkJobExecution jobExecution, MilkJobOutput milkJobOutput ) {
             this.jobExecution = jobExecution;
+            this.milkJobOutput = milkJobOutput;            
         }
 
         public int getMaxNumberToProcess() {
-            return jobExecution.getJobStopAfterMaxItems() - jobExecution.getManagedItems();
+            if (jobExecution.isLimitationOnMaxItem()) {
+                return jobExecution.getJobStopAfterMaxItems() - jobExecution.getManagedItems();
+            }
+            // no limitation on the maxNumberToProcess
+            return 100000; 
         }
-        
+
         public boolean pleaseStop(int numberOfDeletion) {
             jobExecution.addManagedItems(numberOfDeletion);
             return jobExecution.pleaseStop();
+        }
+
+        @Override
+        public void setTimeSelectInMs(long timeInMs) {
+            milkJobOutput.addTimeChronometer("querySelect", timeInMs);
+        }
+
+        @Override
+        public void setTimeCollectInMs(long timeInMs) {
+            milkJobOutput.addTimeChronometer("queryCollect", timeInMs);
+        }
+
+        @Override
+        public void setTimeDeleteInMs(long timeInMs) {
+            milkJobOutput.addTimeChronometer("queryDelete", timeInMs);
+        }
+
+        @Override
+        public void setTimeCommitInMs(long timeInMs) {
+            milkJobOutput.addTimeChronometer("queryCommit", timeInMs);            
         }
     }
 

@@ -207,10 +207,17 @@ public class MilkJobExecution {
      * @param nbStepManagedItem
      */
 
-
+    public boolean isLimitationOnMaxItem() {
+        return (pleaseStopAfterMaxItems != null && pleaseStopAfterMaxItems>0);
+    }
     public Integer getJobStopAfterMaxItems() {
         return pleaseStopAfterMaxItems;
     }
+    
+    public boolean isLimitationOnMaxMinutes() {
+        return pleaseStopAfterMaxMinutes != null && pleaseStopAfterMaxMinutes>0;
+    }
+    
     public Integer getJobStopAfterMaxMinutes() {
         return pleaseStopAfterMaxMinutes;
     }
@@ -253,14 +260,14 @@ public class MilkJobExecution {
             return true;        
         if (milkJob.isAskedForStop())
             return true;
-        if (pleaseStopAfterMaxMinutes != null && pleaseStopAfterMaxMinutes>0) {
+        if (isLimitationOnMaxMinutes()) {
             long currentTime = System.currentTimeMillis();
             long timeInMn = (currentTime - startTimeMs) / 1000 / 60;
             if (timeInMn > pleaseStopAfterMaxMinutes) {
                 return true;
             }
         }
-        if (pleaseStopAfterMaxItems != null && pleaseStopAfterMaxItems>0) {
+        if (isLimitationOnMaxItem()) {
             if (nbManagedItems + nbPrepareditems >= pleaseStopAfterMaxItems) {
                 return true;
             }
@@ -270,6 +277,25 @@ public class MilkJobExecution {
 
     }
 
+    public String getStopExplanation() {
+        if (pleaseStop)
+            return "Manual stop";        
+        if (milkJob.isAskedForStop())
+            return "Administrator Manual stop";        
+        if (pleaseStopAfterMaxMinutes != null && pleaseStopAfterMaxMinutes>0) {
+            long currentTime = System.currentTimeMillis();
+            long timeInMn = (currentTime - startTimeMs) / 1000 / 60;
+            if (timeInMn > pleaseStopAfterMaxMinutes) {
+                return "Too long : TimeInMn["+timeInMn+"], MaxTimeAllowed=["+pleaseStopAfterMaxMinutes+"]";
+            }
+        }
+        if (pleaseStopAfterMaxItems != null && pleaseStopAfterMaxItems>0) {
+            if (nbManagedItems + nbPrepareditems >= pleaseStopAfterMaxItems) {
+                return "Too long : Items["+(nbManagedItems + nbPrepareditems)+"], MaxItemsAllowed=["+pleaseStopAfterMaxItems+"]";
+            }
+        } 
+        return "";
+    }
     /* ******************************************************************************** */
     /*                                                                                  */
     /* Advancement update */
