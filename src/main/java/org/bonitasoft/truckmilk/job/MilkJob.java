@@ -359,7 +359,7 @@ public @Data class MilkJob {
      */
     /* ******************************************************************************** */
     private TrackExecution trackExecution = new TrackExecution();
-
+    
     public Date getNextExecutionDate() {
         return trackExecution.nextExecutionDate;
     }
@@ -420,6 +420,9 @@ public @Data class MilkJob {
         this.trackExecution.percent = percent;
     }
 
+    public void setAvancementInformation(String avancementInformation ) {
+        this.trackExecution.avancementInformation = avancementInformation;
+    }
     public long getEndTimeEstimatedInMs() {
         return this.trackExecution.endTimeEstimatedInMs;
     }
@@ -1029,8 +1032,8 @@ public @Data class MilkJob {
         return map;
     }
 
-    public Map<String, Object> getTrackExecution() {
-        return trackExecution.getMap();
+    public Map<String, Object> getTrackExecutionMap() {
+        return trackExecution==null ? new HashMap<>() : trackExecution.getMap();
     }
 
     public List<Map<String, Object>> getMapListSavedExecution(boolean limitData, boolean destinationHtml) {
@@ -1145,7 +1148,7 @@ public @Data class MilkJob {
      * /*
      */
     /* ******************************************************************************** */
-    private class TrackExecution {
+    public class TrackExecution {
 
         /**
          * Job will be start at the next heartBeat.
@@ -1168,6 +1171,7 @@ public @Data class MilkJob {
         public long totalTimeEstimatedInMs = 0;
         public Date endDateEstimated;
 
+        public String avancementInformation;
         public String inExecutionHostName;
 
         public TrackExecution() {
@@ -1188,6 +1192,7 @@ public @Data class MilkJob {
             map.put(MilkConstantJson.cstJsonInExecution, trackExecution.inExecution);
             map.put(MilkConstantJson.cstJsonInExecutionStartTime, trackExecution.startTime);
             map.put(MilkConstantJson.cstJsonInExecutionPercent, trackExecution.percent);
+            map.put(MilkConstantJson.cstJsonInExecutionAvancementInformation, avancementInformation);
             map.put(MilkConstantJson.cstJsonInExecutionEndTimeEstimatedInMS, trackExecution.endTimeEstimatedInMs);
             map.put(MilkConstantJson.cstJsonInExecutionEndTimeEstimatedInMS + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, getHumanTimeEstimated(false));
             map.put(MilkConstantJson.cstJsonInExecutionEndDateEstimated + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, trackExecution.endDateEstimated == null ? "" : sdf.format(trackExecution.endDateEstimated));
@@ -1215,6 +1220,8 @@ public @Data class MilkJob {
             inExecution = getBooleanValue(jsonMap.get(MilkConstantJson.cstJsonInExecution), false);
             startTime = getLongValue(jsonMap.get(MilkConstantJson.cstJsonInExecutionStartTime), 0L);
             percent = getLongValue(jsonMap.get(MilkConstantJson.cstJsonInExecutionPercent), 0L);
+            avancementInformation = (String) jsonMap.get(MilkConstantJson.cstJsonInExecutionAvancementInformation);
+            
             endTimeEstimatedInMs = getLongValue(jsonMap.get(MilkConstantJson.cstJsonInExecutionEndTimeEstimatedInMS), 0L);
             endDateEstimated = null;
             if (startTime > 0 && endTimeEstimatedInMs > 0) {

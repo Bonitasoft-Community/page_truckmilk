@@ -340,14 +340,32 @@ public class MilkJobExecution {
                 milkJob.setTotalTimeEstimatedInMs ( timeExecution * 100 / advancementInPercent);
                 milkJob.setEndTimeEstimatedInMs( milkJob.getTotalTimeEstimatedInMs() - timeExecution );
                 milkJob.setEndDateEstimated( new Date(milkJob.getEndTimeEstimatedInMs() + startTimeMs));
-                // save the current advancement
-                SerializationJobParameters saveParameters = SerializationJobParameters.getInstanceTrackExecution();
-                milkJob.milkJobFactory.dbSaveJob(milkJob, saveParameters);
+                saveAdvancement();
             }
         }
         // register in the tour the % of advancement, and then calculated an estimated end date.
     }
+    /**
+     * Job can give an information on what's doing. There is no history here.
+     * @param information
+     */
+    public void setAvancementInformation(String information) {
+        milkJob.setAvancementInformation( information );
+        saveAdvancement();
+    }
+    
+    private long lastTimeSaved=0;
 
+    private void saveAdvancement() {
+        long currentTime = System.currentTimeMillis();
+        if (lastTimeSaved==0 || currentTime-lastTimeSaved>60*1000)
+        {
+            // save the current advancement
+            SerializationJobParameters saveParameters = SerializationJobParameters.getInstanceTrackExecution();
+            milkJob.milkJobFactory.dbSaveJob(milkJob, saveParameters);
+            lastTimeSaved = currentTime;
+        }
+    }
     private long startTimeMs;
 
     /**

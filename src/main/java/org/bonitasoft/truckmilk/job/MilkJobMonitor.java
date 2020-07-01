@@ -2,6 +2,9 @@ package org.bonitasoft.truckmilk.job;
 
 import java.util.Set;
 
+import org.bonitasoft.truckmilk.job.MilkJob.TrackExecution;
+import org.bonitasoft.truckmilk.toolbox.TypesCast;
+
 /* ******************************************************************************** */
 /*                                                                                  */
 /* Monitor externaly an job execution */
@@ -32,6 +35,13 @@ public class MilkJobMonitor {
         StringBuilder result = new StringBuilder();
         result.append("<table class=\"table table-striped table-hover table-condensed\">");
         result.append("<tr><td>Thread Name</td><td>"+threadNameSearched+"</td></tr>");
+        TrackExecution trackExecution = milkJob.getTrackExecution();
+        if (trackExecution!=null) {
+            result.append("<tr><td>Information</td><td>"+trackExecution.avancementInformation+"</td></tr>");
+            result.append("<tr><td>% advancement</td><td >"+trackExecution.percent+" % </td></tr>");
+            result.append("<tr><td>Estimation duration</td><td>"+ TypesCast.getHumanDuration(trackExecution.endTimeEstimatedInMs, false)+"</td></tr>");
+        }
+        
         boolean foundThread=false;
         Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
         for (Thread th : threadSet) {
