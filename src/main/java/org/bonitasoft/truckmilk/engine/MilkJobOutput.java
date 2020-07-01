@@ -10,13 +10,12 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import org.bonitasoft.log.event.BEvent;
-import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
-import org.bonitasoft.truckmilk.plugin.MilkPing;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMeasurement;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeMeasure;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMeasurement;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
 public class MilkJobOutput {
@@ -83,7 +82,7 @@ public class MilkJobOutput {
             // update the PLUGIN parameters
             milkJob.setParameterStream(param, stream);
         } else {
-            logger.severe("setParameterStream not allowed on parameter[" + param.name + "] (plugin " + milkJob.getName() + "]");
+            logger.severe(LOGGER_LABEL+"setParameterStream not allowed on parameter[" + param.name + "] (plugin " + milkJob.getName() + "]");
         }
     }
 
@@ -173,20 +172,30 @@ public class MilkJobOutput {
     }
 
     /**
-     * return the time in MS of this mark (diff between the startMarker and the endMarker)
+     * return the time in MS of this mark (diff between the startMarker and the endMarker) and collect it
      * 
      * @param marker
+     * @param the chronometer may have registered multiple operation.
      * @return
      */
-    public long endChronometer(Chronometer marker) {
+    public long endChronometer(Chronometer marker, int nbOccurenceOperation) {
         if (marker == null)
             return 0;
         long sumTime = sumTimeOperation.get(marker.operationName) == null ? 0 : sumTimeOperation.get(marker.operationName);
         long nbOccurences = nbOccurencesOperation.get(marker.operationName) == null ? 0 : nbOccurencesOperation.get(marker.operationName);
         marker.stopTracker();
         sumTimeOperation.put(marker.operationName, sumTime + marker.getTimeExecution());
-        nbOccurencesOperation.put(marker.operationName, nbOccurences + 1);
+        nbOccurencesOperation.put(marker.operationName, nbOccurences + nbOccurenceOperation);
         return marker.getTimeExecution();
+    }
+    /**
+     * return the time in MS of this mark (diff between the startMarker and the endMarker) and collect it
+     * 
+     * @param marker
+     * @return
+     */
+    public long endChronometer(Chronometer marker) {
+        return endChronometer(marker,1);
     }
 
     /**

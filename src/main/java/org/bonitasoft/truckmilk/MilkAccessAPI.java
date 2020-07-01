@@ -56,7 +56,7 @@ public class MilkAccessAPI {
 
     static MilkLog logger = MilkLog.getLogger(MilkAccessAPI.class.getName());
 
-    public static String cstJsonListEvents = MilkCmdControl.cstResultListEvents;
+    public static String cstJsonListEvents = MilkCmdControl.CST_RESULT_LISTEVENTS;
     public static String cstJsonDeploimentsuc = "deploimentsuc";
     public static String cstJsonDeploimenterr = "deploimenterr";
 
@@ -262,7 +262,7 @@ public class MilkAccessAPI {
     public Map<String, Object> testButton(Parameter parameter) {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         Map<String, Object> information = parameter.information;
-        information.put(MilkCmdControl.cstButtonName, parameter.information.get("buttonName"));
+        information.put(MilkCmdControl.CST_BUTTONNAME, parameter.information.get("buttonName"));
         return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.TESTBUTTONARGS, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
     }
 
