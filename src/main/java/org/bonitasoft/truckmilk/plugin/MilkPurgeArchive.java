@@ -101,7 +101,9 @@ public class MilkPurgeArchive extends MilkPlugIn {
 
     private static PlugInParameter cstParamDelay = PlugInParameter.createInstanceDelay("delayinday", "Delay", DELAYSCOPE.MONTH, 3, "The case must be older than this number, in days. 0 means all archived case is immediately in the perimeter")
             .withMandatory(true)
-            .withVisibleCondition("milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_FROMLIST + "'");
+            .withVisibleConditionParameterValueDiff(cstParamOperation, CSTOPERATION_FROMLIST);
+            // .withVisibleCondition("milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_FROMLIST + "'");
+    
 
     private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Process Filter", TypeParameter.ARRAYPROCESSNAME, null, "Give a list of process name. Name must be exact, no version is given (all versions will be purged)")
             .withVisibleCondition("milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_FROMLIST + "'")
@@ -632,7 +634,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
 
                 finalReport.append(" ARCHIVEDATE <= " + timeSearch);
                 finalReport.append(" and TENANTID=" + jobExecution.getTenantId());
-                finalReport.append(" and STATEID=6"); // only archive case
+                finalReport.append(" and STATEID in (3,4,6)"); // only archive case
                 finalReport.append(" and ROOTPROCESSINSTANCEID = SOURCEOBJECTID"); // only root case
 
                 SearchResult<ArchivedProcessInstance> searchArchivedProcessInstance;
