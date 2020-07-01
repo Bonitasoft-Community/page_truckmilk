@@ -25,7 +25,7 @@ public @Data class MilkPlugInDescription {
 
     
     public enum CATEGORY {
-        TASKS, CASES, MONITOR, OTHER
+        TASKS, PROCESSES, CASES, MONITOR, OTHER
     };
 
     MilkPlugInDescription.CATEGORY category = CATEGORY.OTHER;
