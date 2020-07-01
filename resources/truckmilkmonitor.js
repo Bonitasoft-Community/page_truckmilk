@@ -129,9 +129,11 @@
 		// getListPlugin
 		// -----------------------------------------------------------------------------------------
 
-		this.plugin = { 'showCases' : true, 'showTasks':true, 'showMonitor':true, 'showOthers':true};
+		this.plugin = { 'showProcesses':true, 'showCases' : true, 'showTasks':true, 'showMonitor':true, 'showOthers':true};
 
 		this.displayPlugIn = function (plugIn ) {
+			if (plugIn.category === "PROCESSES" && this.plugin.showProcesses)
+				return true;
 			if (plugIn.category === "CASES" && this.plugin.showCases)
 				return true;
 			if (plugIn.category === "TASKS" && this.plugin.showTasks)
@@ -314,7 +316,7 @@
 							localPlugTour.listevents						= serverPlugTour.listevents;
 							localPlugTour.parameters						= serverPlugTour.parameters;
 							localPlugTour.measurement						= serverPlugTour.measurement;
-							
+							localPlugTour.name								= serverPlugTour.name;
 							// console.log("Values does not change:"+angular.toJson(localPlugTour.parametersvalue));
 						}
 	
