@@ -103,8 +103,12 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
 
                 advancementStep++;
                 jobExecution.setAvancementStep(advancementStep);
-
+                jobExecution.setAvancementInformation("Detect "+typeDross.name+"<br><i>select count(*) "+typeDross.sqlQuery+"</i>");
+                
+                Chronometer drossMarker = milkJobOutput.beginChronometer(typeDross.name);
                 TypeDrossExecution typeDrossExecution = RadarCleanArchivedDross.getStatus(jobExecution.getTenantId(), typeDross);
+                milkJobOutput.endChronometer(drossMarker);
+                
                 listEvents.addAll(typeDrossExecution.listEvents);
                 listDrossExecution.add(typeDrossExecution);
             }
@@ -119,24 +123,29 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
             milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
         }
 
-        // ----------------------------- Purge
+        // ----------------------------- Purge now
         if (operationPurge.equals(operation)) {
             milkJobOutput.addReportInHtml("<h4>Purge</h4><br>");
             totalDross = 0; // we want to count the number of deletion 
             // first get the
             for (TypeDrossDefinition typeDross : listTypeDross) {
                 if (jobExecution.pleaseStop()) {
-                    logger.info(loggerHeader+"Stop Asked["+typeDross.name+"] "+jobExecution.getStopExplanation());
+                    logger.info(loggerHeader+"Stop Asked type["+typeDross.name+"] "+jobExecution.getStopExplanation());
                     break;
                 }
 
                 advancementStep++;
                 jobExecution.setAvancementStep(advancementStep);
+                jobExecution.setAvancementInformation("Purge "+typeDross.name+"<br><i>select count(*) "+typeDross.sqlQuery+"</i>");
+
                 logger.info(loggerHeader+"Start type["+typeDross.name+"]");
                 
+                Chronometer drossMarker = milkJobOutput.beginChronometer(typeDross.name);                
                 TypeDrossExecution typeDrossDeletion = RadarCleanArchivedDross.deleteDross(jobExecution.getTenantId(),
                         typeDross,
                         new MonitorPurgeBaseOnJob(jobExecution,milkJobOutput ));
+                milkJobOutput.endChronometer(drossMarker);
+                
                 logger.info(loggerHeader+"Clean type["+typeDross.name+"] Delete["+typeDrossDeletion.nbRecords+"]");
                 
                 listEvents.addAll(typeDrossDeletion.listEvents);
