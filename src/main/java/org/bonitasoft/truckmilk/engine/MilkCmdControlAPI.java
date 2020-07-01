@@ -125,8 +125,8 @@ public class MilkCmdControlAPI {
         
             
         cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-event", "1.8.0", "bonita-event-1.8.0.jar");
-        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.3.0", "bonita-properties-2.3.0.jar");
-        // cmdDependency.setForceDeploy( true );
+        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.4.0", "bonita-properties-2.4.0.jar");
+        cmdDependency.setForceDeploy( true );
 
         commandDescription.addJarDependencyLastVersion("mail", "1.5.0", "mail-1.5.0-b01.jar");
         commandDescription.addJarDependencyLastVersion("activation", "1.1.1", "activation-1.1.1.jar");
