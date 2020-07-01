@@ -164,7 +164,7 @@ public @Data class MilkSchedulerFactory {
      * /*
      */
     /* ******************************************************************************** */
-    public List<BEvent> changeScheduler(String typeSchedulerToChange,  long tenantId) {
+    public List<BEvent> changeScheduler(String typeSchedulerToChange,  long tenantId, boolean saveNow) {
         List<BEvent> listEvents = new ArrayList<>();
 
         MilkSchedulerInt newScheduler = getFromType(typeSchedulerToChange, false);
@@ -195,8 +195,9 @@ public @Data class MilkSchedulerFactory {
             return listEvents;
         }
  
-        // save the new value
-        listEvents.addAll( savedScheduler( tenantId) );
+        // save the new value?
+        if (saveNow)
+            listEvents.addAll( savedScheduler( tenantId) );
         return listEvents;
 
     }

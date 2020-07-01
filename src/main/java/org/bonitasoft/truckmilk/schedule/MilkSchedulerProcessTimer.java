@@ -69,7 +69,14 @@ public class MilkSchedulerProcessTimer extends MilkSchedulerInt {
     public boolean needRestartAtInitialization() {
         return false;
     }
-
+    /**
+     *  Bonita engine ensure a quartz job start only on one node 
+     * 
+     */
+    public boolean isClusterProtected() {
+        return true;
+    }
+    
     /**
      * 
      */

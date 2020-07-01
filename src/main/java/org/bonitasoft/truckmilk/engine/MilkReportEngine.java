@@ -22,12 +22,13 @@ public class MilkReportEngine {
     private static MilkLog logger = MilkLog.getLogger(MilkReportEngine.class.getName());
     private final static String LOG_HEADER = "MilkReportEngine  ~~ ";
 
-    private final static String BONITAPROPERTIES_DOMAINREPORT = "report";
-    private final static String BONITAPROPERTIES_DOMAINHEARTBRREATH = "heartbreath";
+    private final static String BONITAPROPERTIES_DOMAIN_REPORT = "report";
+    private final static String BONITAPROPERTIES_DOMAIN_HEARTBREAT = "heartbreath";
     
-    private final static String BONITAPROPERTIES_SCHEDULERLOGINFOBEAT = "schedulerLogInfoBeat";
-    private final static String BONITAPROPERTIES_SCHEDULERNBSAVEDHEARTBEAT = "schedulerNbSavedHeartBeat";
-    private final static String BONITAPROPERTIES_SCHEDULERSAVEDHEARTBEAT = "schedulersavedHeartBeat";
+    // private final static String BONITAPROPERTIES_HEARTBREATH_LOGINFOBEAT = "schedulerLogInfoBeat";
+    private final static String BONITAPROPERTIES_HEARTBEAT_NBSAVEDHEARTBEAT = "schedulerNbSavedHeartBeat";
+    
+    private final static String BONITAPROPERTIES_HEARTBEAT_SAVEDHEARTBEAT = "schedulersavedHeartBeat";
     
     private final static String BONITAPROPERTIES_REPORT = "reportline";
         
@@ -39,25 +40,7 @@ public class MilkReportEngine {
     }
 
     
-    
-    /* ******************************************************************************** */
-    /*                                                                                  */
-    /* LogHeartBeat */
-    /*                                                                                  */
-    /* ******************************************************************************** */
-
-    /**
-     * Each Log Beart will be log as INFO
-     */
-    private boolean logHeartBeat = false;
-
-    public boolean isLogHeartBeat() {
-        return logHeartBeat;
-    }
-    public void setLogHeartBeat( boolean logHeartBeat) {
-        this.logHeartBeat = logHeartBeat;
-    }
-    
+   
 
     /**
      * Saved in database this number of heartBeat
@@ -91,9 +74,8 @@ public class MilkReportEngine {
      * @param message
      * @param forceLog
      */
-    public void reportHeartBeatInformation(String message, boolean doSaveInDatabase) {
-        
-        report(message, false, true, doSaveInDatabase );
+    public void reportHeartBeatInformation(String message, boolean doSaveInDatabase, boolean logHeartBeat) {        
+        report(message, false, true, doSaveInDatabase, logHeartBeat );
 
     }
     
@@ -117,7 +99,7 @@ public class MilkReportEngine {
                 listEventSt.append(event.getParameters());
             listEventSt.append("; ");
         }
-        report(listEventSt.toString(), true, false,true);
+        report(listEventSt.toString(), true, false,true, false /* not a heart breath */ );
     }
     public List<String> getListReportOperation(){
         return listSaveReportInformation;
@@ -154,7 +136,7 @@ public class MilkReportEngine {
      * @param saveHeartBeat
      * @param doSaveInDatabase : do not save everytime, to save execution CPU. Start and End of a job can wait for example the next heartbeat
      */
-    private synchronized void report(String message, boolean forceLog, boolean saveHeartBeat, boolean doSaveInDatabase) {
+    private synchronized void report(String message, boolean forceLog, boolean saveHeartBeat, boolean doSaveInDatabase, boolean logHeartBeat) {
         
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM HH:mm:ss");
         message= sdf.format( new Date())+" "+message;
@@ -183,32 +165,29 @@ public class MilkReportEngine {
         List<BEvent> listEvents = new ArrayList<>();
 
         bonitaProperties.setCheckDatabase(false); // we check only when we deploy a new command
-        listEvents.addAll(bonitaProperties.loaddomainName(saveHeartBeat ? BONITAPROPERTIES_DOMAINREPORT : BONITAPROPERTIES_DOMAINHEARTBRREATH));
+        listEvents.addAll(bonitaProperties.loaddomainName(saveHeartBeat ? BONITAPROPERTIES_DOMAIN_REPORT : BONITAPROPERTIES_DOMAIN_HEARTBREAT));
         Set<String> listKeys = new HashSet<>();
 
         if (saveHeartBeat) {
         
             // maybe the first time after a startup? Then, in that situation, reread the value
             if ( !isInitialised) {
-                nbSavedHeartBeat = getIntegerValue(bonitaProperties.get(BONITAPROPERTIES_SCHEDULERNBSAVEDHEARTBEAT), 60);
-                logHeartBeat = getBooleanValue(bonitaProperties.get(BONITAPROPERTIES_SCHEDULERLOGINFOBEAT), true);
+                nbSavedHeartBeat = getIntegerValue(bonitaProperties.get(BONITAPROPERTIES_HEARTBEAT_NBSAVEDHEARTBEAT), 60);
                 
                 synchronized( listSaveHeartBeatInformation ) {
-                    loadExistingList(bonitaProperties, BONITAPROPERTIES_SCHEDULERSAVEDHEARTBEAT, listSaveHeartBeatInformation);
+                    loadExistingList(bonitaProperties, BONITAPROPERTIES_HEARTBEAT_SAVEDHEARTBEAT, listSaveHeartBeatInformation);
                 }
                 isInitialised = true;
     
             }
             // now saved
-            bonitaProperties.put(BONITAPROPERTIES_SCHEDULERLOGINFOBEAT, isLogHeartBeat());
-            listKeys.add(BONITAPROPERTIES_SCHEDULERLOGINFOBEAT);
     
-            bonitaProperties.put(BONITAPROPERTIES_SCHEDULERNBSAVEDHEARTBEAT, getNbSavedHeartBeat());
-            listKeys.add(BONITAPROPERTIES_SCHEDULERNBSAVEDHEARTBEAT);
+            bonitaProperties.put(BONITAPROPERTIES_HEARTBEAT_NBSAVEDHEARTBEAT, getNbSavedHeartBeat());
+            listKeys.add(BONITAPROPERTIES_HEARTBEAT_NBSAVEDHEARTBEAT);
             
             /** save history */
             synchronized( listSaveHeartBeatInformation ) {
-                saveList( bonitaProperties, listKeys, BONITAPROPERTIES_SCHEDULERSAVEDHEARTBEAT, listSaveHeartBeatInformation);
+                saveList( bonitaProperties, listKeys, BONITAPROPERTIES_HEARTBEAT_SAVEDHEARTBEAT, listSaveHeartBeatInformation);
             }
         }
         

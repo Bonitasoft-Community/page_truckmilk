@@ -10,9 +10,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
-import org.bonitasoft.engine.api.APIAccessor;
-import org.bonitasoft.engine.connector.ConnectorAPIAccessorImpl;
-import org.bonitasoft.engine.service.TenantServiceAccessor;
+
+
+
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
@@ -24,6 +24,7 @@ import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.job.MilkJobMonitor;
+import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 /**
@@ -61,7 +62,7 @@ public class MilkExecuteJobThread extends Thread {
      * @param currentDate
      * @return
      */
-    public String checkAndStart(Date currentDate) {
+    public String checkAndStart(Date currentDate, MilkSchedulerInt scheduler) {
         StringBuilder executionDescription = new StringBuilder();
         executionDescription.append( milkJob.getHtmlInfo() );
         boolean saveJob=false;
@@ -97,10 +98,13 @@ public class MilkExecuteJobThread extends Thread {
             }
             // Attention, in a Cluster environment, we must not start the job on two different node.
             if (start) {
-                String statusDoubleStart= synchronizeClusterDoubleStart();
-                if (statusDoubleStart != null) {
-                    executionDescription.append( statusDoubleStart );
-                    return executionDescription.toString();
+                if (!scheduler.isClusterProtected())
+                {
+                    String statusDoubleStart= synchronizeClusterDoubleStart();
+                    if (statusDoubleStart != null) {
+                        executionDescription.append( statusDoubleStart );
+                        return executionDescription.toString();
+                    }
                 }
              }
             
@@ -119,6 +123,10 @@ public class MilkExecuteJobThread extends Thread {
         return executionDescription.toString();
     }
 
+    /**
+     * Cluster is protected by the 
+     */
+   
     /**
      * return null if everything is OK, else a status
      * @return
@@ -181,7 +189,7 @@ public class MilkExecuteJobThread extends Thread {
 
             try {
 
-                milkReportEngine.reportHeartBeatInformation("Start Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")",false );
+                milkReportEngine.reportHeartBeatInformation("Start Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")",false, false /* not a heatbreath */ );
                 savedStartExecution = milkJob.registerExecution(new Date(timeBegin), ExecutionStatus.START, hostName, "Start");
                 // save the status in the database
                 // save the start Status (so general) and the track Status, plus askStop to false
@@ -293,7 +301,7 @@ public class MilkExecuteJobThread extends Thread {
         }
         // calculate the next time
         listEvents.addAll(milkJob.calculateNextExecution("End-Of-Execution-recalculate"));
-        milkReportEngine.reportHeartBeatInformation("End Job[" + milkJob.getName() + "] (" + milkJob.getId() + ") Status["+milkJobOutput.executionStatus.toString()+"] NewNextDate["+sdfSynthetic.format(milkJob.getNextExecutionDate())+"]",false);
+        milkReportEngine.reportHeartBeatInformation("End Job[" + milkJob.getName() + "] (" + milkJob.getId() + ") Status["+milkJobOutput.executionStatus.toString()+"] NewNextDate["+sdfSynthetic.format(milkJob.getNextExecutionDate())+"]",false, false /* not a heatbreath */);
 
         milkJob.setImmediateExecution(false);
         milkJob.setAskForStop(false);

@@ -9,6 +9,7 @@ import org.bonitasoft.engine.service.TenantServiceAccessor;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerFactory;
+import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 /**
@@ -34,6 +35,11 @@ public class MilkHeartBeat {
     
     // to avoid any transaction issue in the command (a transaction is maybe opennend by the engine, and then the processAPI usage is forbiden), let's create a thread
     public void executeOneTimeNewThread(MilkCmdControl milkCmdControl, boolean forceBeat, MilkJobContext milkJobContext) {
+        // release the thread before entering the synchronized
+        if (synchronizeHeart.heartBeatInProgress) {
+            logger.fine(LOGGER_HEADER+"heartBeat in progress, does not start a new one");
+            return;
+        }
         synchronized (synchronizeHeart) {
             // protection : does not start a new Thread if the current one is not finish (no two Hearthread in the same time)
             if (synchronizeHeart.heartBeatInProgress) {
@@ -151,7 +157,7 @@ public class MilkHeartBeat {
                 
                 MilkExecuteJobThread milkExecuteJobThread = new MilkExecuteJobThread(milkJob, milkJobContext);
 
-                executionDescription.append( milkExecuteJobThread.checkAndStart(currentDate)+"<br>");
+                executionDescription.append( milkExecuteJobThread.checkAndStart(currentDate,milkSchedulerFactory.getCurrentScheduler())+"<br>");
             }
             if (executionDescription.length() == 0)
                 executionDescription.append( "<b>No jobs executed;</b><br>");
@@ -166,8 +172,9 @@ public class MilkHeartBeat {
         executionDescription.append(" Heart executed in " + (timeEndHearth - timeBeginHearth) + " ms");
         // logger.info("MickCmdControl.beathearth #" + thisThreadId + " : Start at " + sdf.format(currentDate) + ", End in " + (timeEndHearth - timeBeginHearth) + " ms on [" + (ip == null ? "" : ip.getHostAddress()) + "] " + executionDescription);
         MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
-        milkReportEngine.reportHeartBeatInformation(executionDescription.toString(),true);
-        milkSchedulerFactory.savedScheduler(milkJobContext.getTenantId());
+        MilkSchedulerInt scheduler = milkSchedulerFactory.getCurrentScheduler();
+        milkReportEngine.reportHeartBeatInformation(executionDescription.toString(),true, scheduler.isLogHeartBeat() );
+        
     }
     
 

@@ -106,11 +106,18 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
     public boolean needRestartAtInitialization() {
         return true;
     }
-
+    /**
+     *  A thread can be started on two different nodes 
+     * 
+     */
+    public boolean isClusterProtected() {
+        return false;
+    }
+    
     public List<BEvent> startup(long tenantId, boolean forceReset) {
         List<BEvent> listEvents = new ArrayList<>();
         MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
-        milkReportEngine.reportHeartBeatInformation("Startup ThreadScheduler reset[" + forceReset + "]",true);
+        milkReportEngine.reportHeartBeatInformation("Startup ThreadScheduler reset[" + forceReset + "]",true, isLogHeartBeat());
         try {
 
             // already register ? 
@@ -154,7 +161,7 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
 
         List<BEvent> listEvents = new ArrayList<>();
         MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
-        milkReportEngine.reportHeartBeatInformation( "SHUTDOWN Quartz Scheduler",true);
+        milkReportEngine.reportHeartBeatInformation( "SHUTDOWN Quartz Scheduler",true, isLogHeartBeat());
 
         // already register ? 
         synchronized (listSchedulerThread) {

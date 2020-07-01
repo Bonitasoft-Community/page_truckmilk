@@ -30,6 +30,11 @@ public abstract class MilkSchedulerInt {
      */
     public abstract boolean needRestartAtInitialization();
     /**
+     * is the double start on a cluster is protected by the scheduler used ?
+     * @return
+     */
+    public abstract boolean isClusterProtected();
+    /**
      * initialize. Then the schedule must call back the engine on the method
      * milkCmdControl.executeOneTime( tenantId );
      * 
@@ -102,5 +107,40 @@ public abstract class MilkSchedulerInt {
      */
     public abstract List<BEvent> reset(long tenantId);
 
-   
+    
+    /* ******************************************************************************** */
+    /*                                                                                  */
+    /* LogHeartBeat */
+    /*                                                                                  */
+    /* ******************************************************************************** */
+
+    /**
+     * Each Log Beart will be log as INFO
+     */
+    private boolean logHeartBeat = false;
+
+    public boolean isLogHeartBeat() {
+        return logHeartBeat;
+    }
+    public void setLogHeartBeat( boolean logHeartBeat) {
+        this.logHeartBeat = logHeartBeat;
+    }
+
+    /**
+     * Saved in database this number of heartBeat
+     */
+    private long nbSavedHeartBeat = 1;
+    private boolean isInitialised = false;
+
+    public long getNbSavedHeartBeat() {
+        return nbSavedHeartBeat;
+    }
+
+    public void setNbSavedHeartBeat(long nbHeartBeat) {
+        if (nbHeartBeat > 3600)
+            nbHeartBeat = 3600;
+        if (nbSavedHeartBeat < 60)
+            nbSavedHeartBeat = 60;
+        this.nbSavedHeartBeat = nbHeartBeat;
+    }
 }
