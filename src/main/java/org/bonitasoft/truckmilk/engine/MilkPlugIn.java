@@ -278,6 +278,28 @@ public abstract class MilkPlugIn {
             return this;
         }
         
+        public PlugInParameter withVisibleConditionParameterValueDiff( PlugInParameter parameter, Object value ) {
+            if (value instanceof Boolean)
+                this.visibleCondition = "milkJob.parametersvalue[ '"+parameter.name+"' ] !== " + value;
+            else if (value != null)
+                this.visibleCondition = "milkJob.parametersvalue[ '"+parameter.name+"' ] !== '" + value.toString()+"'";
+            else
+                this.visibleCondition = "milkJob.parametersvalue[ '"+parameter.name+"' ] !== null";
+            return this;
+        }
+        public PlugInParameter withVisibleConditionParameterValueEqual( PlugInParameter parameter, Object value ) {
+            if (value instanceof Boolean)
+                this.visibleCondition = "milkJob.parametersvalue[ '"+parameter.name+"' ] === " + value;
+            else if (value != null)
+                this.visibleCondition = "milkJob.parametersvalue[ '"+parameter.name+"' ] === '" + value.toString()+"'";
+            else
+                this.visibleCondition = "milkJob.parametersvalue[ '"+parameter.name+"' ] === null";
+            return this;
+        }
+
+        
+        
+        
         /**
          * Default : only activated process
          * @param withActivated
