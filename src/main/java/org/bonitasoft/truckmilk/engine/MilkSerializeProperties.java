@@ -33,7 +33,7 @@ public class MilkSerializeProperties {
     /*
      * we can use multiple bonitaProperties at a time (multithread), assuming the store() is a transaction in the database and protect multiple write
      */
-    BonitaProperties bonitaProperties;
+    private BonitaProperties bonitaProperties;
 
     public final static String BONITAPROPERTIESNAME = "MilkTour";
     
@@ -55,12 +55,14 @@ public class MilkSerializeProperties {
     public MilkSerializeProperties(MilkJobFactory milkPlugInTourFactory) {
         this.milkJobFactory = milkPlugInTourFactory;
         bonitaProperties = new BonitaProperties(BONITAPROPERTIESNAME, milkPlugInTourFactory.getMilkJobContext().getTenantId());
+        bonitaProperties.setPolicyBigStringToStream(true);
         bonitaProperties.setLogLevel(java.util.logging.Level.FINE);
 
     }
 
     public MilkSerializeProperties(long tenantId) {
         bonitaProperties = new BonitaProperties(BONITAPROPERTIESNAME, tenantId);
+        bonitaProperties.setPolicyBigStringToStream(true);
         bonitaProperties.setLogLevel(java.util.logging.Level.FINE);
     }
 
@@ -132,6 +134,7 @@ public class MilkSerializeProperties {
     public List<BEvent> dbLoadAllJobsAndPurge(boolean purge) {
         List<BEvent> listEvents = new ArrayList<>();
         bonitaProperties.setCheckDatabase(false);
+        bonitaProperties.setPolicyBigStringToStream(true);
         logger.fine(".dbLoadAllJobsAndPurge-begin");
 
         /** soon : name is NULL to load all tour */
@@ -369,7 +372,7 @@ public class MilkSerializeProperties {
             listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_SAVEDEXECUTION);
         }
         if (saveParameters.trackExecution) {
-            bonitaProperties.put(String.valueOf(milkJob.getId()) + CSTPREFIXPROPERTIES_TRACKEXECUTION, getJsonSt( milkJob.getTrackExecution()) );
+            bonitaProperties.put(String.valueOf(milkJob.getId()) + CSTPREFIXPROPERTIES_TRACKEXECUTION, getJsonSt( milkJob.getTrackExecutionMap()) );
             listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_TRACKEXECUTION);
         }
         
@@ -471,8 +474,8 @@ public class MilkSerializeProperties {
     /* ******************************************************************************** */
 
     private final static String BONITAPROPERTIES_DOMAINSCHEDULER = "scheduler";
-    private final static String BONITAPROPERTIES_SCHEDULERTYPE = "schedulertype";
-    private final static String BONITAPROPERTIES_REPORTLOGHEART = "reportheart";
+    private final static String BONITAPROPERTIES_SCHEDULER_SCHEDULERTYPE = "schedulertype";
+    private final static String BONITAPROPERTIES_SCHEDULER_REPORTLOGHEART = "reportheart";
     
 
     public SerializeOperation getCurrentScheduler(MilkSchedulerFactory schedulerFactory) {
@@ -480,12 +483,11 @@ public class MilkSerializeProperties {
 
         bonitaProperties.setCheckDatabase(false); // we check only when we deploy a new command
         serializeOperation.listEvents.addAll(bonitaProperties.loaddomainName(BONITAPROPERTIES_DOMAINSCHEDULER));
-        String valueSt = (String) bonitaProperties.get(BONITAPROPERTIES_SCHEDULERTYPE);
+        String valueSt = (String) bonitaProperties.get(BONITAPROPERTIES_SCHEDULER_SCHEDULERTYPE);
         serializeOperation.scheduler = schedulerFactory.getFromType(valueSt, true);
 
-        MilkReportEngine reportEngine = MilkReportEngine.getInstance();
-        Object reportHeart= bonitaProperties.get(BONITAPROPERTIES_REPORTLOGHEART);
-        reportEngine.setLogHeartBeat( reportHeart==null ? false : "true".equals( reportHeart.toString() ));
+        Object reportHeart= bonitaProperties.get(BONITAPROPERTIES_SCHEDULER_REPORTLOGHEART);
+        serializeOperation.scheduler.setLogHeartBeat( reportHeart==null ? false : "true".equals( reportHeart.toString() ));
         
         return serializeOperation;
     }
@@ -498,12 +500,12 @@ public class MilkSerializeProperties {
         bonitaProperties.setCheckDatabase(false); // we check only when we deploy a new command
         serializeOperation.listEvents.addAll(bonitaProperties.loaddomainName(BONITAPROPERTIES_DOMAINSCHEDULER));
         
-        bonitaProperties.put(BONITAPROPERTIES_SCHEDULERTYPE, currentScheduler.getType().toString());
-        listKeys.add(BONITAPROPERTIES_SCHEDULERTYPE);
+        bonitaProperties.put(BONITAPROPERTIES_SCHEDULER_SCHEDULERTYPE, currentScheduler.getType().toString());
+        listKeys.add(BONITAPROPERTIES_SCHEDULER_SCHEDULERTYPE);
        
         MilkReportEngine reportEngine = MilkReportEngine.getInstance();
-        bonitaProperties.put(BONITAPROPERTIES_REPORTLOGHEART, reportEngine.isLogHeartBeat()? "true" : "false");
-        listKeys.add(BONITAPROPERTIES_REPORTLOGHEART);
+        bonitaProperties.put(BONITAPROPERTIES_SCHEDULER_REPORTLOGHEART, currentScheduler.isLogHeartBeat()? "true" : "false");
+        listKeys.add(BONITAPROPERTIES_SCHEDULER_REPORTLOGHEART);
 
         serializeOperation.listEvents.addAll(bonitaProperties.storeCollectionKeys(listKeys));
 
