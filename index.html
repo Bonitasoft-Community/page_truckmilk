@@ -90,7 +90,7 @@
 					<div style="font-style: italic;">
 					The <span style="color: red;font-weight: bold;">B</span>onita <span style="color: red;font-weight: bold;">SC</span>heduler&nbsp;
 					</div>
-					<a href="" >V2.5.0 (June 10)</a>
+					<a href="" >V2.5.1 (June 29)</a>
 				</center>
 			</td></tr>
 			<tr><td>
@@ -363,7 +363,7 @@
 												</a>
 										</div>
 									</div>
-									<div class="panel-body"></div>
+										<div class="panel-body"></div>
 										<div ng-bind-html="ctrl.getHtml(plugtour.threadDump, 'threaddump')"></div>
 									</div> <!-- panel body -->
 								</div> <!--  panel info -->
@@ -1351,6 +1351,7 @@
 			
 			<table>
 			<tr><td style="width:500px;padding: 10px; vertical-align:top">
+				<input type="checkbox" ng-model="ctrl.plugin.showProcesses"> Processes
 				<input type="checkbox" ng-model="ctrl.plugin.showCases"> Cases
 				<input type="checkbox" ng-model="ctrl.plugin.showTasks"> Tasks
 				<input type="checkbox" ng-model="ctrl.plugin.showMonitor"> Monitor
