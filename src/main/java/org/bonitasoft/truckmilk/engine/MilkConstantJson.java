@@ -54,6 +54,7 @@ public class MilkConstantJson {
     public final static String cstJsonRegisterInExecutionHost = "inExecutionHost";
     public final static String cstJsonInExecutionStartTime = "inExecutionStartTime";
     public final static String cstJsonInExecutionPercent = "inExecutionPercent";
+    public final static String cstJsonInExecutionAvancementInformation = "inExecutionInfo";    
     public final static String cstJsonInExecutionEndTimeEstimatedInMS = "inExecutionEndTimeEstimatedinMS";
     public final static String cstJsonInExecutionEndDateEstimated = "inExecutionEndDateEstimated";
     // saved last execution  
