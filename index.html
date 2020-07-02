@@ -90,7 +90,7 @@
 					<div style="font-style: italic;">
 					The <span style="color: red;font-weight: bold;">B</span>onita <span style="color: red;font-weight: bold;">SC</span>heduler&nbsp;
 					</div>
-					<a href="" >V2.5.1 (June 29)</a>
+					<a href="" >V2.5.1 (July 1)</a>
 				</center>
 			</td></tr>
 			<tr><td>
@@ -1540,6 +1540,8 @@
 						<div ng-if="ctrl.commandredeploy.deploimenterr.length >0 " class="alert alert-danger">
 							{{ctrl.commandredeploy.deploimenterr}}
 						</div>
+						<div ng-bind-html="ctrl.getHtml( ctrl.commandredeploy.listevents, 'cmdRedeploy' )"></div>
+
 
 						<h3>Uninstall</h3>
 							This command uninstall the page. Remove any scheduler, remove the Truckmil command, purge all informations.<br>
