@@ -292,8 +292,8 @@ public class MilkJobFactory {
      * @param tour
      * @return
      */
-    private List<BEvent> dbRemoveJob(MilkJob plugInTour) {
-        return milkSerialize.dbRemoveMilkJob(plugInTour);
+    private List<BEvent> dbRemoveJob(MilkJob milkJob) {
+        return milkSerialize.dbRemoveMilkJob(milkJob);
     }
 
     // load all tour execution
