@@ -454,13 +454,16 @@ public class MilkSerializeProperties {
 
         // remove(pluginTour.getId() does not work, so let's compare the key
         Set<String> listKeys = new HashSet<>();
+        listKeys.add(String.valueOf( milkJob.getId()) );
         listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_BASE);
         listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_ASKSTOP);
         listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_TRACKEXECUTION);
 
-        for (String key : listKeys)
+        for (String key : listKeys) {
             bonitaProperties.remove(key);
-
+            bonitaProperties.removeStream( key );
+        }
+        
         listEvents.addAll(bonitaProperties.storeCollectionKeys(listKeys));
         logger.info(".dbRemovePlugInTour-end");
 
