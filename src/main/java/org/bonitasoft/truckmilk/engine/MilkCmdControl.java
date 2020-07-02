@@ -913,6 +913,13 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
         return listJobMap;
     }
 
+    /**
+     * Remove the job
+     * Nb: save the result is not part of htis
+     * @param milkJob
+     * @param jobExecution
+     * @return
+     */
     public List<BEvent> removeJob(MilkJob milkJob, MilkJobExecution jobExecution) {
         return milkJob.getMilkJobFactory().removeJob(milkJob,jobExecution);
     }
