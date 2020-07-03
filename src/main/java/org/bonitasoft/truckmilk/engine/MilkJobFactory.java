@@ -129,7 +129,7 @@ public class MilkJobFactory {
         
         milkJob.getPlugIn().notifyUnregisterAJob(milkJob, jobExecution);
         
-        listEvents.addAll(dbRemoveJob(listJobsId.get( milkJob.getId())));
+        listEvents.addAll( dbRemoveJob(listJobsId.get( milkJob.getId())));
         listJobsId.remove( milkJob.getId());
         return listEvents;
     }
