@@ -48,9 +48,9 @@ public class MilkConstantJson {
     public final static String CSTJSON_JOB_NAME = "name";
     public final static String CSTJSON_JOB_ID = "id";
     public final static String CSTJSON_JOB_IMMEDIATEEXECUTION = "imediateExecution";
-    public final static String cstJsonAskForStop = "askForStop";
-    public final static String cstJsonlastExecutionStatus = "lastexecutionstatus";
-    public final static String cstJsonInExecution = "inExecution";
+    public final static String CSTJSON_ASKFORSTOP = "askForStop";
+    public final static String CSTJSON_LAST_EXECUTION_STATUS = "lastexecutionstatus";
+    public final static String CSTJSON_IN_EXECUTION = "inExecution";
     public final static String cstJsonRegisterInExecutionHost = "inExecutionHost";
     public final static String cstJsonInExecutionStartTime = "inExecutionStartTime";
     public final static String cstJsonInExecutionPercent = "inExecutionPercent";
@@ -102,7 +102,7 @@ public class MilkConstantJson {
     public final static String CSTJSON_PLUGIN_TYPE = "type";
 
     public final static String CSTJSON_PLUGIN_PARAMETERNAME = "name";
-
+    public final static String CSTJSON_PLUGIN_PARAMETERTYPE = "type";
     public final static String CSTJSON_PLUGIN_PARAMETERLABEL = "label";
 
     public final static String CSTJSON_PLUGIN_PARAMETERMANDATORY ="isMandatory";
