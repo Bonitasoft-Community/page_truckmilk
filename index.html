@@ -90,7 +90,7 @@
 					<div style="font-style: italic;">
 					The <span style="color: red;font-weight: bold;">B</span>onita <span style="color: red;font-weight: bold;">SC</span>heduler&nbsp;
 					</div>
-					<a href="" >V2.5.1 (July 1)</a>
+					<a href="" >V2.5.1 (July 2)</a>
 				</center>
 			</td></tr>
 			<tr><td>
@@ -387,7 +387,7 @@
 									</div>
 									<div class="panel-body"></div>
 										<table width="100%">
-											<tr><td colspan="2" style="padding: 15px" >
+											<tr><td colspan="2" style="padding: 15px;vertical-align: top;">
 												<input ng-model="plugtour.cron" maxlength="100" style="width:100%;padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" />
 												<div class="alert alert-default">
 													Use a Cron definition string. Visit <a href="https://www.freeformatter.com/cron-expression-generator-quartz.html" target="blanck" style="color:black">Quartz Cron Editor</a><p>
@@ -402,17 +402,18 @@
 													<button ng-click="ctrl.updateJob( plugtour)" class="btn btn-primary btn-xs" ng-disabled="ctrl.inprogress"> <span ng-if="ctrl.inprogress">{{ctrl.postParams.advPercent}} % </span> Update</button>												
 												</center>
 												</td>
-												<td>
+												<td style="vertical-align: top;">
 													Usual:<br>
-													<button ng-click="plugtour.cron='0 0/10 * ? * * *'" class="btn btn-info btn-xs">Every 10 minutes</button><br>
-													<button ng-click="plugtour.cron='0 0 * ? * * *'" class="btn btn-info btn-xs">Every hour</button><br>
-													<button ng-click="plugtour.cron='0 0 2,14 ? * * *'" class="btn btn-info btn-xs">Every day, 2H and 14H am</button><br>
-													<button ng-click="plugtour.cron='0 0 3 ? * MON,TUE,WED,THU,FRI *'" class="btn btn-info btn-xs">Every week day, 3H</button><br>
-													<button ng-click="plugtour.cron='0 0 3 ? * MON,TUE,WED,THU,FRI *'" class="btn btn-info btn-xs">Every weekend, 3H</button><br>
-													<button ng-click="plugtour.cron='0 0 4 1 * ? *'" class="btn btn-info btn-xs">First day of the month, 4H</button><br>
-													<button ng-click="plugtour.cron='0 0 4 L * ? *'" class="btn btn-info btn-xs">Last day of the month</button><br>
-													<button ng-click="plugtour.cron='0 0 4 L * ? *'" class="btn btn-info btn-xs">Last day of the month</button><br>
-													<button ng-click="plugtour.cron='0 0 4 ? * 7#1 *'" class="btn btn-info btn-xs">First Saturday of the month</button><br>
+													<button ng-click="plugtour.cron='0 0/10 * ? * * *'" class="btn btn-info btn-xs" style="margin-bottom: 5px">Every 10 minutes</button><br>
+													<button ng-click="plugtour.cron='0 0 * ? * * *'" class="btn btn-info btn-xs" style="margin-bottom: 5px">Every hour</button><br>
+													<button ng-click="plugtour.cron='0 0 3 ? * * *'" class="btn btn-info btn-xs" style="margin-bottom: 5px">Every day, 3H am</button><br>
+													<button ng-click="plugtour.cron='0 0 2,14 ? * * *'" class="btn btn-info btn-xs" style="margin-bottom: 5px">Every day, 2H and 14H am</button><br>
+													<button ng-click="plugtour.cron='0 0 3 ? * MON,TUE,WED,THU,FRI *'" class="btn btn-info btn-xs" style="margin-bottom: 5px">Every week day, 3H</button><br>
+													<button ng-click="plugtour.cron='0 0 3 ? * MON,TUE,WED,THU,FRI *'" class="btn btn-info btn-xs" style="margin-bottom: 5px">Every weekend, 3H</button><br>
+													<button ng-click="plugtour.cron='0 0 4 1 * ? *'" class="btn btn-info btn-xs" style="margin-bottom: 5px">First day of the month, 4H</button><br>
+													<button ng-click="plugtour.cron='0 0 4 L * ? *'" class="btn btn-info btn-xs" style="margin-bottom: 5px">Last day of the month</button><br>
+													<button ng-click="plugtour.cron='0 0 4 L * ? *'" class="btn btn-info btn-xs" style="margin-bottom: 5px">Last day of the month</button><br>
+													<button ng-click="plugtour.cron='0 0 4 ? * 7#1 *'" class="btn btn-info btn-xs" style="margin-bottom: 5px">First Saturday of the month</button><br>
 													
 													
 												</td>
@@ -1117,21 +1118,29 @@
 												<th>Host</th>
 												<th>Item processed</th>
 												<th>Execution time</th>
-												<th>Report</th>
-												<th ng-if="ctrl.show.detailreport" >Details</th>
-												
-											<tr ng-repeat="savedExec in plugtour.savedExecution" >
+
+											<tbody ng-repeat="savedExec in plugtour.savedExecution"> 
+											<tr  >
 												<td>{{savedExec.execDatest}}</td>
 												<td>{{savedExec.status}}</td>
 												<td>{{savedExec.hostname}}</td>
 												<td style="text-align:right">{{savedExec.itemprocessed}}</td>
 												<td style="text-align:right">{{savedExec.timeinmsst}}<br>
-													<span style="font-size:small">({{savedExec.timeinms}} ms)</span></td>
-												<td><div ng-bind-html="ctrl.getHtml( savedExec.reportinhtml, 'report')"></div><br>
-												<!-- Report={{savedExec.reportinhtml}} -->
-												</td>													
-												<td ng-if="ctrl.show.detailreport"><div ng-bind-html="ctrl.getHtml( savedExec.listevents, 'saveExecListEvents plugtour='+plugtour.id+'savedExec.execDateSt='+savedExec.execDateSt )"></div></td>
+													<span style="font-size:small">({{savedExec.timeinms}} ms)</span>
+												</td>
 											</tr>
+											<tr>										
+												<td colspan="5" style="padding-left: 50px; padding-right: 50px;" >
+													<table><tr>													
+														<td style="vertical-align:top">
+															<div ng-bind-html="ctrl.getHtml( savedExec.reportinhtml, 'report')"></div></td>													
+														<td style="vertical-align:top;border: 1px solid black;" ng-if="ctrl.show.detailreport">
+
+															<div ng-bind-html="ctrl.getHtml( savedExec.listevents, 'saveExecListEvents plugtour='+plugtour.id+'savedExec.execDateSt='+savedExec.execDateSt )"></div></td>
+													</tr></table>
+												</td>
+											</tr>
+											</tbody>
 										</table>
 									</div> <!-- panel SHOW REPORT -->
 								</div> <!--  panel info -->
