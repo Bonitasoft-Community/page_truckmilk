@@ -9,9 +9,11 @@ import java.util.Map;
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJob.MapContentParameter;
 
 import lombok.Data;
 
@@ -397,15 +399,20 @@ public abstract class MilkPlugIn {
          * 
          * @return
          */
-        public Map<String, Object> getMap() {
+        public Map<String, Object> getMap(MapContentParameter mapContent) {
             Map<String, Object> map = new HashMap<>();
             map.put(MilkConstantJson.CSTJSON_PLUGIN_PARAMETERNAME, name);
-            map.put(MilkConstantJson.CSTJSON_PLUGIN_PARAMETERLABEL, label);
-            map.put(MilkConstantJson.CSTJSON_PLUGIN_PARAMETERMANDATORY, isMandatory);
-            map.put(MilkConstantJson.CSTJSON_PLUGIN_PARAMETERVISIBLECONDITION, visibleCondition);
+            if (mapContent.withExplanation) {
+                map.put( MilkConstantJson.CSTJSON_PLUGIN_PARAMETERLABEL, label);
+                map.put( MilkConstantJson.CSTJSON_PLUGIN_PARAMETERMANDATORY, isMandatory);
+                map.put( MilkConstantJson.CSTJSON_PLUGIN_PARAMETERVISIBLECONDITION, visibleCondition);
+                map.put( "explanation", explanation);
+                map.put( "information", information);
+     
+            }
             map.put(MilkConstantJson.CSTJSON_PLUGIN_PARAMETERFILTERPROCESS, filterProcess==null ? "" : filterProcess.toString());
             
-            map.put("type", typeParameter.toString());
+            map.put( MilkConstantJson.CSTJSON_PLUGIN_PARAMETERTYPE, typeParameter.toString());
             if (arrayMapDescription != null) {
                 List<Map<String, Object>> listDescription = new ArrayList<>();
                 for (ColDefinition col : arrayMapDescription) {
@@ -413,27 +420,27 @@ public abstract class MilkPlugIn {
                 }
                 map.put("arraymapDefinition", listDescription);
             }
-            if (MilkPlugIn.TypeParameter.LISTVALUES.equals(typeParameter)) {
-                map.put("listValues", Arrays.asList(listValues));
+            if (mapContent.withExplanation) {
+                if (MilkPlugIn.TypeParameter.LISTVALUES.equals(typeParameter)) {
+                    map.put("listValues", Arrays.asList(listValues));
 
+                }
+
+                if (MilkPlugIn.TypeParameter.BUTTONARGS.equals(typeParameter)) {
+                    List<Map<String, Object>> listArgs = new ArrayList<>();
+                    if (argsName != null)
+                        for (int i = 0; i < argsName.size(); i++) {
+                            Map<String, Object> mapArgs = new HashMap<>();
+                            mapArgs.put("name", i < argsName.size() ? argsName.get(i) : "");
+                            mapArgs.put("value", i < argsValue.size() ? argsValue.get(i) : "");
+    
+                            listArgs.add(mapArgs);
+                        }
+                    map.put("args", listArgs);
+                    map.put("buttonDescription", buttonDescription);
+                }
             }
 
-            if (MilkPlugIn.TypeParameter.BUTTONARGS.equals(typeParameter)) {
-                List<Map<String, Object>> listArgs = new ArrayList<>();
-                if (argsName != null)
-                    for (int i = 0; i < argsName.size(); i++) {
-                        Map<String, Object> mapArgs = new HashMap<>();
-                        mapArgs.put("name", i < argsName.size() ? argsName.get(i) : "");
-                        mapArgs.put("value", i < argsValue.size() ? argsValue.get(i) : "");
-
-                        listArgs.add(mapArgs);
-                    }
-                map.put("args", listArgs);
-                map.put("buttonDescription", buttonDescription);
-            }
-
-            map.put("explanation", explanation);
-            map.put("information", information);
             map.put("defaultValue", defaultValue);
             return map;
         }

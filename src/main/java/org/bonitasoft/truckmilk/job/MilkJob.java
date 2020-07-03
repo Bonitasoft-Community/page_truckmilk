@@ -30,6 +30,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
+import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
@@ -952,13 +953,14 @@ public @Data class MilkJob {
      */
     public static class MapContentParameter {
 
-        boolean withExplanation = false;
+        public boolean withExplanation = false;
         public boolean trackExecution = true;
         public boolean askStop = true;
         public boolean savedExecution = true;
         public boolean limitData = false;
         public boolean mesures = true;
         public boolean destinationHtml=false;
+
 
         public static MapContentParameter getInstanceWeb() {
             MapContentParameter mapContentParameter = new MapContentParameter();
@@ -978,7 +980,7 @@ public @Data class MilkJob {
      * 
      * @return
      */
-    public Map<String, Object> getMap(MapContentParameter mapContent, MilkJobContext milkJobContext) {
+    public Map<String, Object> getMap(MapContentParameter mapContent,  MilkJobContext milkJobContext) {
 
         Map<String, Object> map = new HashMap<>();
         map.put(MilkConstantJson.CSTJSON_JOB_NAME, getName());
@@ -993,10 +995,12 @@ public @Data class MilkJob {
         map.put(MilkConstantJson.CSTJSON_JOB_CRON, cronSt);
         map.put(MilkConstantJson.CSTJSON_SAVEDEXECUTIONPOLICY, savedExecutionPolicy==null ?SAVEDEXECUTIONPOLICY.SAVEALL : savedExecutionPolicy.toString() );
         map.put(MilkConstantJson.CSTJSON_NB_SAVEDEXECUTION, nbSavedExecution);
-        map.put(MilkConstantJson.CSTJSON_HAS_MEASUREMENT, plugIn.getDescription().hasMesures());
+        if (mapContent.withExplanation) {
+            map.put(MilkConstantJson.CSTJSON_HAS_MEASUREMENT, plugIn.getDescription().hasMesures());
+            map.put(MilkConstantJson.CSTJSON_JOBCANBESTOPPED_ITEMS, plugIn.getDescription().isJobCanBeStopByMaxItems());
+            map.put(MilkConstantJson.CSTJSON_JOBCANBESTOPPED_DELAY, plugIn.getDescription().isJobCanBeStopByMaxMinutes());
+        }
         map.put(MilkConstantJson.CSTJSON_NB_HISTORYMEASUREMENT, nbHistoryMesure);
-        map.put(MilkConstantJson.CSTJSON_JOBCANBESTOPPED_ITEMS, plugIn.getDescription().isJobCanBeStopByMaxItems());
-        map.put(MilkConstantJson.CSTJSON_JOBCANBESTOPPED_DELAY, plugIn.getDescription().isJobCanBeStopByMaxMinutes());
         map.put(MilkConstantJson.CSTJSON_STOPAFTER_NBITEMS, userStopAfterMaxItems);
         map.put(MilkConstantJson.CSTJSON_STOPAFTER_NBMINUTES, userStopAfterMaxMinutes);
 
@@ -1007,10 +1011,10 @@ public @Data class MilkJob {
         map.put(MilkConstantJson.CSTJSON_PARAMETERS, mapParametersValue);
 
         // parameter definition
-        map.put(MilkConstantJson.CSTJSON_PARAMETERS_DEF, collectParameterList(plugIn.getDefinitionDescription(milkJobContext).getInputParameters(), mapParametersValue));
+        map.put(MilkConstantJson.CSTJSON_PARAMETERS_DEF, collectParameterList(plugIn.getDefinitionDescription(milkJobContext).getInputParameters(), mapParametersValue, mapContent));
 
         // Analysis definition
-        map.put(MilkConstantJson.CSTJSON_ANALYSISDEF, collectParameterList(plugIn.getDefinitionDescription(milkJobContext).getAnalysisParameters(), mapParametersValue));
+        map.put(MilkConstantJson.CSTJSON_ANALYSISDEF, collectParameterList(plugIn.getDefinitionDescription(milkJobContext).getAnalysisParameters(), mapParametersValue, mapContent));
 
         map.put(MilkConstantJson.CSTJSON_ENABLE, isEnable);
 
@@ -1019,7 +1023,7 @@ public @Data class MilkJob {
 
         }
         if (mapContent.askStop) {
-            map.put(MilkConstantJson.cstJsonAskForStop, trackExecution.askForStop);
+            map.put(MilkConstantJson.CSTJSON_ASKFORSTOP, trackExecution.askForStop);
         }
         if (mapContent.savedExecution) {
             map.put(MilkConstantJson.CSTJSON_SAVEDEXEC, getMapListSavedExecution(mapContent.limitData, mapContent.destinationHtml));
@@ -1078,7 +1082,7 @@ public @Data class MilkJob {
      * ********************************************************************************
      */
 
-    private List<Map<String, Object>> collectParameterList(List<PlugInParameter> listPlugInParameters, Map<String, Object> mapParametersValue) {
+    private List<Map<String, Object>> collectParameterList(List<PlugInParameter> listPlugInParameters, Map<String, Object> mapParametersValue, MapContentParameter mapContent) {
         List<Map<String, Object>> list = new ArrayList<>();
         for (PlugInParameter plugInParameter : listPlugInParameters) {
 
@@ -1089,6 +1093,7 @@ public @Data class MilkJob {
                 // Attention, in the parameters returned, the FILEWRITE parameters values must be removed
                 // Skip this information in fact, will be save in a different way
                 mapParametersValue.put(plugInParameter.name, parameters.get(plugInParameter.name + cstPrefixStreamValue) == null ? null : "AVAILABLE");
+            } else if (plugInParameter.typeParameter == TypeParameter.INFORMATION){
             } else {
                 mapParametersValue.put(plugInParameter.name, parameters.get(plugInParameter.name) == null ? plugInParameter.defaultValue : parameters.get(plugInParameter.name));
             }
@@ -1118,7 +1123,7 @@ public @Data class MilkJob {
                 }
             }
             // Parameters Definition
-            list.add(plugInParameter.getMap());
+            list.add(plugInParameter.getMap(  mapContent));
         }
         return list;
     }
@@ -1181,15 +1186,15 @@ public @Data class MilkJob {
             Map<String, Object> map = new HashMap<>();
 
             map.put(MilkConstantJson.CSTJSON_JOB_IMMEDIATEEXECUTION, trackExecution.isImmediateExecution);
-            map.put(MilkConstantJson.cstJsonAskForStop, trackExecution.askForStop);
+            map.put(MilkConstantJson.CSTJSON_ASKFORSTOP, trackExecution.askForStop);
             map.put(MilkConstantJson.CSTJSON_JOB_NEXTEXECUTION, trackExecution.nextExecutionDate == null ? 0 : trackExecution.nextExecutionDate.getTime());
             map.put(MilkConstantJson.CSTJSON_JOB_NEXTEXECUTION + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, trackExecution.nextExecutionDate == null ? "" : sdf.format(trackExecution.nextExecutionDate.getTime()));
             map.put(MilkConstantJson.CSTJSON_JOB_LASTEXECUTION, trackExecution.lastExecutionDate == null ? 0 : trackExecution.lastExecutionDate.getTime());
             map.put(MilkConstantJson.CSTJSON_JOB_LASTEXECUTION + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, trackExecution.lastExecutionDate == null ? "" : sdf.format(trackExecution.lastExecutionDate));
             String executionStatus = trackExecution.lastExecutionStatus == null ? null : trackExecution.lastExecutionStatus.toString().toLowerCase();
-            map.put(MilkConstantJson.cstJsonlastExecutionStatus, executionStatus);
+            map.put(MilkConstantJson.CSTJSON_LAST_EXECUTION_STATUS, executionStatus);
 
-            map.put(MilkConstantJson.cstJsonInExecution, trackExecution.inExecution);
+            map.put(MilkConstantJson.CSTJSON_IN_EXECUTION, trackExecution.inExecution);
             map.put(MilkConstantJson.cstJsonInExecutionStartTime, trackExecution.startTime);
             map.put(MilkConstantJson.cstJsonInExecutionPercent, trackExecution.percent);
             map.put(MilkConstantJson.cstJsonInExecutionAvancementInformation, avancementInformation);
@@ -1203,7 +1208,7 @@ public @Data class MilkJob {
         public void readTrackExecutionFromMap(Map<String, Object> jsonMap) {
             //  Map<String, Object> jsonMap = (Map<String, Object>) JSONValue.parse(jsonSt);
             isImmediateExecution = getBooleanValue(jsonMap.get(MilkConstantJson.CSTJSON_JOB_IMMEDIATEEXECUTION), false);
-            askForStop = getBooleanValue(jsonMap.get(MilkConstantJson.cstJsonAskForStop), false);
+            askForStop = getBooleanValue(jsonMap.get(MilkConstantJson.CSTJSON_ASKFORSTOP), false);
 
             Long nextExecutionDateLong = (Long) jsonMap.get(MilkConstantJson.CSTJSON_JOB_NEXTEXECUTION);
             if (nextExecutionDateLong != null && nextExecutionDateLong != 0)
@@ -1213,11 +1218,11 @@ public @Data class MilkJob {
             if (lastExecutionDateLong != null && lastExecutionDateLong != 0)
                 trackExecution.lastExecutionDate = new Date(lastExecutionDateLong);
 
-            String lastExecutionStatus = (String) jsonMap.get(MilkConstantJson.cstJsonlastExecutionStatus);
+            String lastExecutionStatus = (String) jsonMap.get(MilkConstantJson.CSTJSON_LAST_EXECUTION_STATUS);
             if (lastExecutionStatus != null)
                 trackExecution.lastExecutionStatus = ExecutionStatus.valueOf(lastExecutionStatus.toUpperCase());
 
-            inExecution = getBooleanValue(jsonMap.get(MilkConstantJson.cstJsonInExecution), false);
+            inExecution = getBooleanValue(jsonMap.get(MilkConstantJson.CSTJSON_IN_EXECUTION), false);
             startTime = getLongValue(jsonMap.get(MilkConstantJson.cstJsonInExecutionStartTime), 0L);
             percent = getLongValue(jsonMap.get(MilkConstantJson.cstJsonInExecutionPercent), 0L);
             avancementInformation = (String) jsonMap.get(MilkConstantJson.cstJsonInExecutionAvancementInformation);
