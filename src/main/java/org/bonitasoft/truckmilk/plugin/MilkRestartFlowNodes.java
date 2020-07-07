@@ -130,19 +130,19 @@ ORDER BY id;
             milkJobOutput.executionStatus =ExecutionStatus.SUCCESSNOTHING;
             milkJobOutput.setMeasure(cstMesureTasksExecuted, 0);
             milkJobOutput.setMeasure(cstMesureTasksError, 0);
-            milkJobOutput.addReportTable( new String[] {"Indicator", "Value"});
-            milkJobOutput.addReportLine( new Object[] {"Number of tasks detected", stuckFlowNodes.listStuckFlowNode.size() });
+            milkJobOutput.addReportTableBegin( new String[] {"Indicator", "Value"});
+            milkJobOutput.addReportTableLine( new Object[] {"Number of tasks detected", stuckFlowNodes.listStuckFlowNode.size() });
             // show up the fist lines
             int max = jobExecution.getJobStopAfterMaxItems() ;
             if (max>50)
                 max=50;
             for (Map<String,Object> flowNode : stuckFlowNodes.listStuckFlowNode) {
-                milkJobOutput.addReportLine( new Object[] {"CaseId/FlowId", flowNode.get("ROOTCONTAINERID")+"/"+flowNode.get("ID") });
+                milkJobOutput.addReportTableLine( new Object[] {"CaseId/FlowId", flowNode.get("ROOTCONTAINERID")+"/"+flowNode.get("ID") });
             }
             if (max < jobExecution.getJobStopAfterMaxItems())
-                milkJobOutput.addReportLine( new Object[] {"... more objects", "" });
+                milkJobOutput.addReportTableLine( new Object[] {"... more objects", "" });
             
-            milkJobOutput.addReportEndTable();
+            milkJobOutput.addReportTableEnd();
             
             return milkJobOutput;
         }
@@ -177,11 +177,11 @@ ORDER BY id;
                 countErrors++;
             }
         }
-        milkJobOutput.addReportTable( new String[] {"Indicator", "Value"});
-        milkJobOutput.addReportLine( new Object[] {"Number of tasks detected", stuckFlowNodes.listStuckFlowNode.size() });
-        milkJobOutput.addReportLine( new Object[] {"Task executed", countCorrects});
-        milkJobOutput.addReportLine( new Object[] {"Task execution error", countErrors});
-        milkJobOutput.addReportEndTable();
+        milkJobOutput.addReportTableBegin( new String[] {"Indicator", "Value"});
+        milkJobOutput.addReportTableLine( new Object[] {"Number of tasks detected", stuckFlowNodes.listStuckFlowNode.size() });
+        milkJobOutput.addReportTableLine( new Object[] {"Task executed", countCorrects});
+        milkJobOutput.addReportTableLine( new Object[] {"Task execution error", countErrors});
+        milkJobOutput.addReportTableEnd();
         
         milkJobOutput.setMeasure(cstMesureTasksExecuted, countCorrects);
         milkJobOutput.setMeasure(cstMesureTasksError, countErrors);

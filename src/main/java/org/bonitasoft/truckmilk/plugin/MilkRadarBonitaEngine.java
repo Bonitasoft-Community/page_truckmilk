@@ -159,16 +159,16 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
 
                     List<IndicatorPhoto> list = radarPhotoResult.getIndicators(cstMesureConnectorConnectorOverloaded.name);
 
-                    milkJobOutput.addReportTable(new String[] { "Connectors Radar", "Details" });
+                    milkJobOutput.addReportTableBegin(new String[] { "Connectors Radar", "Details" });
 
-                    milkJobOutput.addReportLine(new Object[] { "Connector call", connectorCall });
-                    milkJobOutput.addReportLine(new Object[] { "connectorOverload", connectorOverload });
-                    milkJobOutput.addReportLine(new Object[] { "Threshold (in sec)", jobExecution.getInputLongParameter(cstParamConnectorDurationInSecond) });
+                    milkJobOutput.addReportTableLine(new Object[] { "Connector call", connectorCall });
+                    milkJobOutput.addReportTableLine(new Object[] { "connectorOverload", connectorOverload });
+                    milkJobOutput.addReportTableLine(new Object[] { "Threshold (in sec)", jobExecution.getInputLongParameter(cstParamConnectorDurationInSecond) });
 
                     for (IndicatorPhoto indicator : list)
-                        milkJobOutput.addReportLine(new String[] { indicator.getName(), indicator.details == null ? "" : indicator.details });
+                        milkJobOutput.addReportTableLine(new String[] { indicator.getName(), indicator.details == null ? "" : indicator.details });
 
-                    milkJobOutput.addReportEndTable();
+                    milkJobOutput.addReportTableEnd();
 
                     milkJobOutput.addEvent(new BEvent(eventConnectorTooLongStatus, "Connectors called[" + connectorCall + "] Overload[" + connectorOverload + "]"));
 
@@ -189,7 +189,7 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
             
             
             
-            milkJobOutput.addReportTable(new String[] { "Measure", "Value" });
+            milkJobOutput.addReportTableBegin(new String[] { "Measure", "Value" });
 
             for (String radarName : listRadarsName) {
                 Radar radar = radarFactory.getInstance(radarName, radarName, jobExecution.getTenantId(), jobExecution.getApiAccessor());
@@ -203,11 +203,11 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
                 milkJobOutput.addEvents(result.listEvents);
                 for (RadarPhoto photo : result.listPhotos) {
                     for (IndicatorPhoto indicator : photo.getListIndicators()) {
-                        milkJobOutput.addReportLine(new Object[] { indicator.getName(), indicator.isValue() ? indicator.getValue() : indicator.getValuePercent() });
+                        milkJobOutput.addReportTableLine(new Object[] { indicator.getName(), indicator.isValue() ? indicator.getValue() : indicator.getValuePercent() });
                     }
                 }
             }
-            milkJobOutput.addReportEndTable();
+            milkJobOutput.addReportTableEnd();
         }
 
         return milkJobOutput;

@@ -145,17 +145,17 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
             milkJobOutput.endChronometer(searchMarker);
 
             if (CSTOPERATION_GETLIST.equals(policy)) {
-                milkJobOutput.addReportTable(new String[] { "Case Id", "TaskId", "Task Name", "Process Name", "Process Version" });
+                milkJobOutput.addReportTableBegin(new String[] { "Case Id", "TaskId", "Task Name", "Process Name", "Process Version" });
                 int max = listResult.size();
                 if (max > jobExecution.getJobStopAfterMaxItems())
                     max = jobExecution.getJobStopAfterMaxItems();
                 for (int i = 0; i < max; i++) {
                     Map<String, Object> report = listResult.get(i);
-                    milkJobOutput.addReportLine(new Object[] { report.get("ROOTCONTAINERID"), report.get("ID"), report.get("NAME"), report.get("PROCESSNAME"), report.get("PROCESSVERSION") });
+                    milkJobOutput.addReportTableLine(new Object[] { report.get("ROOTCONTAINERID"), report.get("ID"), report.get("NAME"), report.get("PROCESSNAME"), report.get("PROCESSVERSION") });
                 }
                 if (listResult.size() > jobExecution.getJobStopAfterMaxItems())
                     milkJobOutput.addReportInHtml("<td><colspan=\"5\">More objects...</td></tr>");
-                milkJobOutput.addReportEndTable();
+                milkJobOutput.addReportTableEnd();
 
                 milkJobOutput.setNbItemsProcessed(max);
             } else if (CSTOPERATION_DELETE.equals(policy)) {
@@ -214,11 +214,11 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
 
                 }
                 jobExecution.setAvancementStep(max);
-                milkJobOutput.addReportTable(new String[] { "Indicator", "Value" });
-                milkJobOutput.addReportLine(new Object[] { "Number of tasks detected", listResult.size() });
-                milkJobOutput.addReportLine(new Object[] { "Task deleted", countCorrects });
-                milkJobOutput.addReportLine(new Object[] { "Task deletion error", countErrors });
-                milkJobOutput.addReportEndTable();
+                milkJobOutput.addReportTableBegin(new String[] { "Indicator", "Value" });
+                milkJobOutput.addReportTableLine(new Object[] { "Number of tasks detected", listResult.size() });
+                milkJobOutput.addReportTableLine(new Object[] { "Task deleted", countCorrects });
+                milkJobOutput.addReportTableLine(new Object[] { "Task deletion error", countErrors });
+                milkJobOutput.addReportTableEnd();
 
                 milkJobOutput.setMeasure(cstMesureTasksDeleted, countCorrects);
                 milkJobOutput.setMeasure(cstMesureTasksError, countErrors);
@@ -233,7 +233,7 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
 
                 if (listResult.size() > jobExecution.getJobStopAfterMaxItems())
                     milkJobOutput.addReportInHtml("<td><colspan=\"5\">More objects...</td></tr>");
-                milkJobOutput.addReportEndTable();
+                milkJobOutput.addReportTableEnd();
 
                 milkJobOutput.setNbItemsProcessed(max);
 

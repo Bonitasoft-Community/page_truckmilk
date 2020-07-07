@@ -540,23 +540,23 @@ public class MilkPurgeArchive extends MilkPlugIn {
         }
 
         public void addInReport(MilkJobOutput milkJobOutput) {
-            milkJobOutput.addReportTable(new String[] { "Process Name", "Version", "Number of deletion" });
+            milkJobOutput.addReportTableBegin(new String[] { "Process Name", "Version", "Number of deletion" });
             boolean reportSomething = false;
 
             for (DeletionItemProcess deletionItemProcess : mapDeletionProcess.values()) {
                 if (deletionItemProcess.nbCaseDeleted > 0) {
                     if (deletionItemProcess.processDeploymentInfo != null) {
-                        milkJobOutput.addReportLine(new Object[] { deletionItemProcess.processDeploymentInfo.getName(), deletionItemProcess.processDeploymentInfo.getVersion(), deletionItemProcess.nbCaseDeleted });
+                        milkJobOutput.addReportTableLine(new Object[] { deletionItemProcess.processDeploymentInfo.getName(), deletionItemProcess.processDeploymentInfo.getVersion(), deletionItemProcess.nbCaseDeleted });
                         reportSomething = true;
                     } else if (deletionItemProcess.processDefinition != null) {
-                        milkJobOutput.addReportLine(new Object[] { deletionItemProcess.processDefinition.getName(), deletionItemProcess.processDefinition.getVersion(), deletionItemProcess.nbCaseDeleted });
+                        milkJobOutput.addReportTableLine(new Object[] { deletionItemProcess.processDefinition.getName(), deletionItemProcess.processDefinition.getVersion(), deletionItemProcess.nbCaseDeleted });
                         reportSomething = true;
                     }
                 }
             }
             if (!reportSomething)
-                milkJobOutput.addReportLine(new Object[] { "No deletion performed", "", "" });
-            milkJobOutput.addReportEndTable();
+                milkJobOutput.addReportTableLine(new Object[] { "No deletion performed", "", "" });
+            milkJobOutput.addReportTableEnd();
         }
 
     }
@@ -700,10 +700,10 @@ public class MilkPurgeArchive extends MilkPlugIn {
 
             milkJobOutput.addReportInHtml(finalReport.toString());
 
-            milkJobOutput.addReportTable(new String[] { "Label", "Value" });
-            milkJobOutput.addReportLine(new Object[] { "Total cases detected", totalCasesDetected });
-            milkJobOutput.addReportLine(new Object[] { "Total cases in CSV file", milkJobOutput.nbItemsProcessed });
-            milkJobOutput.addReportEndTable();
+            milkJobOutput.addReportTableBegin(new String[] { "Label", "Value" });
+            milkJobOutput.addReportTableLine(new Object[] { "Total cases detected", totalCasesDetected });
+            milkJobOutput.addReportTableLine(new Object[] { "Total cases in CSV file", milkJobOutput.nbItemsProcessed });
+            milkJobOutput.addReportTableEnd();
 
             milkJobOutput.addEvent(new BEvent(eventSynthesisReport, "Total cases in list:" + milkJobOutput.nbItemsProcessed + ", Detected:" + totalCasesDetected));
 
@@ -888,44 +888,44 @@ public class MilkPurgeArchive extends MilkPlugIn {
             // -------------------------------------------------- reorting
             // calculated the last ignore            
             statistic.countStillToAnalyse = statistic.totalLineCsv - lineNumber;
-            milkJobOutput.addReportTable(new String[] { "Mesure", "Value" });
+            milkJobOutput.addReportTableBegin(new String[] { "Mesure", "Value" });
 
             StringBuilder reportEvent = new StringBuilder();
-            milkJobOutput.addReportLine(new Object[] { "Already done", statistic.countAlreadyDone });
+            milkJobOutput.addReportTableLine(new Object[] { "Already done", statistic.countAlreadyDone });
 
             // reportEvent.append("AlreadyDone: " + statistic.countAlreadyDone + "; ");
             if (statistic.countIgnored > 0) {
-                milkJobOutput.addReportLine(new Object[] { "Ignored(no status DELETE):", statistic.countIgnored });
+                milkJobOutput.addReportTableLine(new Object[] { "Ignored(no status DELETE):", statistic.countIgnored });
                 // reportEvent.append("Ignored(no status DELETE):" + statistic.countIgnored + ";");
             }
 
             if (statistic.countStillToAnalyse > 0) {
-                milkJobOutput.addReportLine(new Object[] { "StillToAnalyse", statistic.countStillToAnalyse });
+                milkJobOutput.addReportTableLine(new Object[] { "StillToAnalyse", statistic.countStillToAnalyse });
                 // reportEvent.append("StillToAnalyse:" + statistic.countStillToAnalyse+";");
             }
 
             if (statistic.countBadDefinition > 0) {
-                milkJobOutput.addReportLine(new Object[] { "Bad Definition(noCaseid):", statistic.countBadDefinition });
-                milkJobOutput.addReportLine(new Object[] { "Analysis:", analysis.toString() });
+                milkJobOutput.addReportTableLine(new Object[] { "Bad Definition(noCaseid):", statistic.countBadDefinition });
+                milkJobOutput.addReportTableLine(new Object[] { "Analysis:", analysis.toString() });
 
                 // reportEvent.append("Bad Definition(noCaseid):" + statistic.countBadDefinition + " : " + analysis.toString()+";");
             }
 
             if (nbAnalyseAlreadyReported > 0) {
-                milkJobOutput.addReportLine(new Object[] { "More errors:", nbAnalyseAlreadyReported, "" });
+                milkJobOutput.addReportTableLine(new Object[] { "More errors:", nbAnalyseAlreadyReported, "" });
                 // reportEvent.append("(" + nbAnalyseAlreadyReported + ") more errors;");
             }
 
             // add Statistics
             // reportEvent.append("Cases Deleted:" + statistic.countNbItems + " in " + statistic.sumTimeDeleted + " ms ");
-            milkJobOutput.addReportLine(new Object[] { "Cases Deleted:", statistic.countNbItems });
+            milkJobOutput.addReportTableLine(new Object[] { "Cases Deleted:", statistic.countNbItems });
             if (statistic.countNbItems > 0) {
-                milkJobOutput.addReportLine(new Object[] { "Average/case (ms/case):", ((int) (statistic.sumTimeDeleted / statistic.countNbItems)), "" });
+                milkJobOutput.addReportTableLine(new Object[] { "Average/case (ms/case):", ((int) (statistic.sumTimeDeleted / statistic.countNbItems)), "" });
                 // reportEvent.append("( " + ((int) (statistic.sumTimeDeleted / statistic.countNbItems)) + " ms/case)");
             }
-            milkJobOutput.addReportLine(new Object[] { "SearchCase time:", statistic.sumTimeSearch });
-            milkJobOutput.addReportLine(new Object[] { "Manipulate CSV time (ms):", statistic.sumTimeManipulateCsv });
-            milkJobOutput.addReportLine(new Object[] { "Total Execution time (ms):", purgeMarker.getTimeExecution() });
+            milkJobOutput.addReportTableLine(new Object[] { "SearchCase time:", statistic.sumTimeSearch });
+            milkJobOutput.addReportTableLine(new Object[] { "Manipulate CSV time (ms):", statistic.sumTimeManipulateCsv });
+            milkJobOutput.addReportTableLine(new Object[] { "Total Execution time (ms):", purgeMarker.getTimeExecution() });
 
             // reportEvent.append("SearchCase time:" + statistic.sumTimeSearch + " ms;");
             // reportEvent.append("Manipulate CSV time:" + statistic.sumTimeManipulateCsv + " ms;");
@@ -936,7 +936,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
             if (statistic.countNbItems >= statistic.pleaseStopAfterManagedItems)
                 reportEvent.append("Reach the NumberOfItem;");
 
-            milkJobOutput.addReportEndTable();
+            milkJobOutput.addReportTableEnd();
 
             milkJobOutput.addChronometersInReport(false, false);
 

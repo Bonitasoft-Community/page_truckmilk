@@ -114,12 +114,12 @@ public class MilkLogObserver extends MilkPlugIn {
             
             
             List<LogAnalyseItem> top10Synthese = synthese.getTopSyntheses((int) top, onlyErrorInTop);
-            milkJobOutput.addReportTable( new String[] {"Count", "Description"});
+            milkJobOutput.addReportTableBegin( new String[] {"Count", "Description"});
             for (LogAnalyseItem analyseItem : top10Synthese)
             {
-                milkJobOutput.addReportLine(new String[] { String.valueOf(analyseItem.count), analyseItem.logItem.toString() } );
+                milkJobOutput.addReportTableLine(new String[] { String.valueOf(analyseItem.count), analyseItem.logItem.toString() } );
             }
-            milkJobOutput.addReportEndTable();
+            milkJobOutput.addReportTableEnd();
         }
         
         

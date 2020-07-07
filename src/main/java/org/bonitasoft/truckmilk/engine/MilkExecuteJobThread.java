@@ -199,7 +199,7 @@ public class MilkExecuteJobThread extends Thread {
                 
                 if (milkJobOutput.getReportInHtml().length()==0) {
                     // no report, then build one from the list of event
-                    milkJobOutput.addReportTable( null);
+                    milkJobOutput.addReportTableBegin( null);
                     for (BEvent event : milkJobOutput.getListEvents()) {
                         String title;
                         
@@ -212,14 +212,14 @@ public class MilkExecuteJobThread extends Thread {
                         } else {
                             title="<div class=\"label label-info\" style=\"color:white;\" >"+event.getTitle()+"</div>";
                         }                        
-                        milkJobOutput.addReportLine( new String[] { title,event.getParameters()});
+                        milkJobOutput.addReportTableLine( new String[] { title,event.getParameters()});
                     }
-                    milkJobOutput.addReportEndTable();
+                    milkJobOutput.addReportTableEnd();
                     
                 } else {
                     // a Report HTML exist, so complete it by errors if there are
                     if (BEventFactory.isError(milkJobOutput.getListEvents())) {
-                        milkJobOutput.addReportTable( null);
+                        milkJobOutput.addReportTableBegin( null);
                         for (BEvent event : milkJobOutput.getListEvents()) {
                             
                             if (! event.isError())
@@ -231,9 +231,9 @@ public class MilkExecuteJobThread extends Thread {
                             } else { 
                                 title="<div class=\"label label-warning\" style=\"color:white;\" >"+event.getTitle()+"</div>";
                             }
-                            milkJobOutput.addReportLine( new String[] { title,event.getParameters()});
+                            milkJobOutput.addReportTableLine( new String[] { title,event.getParameters()});
                         }
-                        milkJobOutput.addReportEndTable();
+                        milkJobOutput.addReportTableEnd();
                     }
                 }
                 milkJobOutput.hostName = hostName;

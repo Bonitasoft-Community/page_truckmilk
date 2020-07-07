@@ -98,7 +98,10 @@ public class MilkJobOutput {
      * 
      * @param header
      */
-    public void addReportTable(String[] header) {
+    public void addReportTableBegin(String[] header) {
+
+        this.numberOfColumnsinTable=header.length;
+
         StringBuilder tableHeader = new StringBuilder();
         
         tableHeader.append("<table class=\"table table-striped table-bordered table-sm\">");
@@ -112,8 +115,31 @@ public class MilkJobOutput {
         this.reportInATable=true;
      
     }
+    private int limitNumberOfLines;
+    private int countLinesInTable;
+    private int numberOfColumnsinTable;
+        
+    /**
+     * Start a table with a limiter. When the number of line access the limitter, then the report stop to store lines, and at the end, a message is set to display the number of line produced
+     * @param header
+     * @param limitNumberOfLines
+     */
+    public void addReportTableBegin(String[] header, int limitNumberOfLines) {
+        this.limitNumberOfLines=limitNumberOfLines;
+        this.countLinesInTable=0;
+        addReportTableBegin(header);
+        
+    }
+    /**
+     * Add a new line in the report table
+     * @param values
+     */
+    public void addReportTableLine(Object[] values) {
+        countLinesInTable++;
 
-    public void addReportLine(Object[] values) {
+        if (limitNumberOfLines > 0 && countLinesInTable>=limitNumberOfLines) {
+            return; // no nothing
+            }
         StringBuilder tableLines = new StringBuilder();
         
         tableLines.append("<tr>");
@@ -128,8 +154,11 @@ public class MilkJobOutput {
 
     }
 
-    public void addReportEndTable() {
-       
+    public void addReportTableEnd() {
+        if (limitNumberOfLines > 0 && countLinesInTable>=limitNumberOfLines) {
+            addReportInHtml("<tr><td colspan=\""+numberOfColumnsinTable+"\">Too many lines...("+countLinesInTable+" lines)</td></tr>");
+        }
+        limitNumberOfLines=0; // stop the limiter
         addReportInHtml("</table>");
     }
 
@@ -277,17 +306,17 @@ public class MilkJobOutput {
      * @param keepOperationNoOccurrence
      */
     public void addChronometersInReport(boolean keepOperationNoOccurrence, boolean addAverage) {
-        addReportTable(new String[] { "Chronometer", "Time" });
+        addReportTableBegin(new String[] { "Chronometer", "Time" });
         for (String operationName : sumTimeOperation.keySet()) {
             long sumTime = sumTimeOperation.get(operationName);
             long nbOccurences = nbOccurencesOperation.get(operationName);
             if (nbOccurences == 0 && !keepOperationNoOccurrence)
                 continue;
-            addReportLine(new Object[] { operationName, TypesCast.getHumanDuration(sumTime, true) });
+            addReportTableLine(new Object[] { operationName, TypesCast.getHumanDuration(sumTime, true) });
             if (nbOccurences > 0 && addAverage)
-                addReportLine(new Object[] { operationName + " ms/operation ("+nbOccurences+")", sumTime / nbOccurences });
+                addReportTableLine(new Object[] { operationName + " ms/operation ("+nbOccurences+")", sumTime / nbOccurences });
         }
-        addReportEndTable();
+        addReportTableEnd();
     }
 
     /* ******************************************************************************** */
@@ -322,7 +351,7 @@ public class MilkJobOutput {
     public static SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:MM:ss");
 
     public void addMeasuresInReport(boolean keepMesureValueNotDefine, boolean withEmbededMeasure) {
-        addReportTable(new String[] { "Measure", "Value" });
+        addReportTableBegin(new String[] { "Measure", "Value" });
 
         for (PlugInMeasurement measure : milkJob.getPlugIn().getDescription().getMeasures()) {
             if (measure.isEmbeded && ! withEmbededMeasure) 
@@ -333,15 +362,15 @@ public class MilkJobOutput {
                 continue;
 
             if (measure.typeMeasure == TypeMeasure.DOUBLE)
-                addReportLine(new Object[] { measure.name, measureValue == null ? Double.valueOf(0) : measureValue });
+                addReportTableLine(new Object[] { measure.name, measureValue == null ? Double.valueOf(0) : measureValue });
             else if (measure.typeMeasure == TypeMeasure.LONG)
-                addReportLine(new Object[] { measure.name, measureValue == null ? Long.valueOf(0) : measureValue.longValue() });
+                addReportTableLine(new Object[] { measure.name, measureValue == null ? Long.valueOf(0) : measureValue.longValue() });
             else if (measure.typeMeasure == TypeMeasure.DATE)
-                addReportLine(new Object[] { measure.name, measureValue == null ? "" : sdf.format(new Date(measureValue.longValue())) });
+                addReportTableLine(new Object[] { measure.name, measureValue == null ? "" : sdf.format(new Date(measureValue.longValue())) });
             else
-                addReportLine(new Object[] { measure.name, measureValue == null ? Double.valueOf(0) : measureValue });
+                addReportTableLine(new Object[] { measure.name, measureValue == null ? Double.valueOf(0) : measureValue });
         }
-        addReportEndTable();
+        addReportTableEnd();
     }
 
 }
