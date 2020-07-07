@@ -1,3 +1,7 @@
+import groovy.json.internal.JsonStringDecoder
+
+import groovy.json.internal.JsonStringDecoder
+
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 import java.text.SimpleDateFormat;
@@ -27,9 +31,11 @@ import java.sql.DatabaseMetaData;
 import org.apache.commons.lang3.StringEscapeUtils
 
 import org.bonitasoft.engine.identity.User;
-import org.bonitasoft.console.common.server.page.PageContext
-import org.bonitasoft.console.common.server.page.PageController
-import org.bonitasoft.console.common.server.page.PageResourceProvider
+
+import org.bonitasoft.web.extension.page.PageContext
+import org.bonitasoft.web.extension.page.PageController
+import org.bonitasoft.web.extension.page.PageResourceProvider;
+
 import org.bonitasoft.engine.exception.AlreadyExistsException;
 import org.bonitasoft.engine.exception.BonitaHomeNotSetException;
 import org.bonitasoft.engine.exception.CreationException;
@@ -139,8 +145,9 @@ public class Index implements PageController {
                 } else {
                     jsonSt= actionAnswer.responseJsonSt ;
                 }
-                out.write( jsonSt );
-                loggerCustomPage.fine("#### "+pageName+": return json["+jsonSt+"]" );
+                loggerCustomPage.info("#### "+pageName+": return json "+jsonSt.length()+" ["+(jsonSt.length()>5000? jsonSt.substring(0,5000):jsonSt)+"]" );
+
+                                out.write( jsonSt );
                 out.flush();
                 out.close();
                 return;
