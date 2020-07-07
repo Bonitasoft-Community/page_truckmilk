@@ -192,6 +192,14 @@ public class MilkDeleteProcesses extends MilkPlugIn {
 
         return plugInDescription;
     }
+    @Override
+    public int getDefaultNbSavedExecution() {
+        return 7;
+    }
+    @Override
+    public int getDefaultNbHistoryMesures() {
+        return 14;
+    }
 
     private class StatsResult {
 
