@@ -92,44 +92,90 @@ public class MilkJobOutput {
     /*                                                                                  */
     /*                                                                                  */
     /* ******************************************************************************** */
-    public void addReportInHtml(String reportLine) {
-        this.report.append(reportLine + "\n");
-    }
-
+   
     /**
      * Note : the header my be null, then the table does not have a first th line
      * 
      * @param header
      */
     public void addReportTable(String[] header) {
-        this.report.append("<table class=\"table table-striped table-bordered table-sm\">");
+        StringBuilder tableHeader = new StringBuilder();
+        
+        tableHeader.append("<table class=\"table table-striped table-bordered table-sm\">");
         if (header != null) {
-            this.report.append("<tr>");
+            tableHeader.append("<tr>");
             for (String col : header)
-                this.report.append("<th>" + col + "</th>");
-            this.report.append("</tr>");
+                tableHeader.append("<th>" + col + "</th>");
+            tableHeader.append("</tr>");
         }
+        addReportInHtml(tableHeader.toString());
+        this.reportInATable=true;
+     
     }
 
     public void addReportLine(Object[] values) {
-        this.report.append("<tr>");
+        StringBuilder tableLines = new StringBuilder();
+        
+        tableLines.append("<tr>");
         for (Object colValue : values) {
             if (colValue instanceof Long || colValue instanceof Integer || colValue instanceof Double)
-                this.report.append("<td style=\"text-align:right\">" + colValue + "</td>");
+                tableLines.append("<td style=\"text-align:right\">" + colValue + "</td>");
             else
-                this.report.append("<td>" + colValue + "</td>");
+                tableLines.append("<td>" + colValue + "</td>");
         }
-        this.report.append("</tr>");
-    }
+        tableLines.append("</tr>");
+        addReportInHtml(tableLines.toString());
 
-    public void addReportLine(String htmlLine) {
-        this.report.append(htmlLine);
     }
 
     public void addReportEndTable() {
-        this.report.append("</table>");
+       
+        addReportInHtml("</table>");
     }
 
+    
+    public final static int CST_MAXSIZEINREPORT = 20000; // 20 ko; // 50 Ko
+    boolean alreadyReportOverload=false;    
+    boolean reportInATable=false;
+
+    /**
+     * Add the line in the current report
+     * @param htmlLine
+     * @return true if the line is added, false if the report is overloaded
+     */
+    public boolean addReportInHtml(String htmlLine) {
+        if (this.report.length() > CST_MAXSIZEINREPORT)
+        {
+            if (! this.alreadyReportOverload) {
+                if (this.reportInATable)
+                    this.report.append("</table>");
+                this.report.append("Too many lines...");    
+            }
+                
+            this.alreadyReportOverload=true;   
+            return false;
+        }
+        this.report.append(htmlLine);
+        return true;
+    }
+    public boolean addReportInHtmlCR(String htmlLine) {
+        if (this.report.length() > CST_MAXSIZEINREPORT)
+        {
+            if (! this.alreadyReportOverload) {
+                if (this.reportInATable)
+                    this.report.append("</table>");
+                this.report.append("Too many lines...");    
+            }
+                
+            this.alreadyReportOverload=true;   
+            return false;
+        }
+        this.report.append(htmlLine).append("<br>");
+        return true;
+    }
+    
+    
+  
     public String getReportInHtml() {
         return report.toString();
     }
