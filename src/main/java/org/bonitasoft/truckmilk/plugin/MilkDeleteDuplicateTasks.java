@@ -154,7 +154,7 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
                     milkJobOutput.addReportLine(new Object[] { report.get("ROOTCONTAINERID"), report.get("ID"), report.get("NAME"), report.get("PROCESSNAME"), report.get("PROCESSVERSION") });
                 }
                 if (listResult.size() > jobExecution.getJobStopAfterMaxItems())
-                    milkJobOutput.addReportLine("<td><colspan=\"5\">More object...</td></tr>");
+                    milkJobOutput.addReportInHtml("<td><colspan=\"5\">More objects...</td></tr>");
                 milkJobOutput.addReportEndTable();
 
                 milkJobOutput.setNbItemsProcessed(max);
@@ -232,7 +232,7 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
                     milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
 
                 if (listResult.size() > jobExecution.getJobStopAfterMaxItems())
-                    milkJobOutput.addReportLine("<td><colspan=\"5\">More object...</td></tr>");
+                    milkJobOutput.addReportInHtml("<td><colspan=\"5\">More objects...</td></tr>");
                 milkJobOutput.addReportEndTable();
 
                 milkJobOutput.setNbItemsProcessed(max);
