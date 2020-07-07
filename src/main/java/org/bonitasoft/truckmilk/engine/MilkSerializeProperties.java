@@ -452,9 +452,9 @@ public class MilkSerializeProperties {
 
         // remove(pluginTour.getId() does not work, so let's compare the key
         Set<String> listKeys = new HashSet<>();
-        for (String key : bonitaProperties.getAllProperties().keySet()) {
-            if (key.startsWith(String.valueOf(milkJob.getId())))
-                listKeys.add(key);
+        for (Object key : bonitaProperties.keySet()) {
+            if (key!=null && key.toString().startsWith(String.valueOf(milkJob.getId())))
+                listKeys.add(key.toString());
 
         }
         listKeys.add(String.valueOf(milkJob.getId()));
