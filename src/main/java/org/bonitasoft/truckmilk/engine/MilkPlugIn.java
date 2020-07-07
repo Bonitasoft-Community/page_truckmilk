@@ -9,11 +9,10 @@ import java.util.Map;
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
-import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
+import org.bonitasoft.truckmilk.job.MilkJob.MapContentParameter;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
-import org.bonitasoft.truckmilk.job.MilkJob.MapContentParameter;
 
 import lombok.Data;
 
@@ -496,8 +495,8 @@ public abstract class MilkPlugIn {
         return (description == null ? this.getClass().getName() : description.name);
     }
 
-    private int nbDefaultSavedExecution = 10;
-    private int nbDefaultHistoryMesures =  200;
+    private int nbDefaultSavedExecution = 7;
+    private int nbDefaultHistoryMesures =  50;
             
     public int getDefaultNbSavedExecution() {
         return nbDefaultSavedExecution;
