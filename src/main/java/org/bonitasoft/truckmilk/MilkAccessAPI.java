@@ -248,6 +248,27 @@ public class MilkAccessAPI {
     }
 
     
+    
+    public Map<String, Object> getParameters(Parameter parameter) {
+        MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
+        return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.GETPARAMETERS, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
+    }
+    public Map<String, Object> getSavedExecution(Parameter parameter) {
+        MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
+        return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.GETSAVEDEXECUTION, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
+    }
+    
+    public Map<String, Object> getSavedExecutionDetail(Parameter parameter) {
+        MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
+        return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.GETSAVEDEXECUTIONDETAIL, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
+    }
+    
+    
+    public Map<String, Object> getMeasurement(Parameter parameter) {
+        MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
+        return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.GETMEASUREMENT, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
+    }
+    
     public Map<String, Object> threadDumpJob(Parameter parameter) {
         MilkCmdControlAPI milkCmdControlAPI = MilkCmdControlAPI.getInstance();
         return milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.THREADDUMPJOB, parameter.information, parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());

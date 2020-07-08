@@ -173,12 +173,34 @@ public class Actions {
             {
                 parameter.information.put("userId", apiSession.getUserId());
                 actionAnswer.responseMap = milkAccessAPI.resetJob( parameter);
-            }            
+            }
+
+            else if ("getParameters".equals(action))
+            {
+                parameter.information.put("userId", apiSession.getUserId());
+                actionAnswer.responseMap = milkAccessAPI.getParameters( parameter);
+            }
+            else if ("getSavedExecution".equals(action))
+            {
+                parameter.information.put("userId", apiSession.getUserId());
+                actionAnswer.responseMap = milkAccessAPI.getSavedExecution( parameter);
+            }
+            else if ("getSavedExecutionDetail".equals(action))
+            {
+                parameter.information.put("userId", apiSession.getUserId());
+                actionAnswer.responseMap = milkAccessAPI.getSavedExecutionDetail( parameter);
+            }
+            else if ("getMeasurement".equals(action))
+            {
+                parameter.information.put("userId", apiSession.getUserId());
+                actionAnswer.responseMap = milkAccessAPI.getMeasurement( parameter);
+            }
+
             else if ("threadDumpJob".equals(action))
             {
-                 parameter.information.put("userId", apiSession.getUserId());
-                 actionAnswer.responseMap = milkAccessAPI.threadDumpJob( parameter);
-             }                
+                parameter.information.put("userId", apiSession.getUserId());
+                actionAnswer.responseMap = milkAccessAPI.threadDumpJob( parameter);
+            }
             else if ("collect_reset".equals(action))
             {
                 String paramJsonPartial = request.getParameter("paramjsonpartial");
@@ -279,7 +301,7 @@ public class Actions {
             }
             else  if ("uninstall".equals(action))
             {
-                    actionAnswer.responseMap = milkAccessAPI.uninstall( parameter);
+                actionAnswer.responseMap = milkAccessAPI.uninstall( parameter);
             }
             else  if ("schedulermaintenance".equals(action))
             {
@@ -302,9 +324,9 @@ public class Actions {
                 }
                 if (FilterProcess.ONLYENABLED.toString().equals(filterProcessSt))
                 {
-                        searchOptionsBuilder.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE, ActivationState.ENABLED.toString());
-                 }
-    
+                    searchOptionsBuilder.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE, ActivationState.ENABLED.toString());
+                }
+
                 searchOptionsBuilder.sort( ProcessDeploymentInfoSearchDescriptor.NAME,  Order.ASC);
                 searchOptionsBuilder.sort( ProcessDeploymentInfoSearchDescriptor.VERSION,  Order.ASC);
                 Set<String> setProcessesWithoutVersion=new HashSet<String>();
@@ -328,15 +350,15 @@ public class Actions {
                     listProcesses.add( oneRecord );
                 }
                 // sort the result again to have the "process without version" at the correct place
-                
+
                 Collections.sort(listProcesses, new Comparator< Map<String, Object>>()
-                   {
-                     public int compare( Map<String, Object> s1,
-                                         Map<String, Object> s2)
-                     {
-                       return ((String)s1.get("display")).compareTo( ((String)s2.get("display")));
-                     }
-                   });
+                        {
+                            public int compare( Map<String, Object> s1,
+                                    Map<String, Object> s2)
+                            {
+                                return ((String)s1.get("display")).compareTo( ((String)s2.get("display")));
+                            }
+                        });
                 actionAnswer.responseMap.put("listProcess", listProcesses);
                 actionAnswer.responseMap.put("nbProcess", searchResult.getCount());
             }

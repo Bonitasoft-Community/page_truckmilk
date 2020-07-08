@@ -48,7 +48,7 @@ public class MilkConstantJson {
     public final static String CSTJSON_JOB_NAME = "name";
     public final static String CSTJSON_JOB_ID = "id";
     public final static String CSTJSON_JOB_IMMEDIATEEXECUTION = "imediateExecution";
-    public final static String CSTJSON_ASKFORSTOP = "askForStop";
+    public final static String CSTJSON_JOB_ASKFORSTOP = "askForStop";
     public final static String CSTJSON_LAST_EXECUTION_STATUS = "lastexecutionstatus";
     public final static String CSTJSON_IN_EXECUTION = "inExecution";
     public final static String cstJsonRegisterInExecutionHost = "inExecutionHost";
@@ -58,15 +58,19 @@ public class MilkConstantJson {
     public final static String cstJsonInExecutionEndTimeEstimatedInMS = "inExecutionEndTimeEstimatedinMS";
     public final static String cstJsonInExecutionEndDateEstimated = "inExecutionEndDateEstimated";
     // saved last execution  
-    public final static String CSTJSON_SAVEDEXEC = "savedExecution";
-    public final static String CSTJSON_SAVEEXEC_OVERLOAD ="savedExecutionOverload";
-    public final static String cstJsonSaveExecDate = "execDate";
-    public final static String cstJsonSaveExecStatus = "status";
-    public final static String cstJsonSaveExecListEventsSt = "listevents";
-    public final static String CSTJSON_SAVEEXEC_REPORTINHTML = "reportinhtml";
-    public final static String CSTJSON_SAVEEXEC_ITEMSPROCESSED = "itemprocessed";
-    public final static String cstJsonSaveExecTimeinMs = "timeinms";
-    public final static String cstJsonSaveExecHostName = "hostname";
+    public final static String CSTJSON_JOB_SAVEDEXEC = "savedExecution";
+    public final static String CSTJSON_JOB_SAVEEXEC_OVERLOAD ="savedExecutionOverload";
+    public final static String CSTJSON_JOB_SAVEDEXEC_MOREDATA = "savedExecutionMoreData";
+    public final static String CSTJSON_JOB_TRACKEXECUTION = "trackExecution";
+    
+    public final static String CSTJSON_JOBEXECUTION_DATE = "execDate";
+    public final static String CSTJSON_JOBEXECUTION_STATUS = "status";
+    public final static String CSTJSON_JOBEXECUTION_TAGDAY = "tagDay";
+    public final static String CSTJSON_JOBEXECUTION_LISTEVENTS_ST = "listevents";
+    public final static String CSTJSON_JOBEXECUTION_REPORTINHTML = "reportinhtml";
+    public final static String CSTJSON_JOBEXECUTION_ITEMSPROCESSED = "itemprocessed";
+    public final static String CSTJSON_JOBEXECUTION_TIMEINMS = "timeinms";
+    public final static String CSTJSON_JOBEXECUTION_HOSTNAME = "hostname";
     
     
 
@@ -79,7 +83,7 @@ public class MilkConstantJson {
     public final static String CSTJSON_MEASUREMENT_PLUGIN_NAME = "name";
     public final static String CSTJSON_MEASUREMENT_PLUGIN_LABEL = "label";
     public final static String CSTJSON_MEASUREMENT_PLUGIN_EXPLANATION= "explanation";
-    public final static String CSTJSON_MEASUREMENT ="measurement";
+    public final static String CSTJSON_JOB_MEASUREMENT ="measurement";
     public final static String CSTJSON_MEASUREMENT_DEF = "def";
     public final static String CSTJSON_MEASUREMENT_HISTORY ="history";
     public final static String CSTJSON_MEASUREMENTATDATE_DATEST="datest";

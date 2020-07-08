@@ -52,22 +52,7 @@
 		
 		
 		this.listplugtour =[];
-		this.listplugtourSimul = [ {
-			'name' : 'Replay process Free',
-			'plugin' : 'ReplayFailedTask',
-			'description' : 'Replay Failed Task at intervalle',
-			'state' : 'ACTIF',
-			'frequency' : 'Every 5 minutes',
-			'show' : {
-				'schedule' : false,
-				'parameters' : false,
-				'report' : false,
-				'analysis' : false
-			},
-			'parameters' : [],
-			'schedule' : {},
-			'report' : ''
-		} ];
+		
 		this.listplugin = [];
 		this.newtourname = '';
 		this.refreshDate= new Date();
@@ -84,7 +69,7 @@
 		// a new Jobs is receive : refresh all what we need in the
 		// interface
 		this.refreshListJobs = function() {
-			console.log("refreshListJobs:Start");
+			// console.log("refreshListJobs:Start");
 			for ( var i in this.listplugtour) {
 				var milkJobindex = this.listplugtour[i];
 				this.prepareJobParameter(milkJobindex);
@@ -101,26 +86,27 @@
 		// interface
 		this.refreshListReportExecution = function() {
 			// collect all trackedsaveexecution
-			console.log("refreshListReportExecution:Build list reportExecution");
+			// console.log("refreshListReportExecution:Build list reportExecution");
 			this.listreportsexecution=[];
 			for ( var i in this.listplugtour) {
-				var jobindex = this.listplugtour[i];
+				var milkjob = this.listplugtour[i];
 				// console.log("  JobIndex "+angular.toJson(jobindex));
-				if (jobindex.savedExecution) {
-					for (var j in jobindex.savedExecution) {
+				if (milkjob.savedExecution) {
+					for (var j in milkjob.savedExecution) {
 						
 						// console.log('savedExecution[j] '+ angular.toJson(jobindex.savedExecution[ j ]));
-						var reportExecution = angular.fromJson( angular.toJson(jobindex.savedExecution[ j ]));
+						var reportExecution = angular.fromJson( angular.toJson(milkjob.savedExecution[ j ]));
 
-						reportExecution.pluginname	= jobindex.pluginname;
-						reportExecution.name		= jobindex.name;
+						reportExecution.pluginname	= milkjob.pluginname;
+						reportExecution.name		= milkjob.name;
+						reportExecution.milkjob		= milkjob;
 						this.listreportsexecution.push( reportExecution );
 					}
 				}
 			}
 			// newest in first
 			this.listreportsexecution= $filter('orderBy')(this.listreportsexecution, 'execDate',true);
-			console.log('refreshListReportExecution.order='+angular.toJson(this.listreportsexecution));
+			// console.log('refreshListReportExecution.order='+angular.toJson(this.listreportsexecution));
 			
 		}
 
@@ -161,7 +147,7 @@
 			self.inprogress = true;
 			self.showUploadSuccess=false;
 
-			console.log("loadinit inprogress<=true. Call now");
+			// console.log("loadinit inprogress<=true. Call now");
 			self.listevents='';
 			
 			// console.log("loadinit Call HTTP");
@@ -174,7 +160,7 @@
 					window.location.reload();
 				}
 
-				console.log("loadinit.receiveData (scheduler)");
+				// console.log("loadinit.receiveData (scheduler)");
 				
 				self.listplugtour 	= jsonResult.listplugtour;
 				self.listplugin 	= jsonResult.listplugin;
@@ -183,13 +169,13 @@
 				self.deploimentsuc  = jsonResult.deploimentsuc;
 				self.deploimenterr  = jsonResult.deploimenterr;
 				
-				console.log("loadInit start initialisation");
-				// prepare defaut value
+
+				// prepare default value
 				self.refreshListJobs();
 				self.refreshListReportExecution();
 
 				self.inprogress = false;
-				console.log("loadinit.end inprogress<=false");
+				
 
 			}).error(function(jsonResult, statusHttp, headers, config) {
 				console.log("loadinit.error HTTP statusHttp="+statusHttp);
@@ -220,11 +206,18 @@
 			var self = this;
 			self.deploimentsuc=''; // no need to keep it for ever
 			// console.log("refresh.start listplugtour="+angular.toJson( self.listplugtour )); 
-			console.log("refresh.start");
+			// console.log("refresh.start");
 			if (self.inprogress)
 			{
 				console.log("Refresh in progress, skip this one");
 				return;
+			}
+			
+			// close all popup
+			for (var i in this.listplugtour)
+			{
+				var milkJob = this.listplugtour[ i ];
+				this.hideall( milkJob);
 			}
 			
 			var verb="refresh";
@@ -236,8 +229,7 @@
 			self.inprogress = true;
 			self.showUploadSuccess=false;
 
-			console.log("action["+verb+"] inprogress<=true. Call now 2.2");
-			// console.log("refresh call HTTP");
+			// console.log("action["+verb+"] inprogress<=true. Call now 2.2");
 			$http.get('?page=custompage_truckmilk&action='+verb+'&t='+Date.now())
 			.success(function(jsonResult, statusHttp, headers, config) {
 				self.inprogress = false;
@@ -251,7 +243,7 @@
 
 					
 				self.deploiment = jsonResult.deploiment;
-				console.log("Result completeStatus ? "+self.completeStatus);
+				// console.log("Result completeStatus ? "+self.completeStatus);
 				self.refreshPlugTourFromServer(self.completeStatus, self, jsonResult );
 
 
@@ -274,7 +266,7 @@
 		}
 		// 
 		this.refreshPlugTourFromServer = function( completeStatus, self, jsonResult ) {
-			console.log("refreshPlugTourFromServer - complete="+completeStatus);
+			// console.log("refreshPlugTourFromServer - complete="+completeStatus);
 		
 			if (completeStatus)
 			{
@@ -337,7 +329,7 @@
 		
 		
 		this.addJob = function(plugin, nameJob) {
-			console.log("addJob: add["+nameJob+"]");
+			// console.log("addJob: add["+nameJob+"]");
 			var message="";
 			
 			if (! nameJob || nameJob === '') {
@@ -374,7 +366,7 @@
 		this.removeJob = function(milkJob) {
 			var result = confirm("Do you want to remove this job?");
 			if (result) {
-				console.log("removeJob:Start");
+				// console.log("removeJob:Start");
 
 				var param = {
 					'name' :  milkJob.name,
@@ -385,7 +377,7 @@
 		}
 
 		this.abortJob = function( milkJob) {
-			console.log("abortTour:Start");
+			// console.log("abortTour:Start");
 			var param = {
 					'name' :  milkJob.name,
 					'id'   :  milkJob.id
@@ -395,7 +387,7 @@
 
 		// Activate / Deactivate
 		this.activateJob = function(milkJob) {
-			console.log("startJob:Start");
+			// console.log("startJob:Start");
 			var param = {
 					'name' :  milkJob.name,
 					'id'   :  milkJob.id
@@ -404,7 +396,7 @@
 		}
 		
 		this.deactivateJob = function(milkJob) {
-			console.log("stopJob:beginning");
+			// console.log("stopJob:beginning");
 			var param = {
 					'name' :  milkJob.name,
 					'id'   :  milkJob.id
@@ -415,7 +407,7 @@
 
 		
 		this.updateJob= function(milkJob) {
-			console.log("updateJob START")
+			// console.log("updateJob START")
 			var paramStart = milkJob;
 			var self=this;
 			// update maybe very heavy : truncate it
@@ -438,7 +430,7 @@
 		
 		
 		this.immediateJob = function(milkJob) {
-			console.log("immediateJob:Start");
+			// console.log("immediateJob:Start");
 			var param = {
 					'name' :  milkJob.name,
 					'id'   :  milkJob.id
@@ -448,7 +440,7 @@
 		}
 		
 		this.abortJob = function(milkJob) {
-			console.log("abortJob:begin");
+			// console.log("abortJob:begin");
 			var param = {
 					'name' :  milkJob.name,
 					'id'   :  milkJob.id
@@ -458,7 +450,7 @@
 		}
 		
 		this.resetJob = function(milkJob) {
-			console.log("resetJob:begin");
+			// console.log("resetJob:begin");
 			var param = {
 					'name' :  milkJob.name,
 					'id'   :  milkJob.id
@@ -469,8 +461,7 @@
 		
 		// execute an operation on Job
 		this.operationJob = function(action, param, milkJob, refreshParam) {
-			console.log("operationJob:Start");
-
+			// console.log("operationJob:Start");
 			
 			var self = this;
 			self.inprogress = true;
@@ -488,7 +479,7 @@
 			$http.get('?page=custompage_truckmilk&action=' + action + '&paramjson=' + json+'&t='+Date.now())
 			.success(function(jsonResult, statusHttp, headers, config) {
 				self.inprogress = false;
-				console.log("operationJob.receiveData HTTP inprogress<=false");
+				// console.log("operationJob.receiveData HTTP inprogress<=false");
 				
 				// connection is lost ?
 				if (statusHttp==401 || typeof jsonResult === 'string') {
@@ -549,7 +540,7 @@
 		// parametersvalue [ANGULAR MAPPED]
 		this.prepareJobParameter = function(milkJob) {
 			
-			console.log("prepareJobParameter.start: " + milkJob.name);
+			// console.log("prepareJobParameter.start: " + milkJob.name);
 			milkJob.newname=milkJob.name;
 			milkJob.parametersvalue = {};
 			
@@ -595,7 +586,7 @@
 				milkJob.stopafterNbMinutesIN = false;
 			else
 				milkJob.stopafterNbMinutesIN = true;
-			console.log("milkJobPreration END " + milkJob.name+" milkJob.parametersvalue="+angular.toJson( milkJob.parametersvalue,true ));
+			// console.log("milkJobPreration END " + milkJob.name+" milkJob.parametersvalue="+angular.toJson( milkJob.parametersvalue,true ));
 
 		}
 		
@@ -605,20 +596,17 @@
 			var isVisible = true;
 			if (parameterdef.visibleCondition) {
 				isVisible = $scope.$eval(parameterdef.visibleCondition);
-				console.log("isVisibleParameter milkJob["+milkJob.name+"] parameter["+parameterdef.name+"] result="+isVisible);
+				// console.log("isVisibleParameter milkJob["+milkJob.name+"] parameter["+parameterdef.name+"] result="+isVisible);
 			}
 			return isVisible;
 		}
 		// -----------------------------------------------------------------------------------------
 		// manupulate array in parameters
-		this.isAnArray = function( value ) {
-			console.log("isAnArray:Start");
-			// console.log("operationTour Is An Array");
+		this.isAnArray = function( value ) {			
 		    return Array.isArray( value );
 	     }
 		this.addInArray = function( valueArray, valueToAdd )
 		{
-			console.log("addInArray:Start");
 			// console.log("addInArray valueArray="+angular.toJson( valueArray
 			// ));
 			
@@ -627,7 +615,6 @@
 		}
 		this.removeInArray = function( valueArray, value)
 		{
-			console.log("removeInArray:Start ["+value+"]");
 			// console.log("removeInArray value "+value);
 			var index = valueArray.indexOf(value);
 			if (index > -1) {
@@ -642,8 +629,7 @@
 		// -----------------------------------------------------------------------------------------
 		// just return an array with the same size as the nbargs
 		this.getArgs = function( parameterdef )
-		{
-			console.log("getArgs:Start");
+		{			
 			 return new Array(parameterdef.nbargs);  
 		}
 		
@@ -651,7 +637,7 @@
 		var currentButtonExecution=null;
 		this.testbutton = function(parameterdef, milkJob)
 		{
-			console.log("testbutton:Start");
+			// console.log("testbutton:Start");
 			var self=this;
 			var  milkJobcopy =angular.copy( milkJob );
 			milkJobcopy.parametersdef = null; // parameters are in
@@ -672,11 +658,11 @@
 		// parameters tool
 		// -----------------------------------------------------------------------------------------
 		this.query = function(queryName, textSearch, parameterDef) {
-			console.log("query:Start");
+			// console.log("query:Start");
 			var selfParameterDef=parameterDef;
 			var self=this;
 			self.inprogress=true;
-			console.log("operationTour.query ["+queryName+"] on ["+textSearch+"] inprogress<=true");
+			// console.log("operationTour.query ["+queryName+"] on ["+textSearch+"] inprogress<=true");
 
 			var param={ 'userfilter' :  textSearch, 'filterProcess':parameterDef.filterProcess};
 			
@@ -696,7 +682,7 @@
 
 				}
 				self.inprogress=false;
-				console.log("Query.receiveData HTTP inProgress<=false result="+angular.toJson(jsonResult.data, false));
+				// console.log("Query.receiveData HTTP inProgress<=false result="+angular.toJson(jsonResult.data, false));
 				selfParameterDef.list 			=  jsonResult.data.listProcess;
 				selfParameterDef.nbProcess		=  jsonResult.data.nbProcess;
 				return selfParameterDef.list;
@@ -712,7 +698,6 @@
 		// Show information
 		// -----------------------------------------------------------------------------------------
 		this.hideall = function(milkJob) {
-			console.log("hideall");
 			milkJob.show = {
 				'schedule' : false,
 				'threaddump' : false,
@@ -724,7 +709,7 @@
 			};
 		}
 		this.showthreaddump = function( milkJob ) {
-			console.log("showthreaddump milkJob="+angular.toJson( milkJob));
+			// console.log("showthreaddump milkJob="+angular.toJson( milkJob));
 			var self=this;
 			self.inprogress=true;
 			
@@ -751,7 +736,7 @@
 
 				}
 				self.inprogress=false;
-				console.log("showthreaddump result="+angular.toJson(jsonResult.data, false));
+				// console.log("showthreaddump result="+angular.toJson(jsonResult.data, false));
 				milkJobSelf.threadDump 			=  jsonResult.data.threadDump;
 				return;
 			}, function ( jsonResult ) {
@@ -761,12 +746,12 @@
 
 		}
 		this.showSchedule = function(milkJob) {
-			console.log("showSchedule:Start");
+			// console.log("showSchedule:Start");
 			this.hideall(milkJob);
 			milkJob.show.schedule = true;
 		}
 		this.showHostRestriction = function(milkJob) {
-			console.log("showHost Restriction:Start");
+			// console.log("showHost Restriction:Start");
 			this.hideall(milkJob);
 			milkJob.show.hostrestriction = true;
 		}
@@ -776,16 +761,165 @@
 
 			this.hideall(milkJob);
 			milkJob.show.parameters = true;
+			
+			var self=this;
+			self.inprogress=true;
+			
+			var param={"id": milkJob.id, "c":milkJob.c,"p":milkJob.p };
+			var milkJobSelf = milkJob;
+			
+			var json = encodeURI( angular.toJson( param, false));
+			// 7.6 : the server force a cache on all URL, so to bypass the
+			// cache, then create a different URL
+			var d = new Date();
+			
+			// console.log("query Call HTTP")
+			return $http.get( '?page=custompage_truckmilk&action=getParameters&paramjson='+json+'&t='+d.getTime() )
+			.then( function ( jsonResult, statusHttp, headers, config ) {
+				
+				// connection is lost ?
+				if (statusHttp==401 || typeof jsonResult === 'string') {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+
+				}
+				self.inprogress=false;
+				// console.log("getParameters result="+angular.toJson(jsonResult.data, false));
+				milkJobSelf.parameters 			=  jsonResult.data.milkjob.parameters;
+				milkJobSelf.parametersdef 		=  jsonResult.data.milkjob.parametersdef;
+				self.prepareJobParameter(milkJobSelf);
+				return;
+			}, function ( jsonResult ) {
+				console.log("getSavedExecution HTTP THEN");
+				self.inprogress=false;
+			});
+			
 		}
-		this.showreport = function(milkJob) {
+		this.showreport = function(milkJob, c, p) {
 			// console.log("showreport:Start");
 			this.hideall(milkJob);
 			milkJob.show.report = true;
+			milkJob.c=c;
+			milkJob.p=p;
+			
+			// console.log("showReport milkJob="+angular.toJson( milkJob));
+			var self=this;
+			self.inprogress=true;
+			
+			var param={"id": milkJob.id, "c":milkJob.c,"p":milkJob.p };
+			var milkJobSelf = milkJob;
+			milkJob.threadDump="";
+			
+			var json = encodeURI( angular.toJson( param, false));
+			// 7.6 : the server force a cache on all URL, so to bypass the
+			// cache, then create a different URL
+			var d = new Date();
+			
+			// console.log("query Call HTTP")
+			return $http.get( '?page=custompage_truckmilk&action=getSavedExecution&paramjson='+json+'&t='+d.getTime() )
+			.then( function ( jsonResult, statusHttp, headers, config ) {
+				
+				// connection is lost ?
+				if (statusHttp==401 || typeof jsonResult === 'string') {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+
+				}
+				self.inprogress=false;
+				// console.log("getSavedExecution result="+angular.toJson(jsonResult.data, false));
+				milkJobSelf.savedExecution 			=  jsonResult.data.milkjob.savedExecution;
+				milkJobSelf.savedExecutionMoreData	=  jsonResult.data.milkjob.savedExecutionMoreData;
+				milkJobSelf.trackExecution			=  jsonResult.data.milkjob.trackExecution;
+				return;
+			}, function ( jsonResult ) {
+				console.log("getSavedExecution HTTP THEN");
+				self.inprogress=false;
+			});
+			
+			
 		}
+		
+		this.showreportplus = function( milkJob ) {
+			milkJob.c = milkJob.c+5;
+			this.showreport( milkJob,milkJob.c, 0 );			
+		}
+		/**
+		 * 
+		 */
+		this.showreportdetail= function( milkJob, savedExec, fromTabReport ) {
+			// console.log("showReportDetail milkJobId="+ milkJob.id);
+			var self=this;
+			self.inprogress=true;
+			self.fromTabReport= fromTabReport;
+			var param={"id": milkJob.id, "savedExecutionDateSt":savedExec.execDatest };
+			var milkJobSelf = milkJob;
+			var savedExecSelf = savedExec;
+			
+			var json = encodeURI( angular.toJson( param, false));
+			// 7.6 : the server force a cache on all URL, so to bypass the
+			// cache, then create a different URL
+			var d = new Date();
+			
+			// console.log("query Call HTTP")
+			return $http.get( '?page=custompage_truckmilk&action=getSavedExecutionDetail&paramjson='+json+'&t='+d.getTime() )
+			.then( function ( jsonResult, statusHttp, headers, config ) {
+				
+				// connection is lost ?
+				if (statusHttp==401 || typeof jsonResult === 'string') {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+
+				}
+				self.inprogress=false;
+				// console.log("getSavedExecution result="+angular.toJson(jsonResult.data, false));
+				savedExecSelf.reportinhtml 			=  jsonResult.data.milkjob.savedExecution[0].reportinhtml;
+				savedExecSelf.listevents 			=  jsonResult.data.milkjob.savedExecution[0].listevents;
+				if (self.fromTabReport) {
+					self.showdetail=true;
+				}
+				return;
+			}, function ( jsonResult ) {
+				console.log("showreportdetail HTTP THEN");
+				self.inprogress=false;
+			});
+			
+		}
+		
 		this.showdashboard = function(milkJob) {
 			// console.log("showreport:Start");
 			this.hideall(milkJob);
 			milkJob.show.dashboard = true;
+			// console.log("showReport milkJob="+angular.toJson( milkJob));
+			var self=this;
+			self.inprogress=true;
+			
+			var param={"id": milkJob.id, "c":milkJob.c,"p":milkJob.p };
+			var milkJobSelf = milkJob;
+			milkJob.threadDump="";
+			
+			var json = encodeURI( angular.toJson( param, false));
+			// 7.6 : the server force a cache on all URL, so to bypass the
+			// cache, then create a different URL
+			var d = new Date();
+			
+			// console.log("query Call HTTP")
+			return $http.get( '?page=custompage_truckmilk&action=getMeasurement&paramjson='+json+'&t='+d.getTime() )
+			.then( function ( jsonResult, statusHttp, headers, config ) {
+				
+				// connection is lost ?
+				if (statusHttp==401 || typeof jsonResult === 'string') {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+
+				}
+				self.inprogress=false;
+				// console.log("getmeasurement result="+angular.toJson(jsonResult.data, false));
+				milkJobSelf.measurement 			=  jsonResult.data.milkjob.measurement;
+				return;
+			}, function ( jsonResult ) {
+				console.log("getSavedExecution HTTP THEN");
+				self.inprogress=false;
+			});
 		}
 		this.showanalysis = function(milkJob) {
 			// console.log("showreport:Start");
@@ -793,7 +927,9 @@
 			milkJob.show.analysis = true;
 		}
 		this.hasanalysis = function( milkJob) {
-			return milkJob.analysisdef.length > 0 ;
+			if (milkJob && milkJob.analysisdef)
+				return milkJob.analysisdef.length > 0 ;
+			return false;
 		}
 		this.getJobStyle= function(milkJob) {
 			// console.log("getTourStyle:Start (r/o) milkJob="+milkJob.id+"
@@ -892,7 +1028,7 @@
 				}
 					
 			}
-			console.log("calculateParameterUpload - end nbDetected="+this.listParameterUpload.length);
+			// console.log("calculateParameterUpload - end nbDetected="+this.listParameterUpload.length);
 			
 		}
 		var me=this;
@@ -934,7 +1070,7 @@
 	// file :'+ evt.config.file.name);
 				}).success(function(data, status, headers, config) {
 					console.log('Watch: file is uploaded successfully. Response: ' + data + " Source="+me.sourceParameterToUpload);
-					console.log('SourceId='+me.sourceParameterToUpload.id);
+					// console.log('SourceId='+me.sourceParameterToUpload.id);
 					
 					me.parameterToUploadStatus="Saving...";
 					// now, upload it in the Tour
@@ -983,7 +1119,7 @@
 		{
 			var self=this;
 			self.inprogress=true;
-		    console.log("uploadParameterFile.start= inprogres<=true");
+		    // console.log("uploadParameterFile.start= inprogres<=true");
 			var param={"plugintour": this.plugtour.id, "parametername":parameterdef.name, "filename":this.paramfile};
 
 			var json = angular.toJson( param, false);
@@ -997,11 +1133,11 @@
 					window.location.reload();
 				}
 				self.inprogress=false;
-			    console.log("uploadParameterFile.receivedata HTTP - inprogress<=false result= "+angular.toJson(jsonResult, false));
+			    // console.log("uploadParameterFile.receivedata HTTP - inprogress<=false result= "+angular.toJson(jsonResult, false));
 			 	return self.list;
 				},  function ( jsonResult ) {
-				self.inprogress=false;
-			    console.log("uploadParameterFile.error HTTP - inprogress<=false ");
+					self.inprogress=false;
+					// console.log("uploadParameterFile.error HTTP - inprogress<=false ");
 			})
 			.error(function(jsonResult, statusHttp, headers, config) {
 				console.log("uploadParamFile.error HTTP statusHttp="+statusHttp);
@@ -1065,7 +1201,7 @@
 
 					}
 					self.inprogress = false;
-					console.log("commandRedeploy.receiveData HTTP inprogress<=false jsonResult="+angular.toJson(jsonResult));
+					// console.log("commandRedeploy.receiveData HTTP inprogress<=false jsonResult="+angular.toJson(jsonResult));
 	
 					self.commandredeploy.status 		= jsonResult.status;
 					self.commandredeploy.deploimentsuc	= jsonResult.deploimentsuc;
@@ -1125,9 +1261,12 @@
 		this.schedulerOperation = function(action) {
 			var self = this;
 			self.inprogress = true;
-			console.log("schedulerOperation, inprogress=true");
+			// console.log("schedulerOperation, inprogress=true");
 			var param= { 'start' : action};
 			var json = encodeURIComponent(angular.toJson(param, true));
+			if (! self.scheduler)
+				self.scheduler= {};
+			
 			self.scheduler.listevents='';
 			
 			// console.log("schedulerOperation call HTTP");
@@ -1140,12 +1279,11 @@
 
 				}
 				self.inprogress = false;
-				console.log("scheduler.receiveData HTTP inprogress<=false jsonResult="+angular.toJson(jsonResult));
+				// console.log("scheduler.receiveData HTTP inprogress<=false jsonResult="+angular.toJson(jsonResult));
 
-				self.scheduler.status 						= jsonResult.status;
-				self.scheduler.listevents					= jsonResult.listevents;
-				self.scheduler.dashboardlistevents			= jsonResult.scheduler.dashboardlistevents;
-				self.scheduler.dashboardsyntheticlistevents	= jsonResult.scheduler.dashboardsyntheticlistevents;
+				self.scheduler 						= jsonResult.scheduler;
+				self.scheduler.listevents			= jsonResult.listevents;
+				
 			}).error(function(jsonResult, statusHttp, headers, config) {
 				console.log("Scheduler.error HTTP statusHttp="+statusHttp);
 				// connection is lost ?
@@ -1163,7 +1301,7 @@
 			self.inprogress = true;
 			self.listevents='';
 
-			console.log("SchedulerMaintenance v2, Inprogress<=true operation=["+operation+"]");
+			// console.log("SchedulerMaintenance v2, Inprogress<=true operation=["+operation+"]");
 			
 			var param= {'operation' : operation,'reset' : true };
 			if (this.scheduler) {
@@ -1188,7 +1326,7 @@
 				}
 				self.inprogress = false;
 				
-				console.log("schedulerMaintenance.receiveData (scheduler)"+ angular.toJson(jsonResult,false));
+				// console.log("schedulerMaintenance.receiveData (scheduler)"+ angular.toJson(jsonResult,false));
 
 				self.scheduler	= jsonResult.scheduler;
 				self.scheduler.schedulerlistevents = jsonResult.listevents;
@@ -1285,7 +1423,7 @@
 		// -----------------------------------------------------------------------------------------
 
 		this.getHtml = function(listevents, sourceContext) {
-			console.log("getHtml:Start (r/o) source="+sourceContext);
+			// console.log("getHtml:Start (r/o) source="+sourceContext);
 			return $sce.trustAsHtml(listevents);
 		}
 
@@ -1319,7 +1457,7 @@
 		{
 			var self=this;
 			self.inprogress=true;
-			console.log("sendPost inProgress<=true action="+finalaction+" Json="+ angular.toJson( json ));
+			// console.log("sendPost inProgress<=true action="+finalaction+" Json="+ angular.toJson( json ));
 			
 			self.postParams={};
 			self.postParams.listUrlCall=[];
@@ -1350,13 +1488,13 @@
 			self.executeListUrl( self ) // , self.listUrlCall, self.listUrlIndex
 										// );
 			// this.operationTour('updateJob', plugtour, plugtour, true);
-			console.log("sendPost.END")
+			// console.log("sendPost.END")
 			
 		}
 		
 		this.executeListUrl = function( self ) // , listUrlCall, listUrlIndex )
 		{
-			console.log(" CallList "+self.postParams.listUrlIndex+"/"+ self.postParams.listUrlCall.length+" : "+self.postParams.listUrlCall[ self.postParams.listUrlIndex ]);
+			// console.log(" CallList "+self.postParams.listUrlIndex+"/"+ self.postParams.listUrlCall.length+" : "+self.postParams.listUrlCall[ self.postParams.listUrlIndex ]);
 			self.postParams.advPercent= Math.round( (100 *  self.postParams.listUrlIndex) / self.postParams.listUrlCall.length);
 			
 			// console.log("executeListUrl call HTTP");
@@ -1368,7 +1506,7 @@
 					console.log("Redirected to the login page !");
 					window.location.reload();
 				}
-				console.log("executeListUrl receive data HTTP");
+				// console.log("executeListUrl receive data HTTP");
 				// console.log("Correct, advance one more",
 				// angular.toJson(jsonResult));
 				self.postParams.listUrlIndex = self.postParams.listUrlIndex+1;
@@ -1378,7 +1516,7 @@
 				else
 				{
 					self.inprogress = false;
-					console.log("sendPost finish inProgress<=false jsonResult="+ angular.toJson(jsonResult));
+					// console.log("sendPost finish inProgress<=false jsonResult="+ angular.toJson(jsonResult));
 
 					self.postParams.advPercent= 100; 
 	
@@ -1387,7 +1525,7 @@
 						self.listeventsexecution    		= jsonResult.listevents;
 						self.listeventsconfig 				= jsonResult.listeventsconfig;
 
-						self.refreshPlugTourFromServer(false, self, jsonResult ); // bob
+						self.refreshPlugTourFromServer(false, self, jsonResult ); 
 
 					}
 					if (self.postParams.action=="testButton")

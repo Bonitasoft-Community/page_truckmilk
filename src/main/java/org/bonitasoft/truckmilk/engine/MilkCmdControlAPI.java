@@ -160,10 +160,13 @@ public class MilkCmdControlAPI {
             CommandAPI commandAPI, PlatformAPI platFormAPI, long tenantId) {
         Map<String, Object> result = new HashMap<>();
         String operation = (String) information.get("operation");
-        HashMap<String, Serializable> parameters = new HashMap<String, Serializable>();
+        HashMap<String, Serializable> parameters = new HashMap<>();
         BonitaCommandDeployment bonitaCommand = BonitaCommandDeployment.getInstance(MilkCmdControl.cstCommandName);
 
-        if ("deploy".equals(operation)) {
+        if ("status".equals(operation)) {
+            // reset scheduler must be send to the command
+            result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULERSTATUS.toString(), parameters, tenantId, commandAPI);
+        }else if ("deploy".equals(operation)) {
             parameters.put(MilkCmdControl.CST_PAGE_DIRECTORY, pageDirectory.getAbsolutePath());
             result = bonitaCommand.callCommand(MilkCmdControl.VERBE.SCHEDULERDEPLOY.toString(), parameters, tenantId, commandAPI);
         }

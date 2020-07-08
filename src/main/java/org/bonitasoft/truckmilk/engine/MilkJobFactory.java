@@ -266,13 +266,19 @@ public class MilkJobFactory {
         MilkFactoryOp milkFactoryOp = new MilkFactoryOp();
         milkFactoryOp.job = milkSerialize.dbLoadJob(idJob);
         return milkFactoryOp;
-
     }
     public MilkFactoryOp dbLoadPartialJob(Long idJob) {
         MilkFactoryOp milkFactoryOp = new MilkFactoryOp();
         milkFactoryOp.job = milkSerialize.dbLoadJob(idJob);
         return milkFactoryOp;
-
+    }
+    /**
+     * Direct access to save time
+     * @param idJob
+     * @return
+     */
+    public boolean askStop( Long idJob ) {
+        return milkSerialize.askStop(idJob);
     }
     /**
      * save a particular plug tour

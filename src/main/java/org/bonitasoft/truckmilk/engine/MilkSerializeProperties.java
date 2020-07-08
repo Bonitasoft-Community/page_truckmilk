@@ -45,6 +45,7 @@ public class MilkSerializeProperties {
             Level.APPLICATIONERROR,
             "Bad tour format", "A Milk tour can't be read due to a Json format", "This tour is lost", "Reconfigure it");
 
+    private long tenantId;
     public static class SerializeOperation {
 
         public List<BEvent> listEvents = new ArrayList<>();
@@ -53,6 +54,7 @@ public class MilkSerializeProperties {
 
     public MilkSerializeProperties(MilkJobFactory milkPlugInTourFactory) {
         this.milkJobFactory = milkPlugInTourFactory;
+        tenantId=milkPlugInTourFactory.getMilkJobContext().getTenantId();
         bonitaProperties = new BonitaProperties(BONITAPROPERTIESNAME, milkPlugInTourFactory.getMilkJobContext().getTenantId());
         bonitaProperties.setPolicyBigStringToStream(true);
         bonitaProperties.setLogLevel(java.util.logging.Level.FINE);
@@ -61,6 +63,7 @@ public class MilkSerializeProperties {
 
     public MilkSerializeProperties(long tenantId) {
         bonitaProperties = new BonitaProperties(BONITAPROPERTIESNAME, tenantId);
+        this.tenantId=tenantId;
         bonitaProperties.setPolicyBigStringToStream(true);
         bonitaProperties.setLogLevel(java.util.logging.Level.FINE);
     }
@@ -123,6 +126,25 @@ public class MilkSerializeProperties {
         return milkJob;
     }
 
+    /**
+     * askStop ? Just read the specific variable
+     * @param jobId
+     * @return
+     */
+    public boolean askStop(Long jobId) {
+         
+        BonitaProperties bonitaPropertiesAskStop = new BonitaProperties(BONITAPROPERTIESNAME, tenantId);
+        bonitaPropertiesAskStop.setCheckDatabase(false);
+        bonitaPropertiesAskStop.setPolicyBigStringToStream(true);
+        bonitaPropertiesAskStop.setLogLevel(java.util.logging.Level.FINE);
+        
+        
+        bonitaPropertiesAskStop.loaddomainName(BONITAPROPERTIESDOMAIN);
+        Object askStopObj = bonitaPropertiesAskStop.get(jobId.toString() + CSTPREFIXPROPERTIES_ASKSTOP);
+        if (askStopObj != null)
+            return Boolean.valueOf(askStopObj.toString());
+        return false;
+    }
     public List<BEvent> dbLoadAllJobs() {
         return dbLoadAllJobsAndPurge(false);
     }
@@ -356,9 +378,10 @@ public class MilkSerializeProperties {
         // save the job
         if (saveParameters.saveBase) {
             MapContentParameter mapContentParameter = new MapContentParameter();
-            mapContentParameter.askStop = false;
-            mapContentParameter.savedExecution = false;
-            mapContentParameter.trackExecution = false;
+            mapContentParameter.withAskStop = false;
+            mapContentParameter.withSavedExecutionHeader = false;
+            mapContentParameter.withSavedExecutionDetails = false;
+            mapContentParameter.withTrackExecution = false;
             mapContentParameter.withExplanation = false;
 
             bonitaProperties.put(String.valueOf(milkJob.getId()) + CSTPREFIXPROPERTIES_BASE, getJsonSt(milkJob.getMap(mapContentParameter, milkJobContext)));
@@ -369,7 +392,7 @@ public class MilkSerializeProperties {
             listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_ASKSTOP);
         }
         if (saveParameters.savedExecution) {
-            bonitaProperties.put(String.valueOf(milkJob.getId()) + CSTPREFIXPROPERTIES_SAVEDEXECUTION, getJsonSt(milkJob.getMapListSavedExecution(false, false)));
+            bonitaProperties.put(String.valueOf(milkJob.getId()) + CSTPREFIXPROPERTIES_SAVEDEXECUTION, getJsonSt(milkJob.getMapListSavedExecution(true, true, false,-1,-1, false)));
             listKeys.add(milkJob.getId() + CSTPREFIXPROPERTIES_SAVEDEXECUTION);
         }
         if (saveParameters.trackExecution) {
