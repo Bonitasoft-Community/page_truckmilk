@@ -145,9 +145,9 @@ public class Index implements PageController {
                 } else {
                     jsonSt= actionAnswer.responseJsonSt ;
                 }
-                loggerCustomPage.info("#### "+pageName+": return json "+jsonSt.length()+" ["+(jsonSt.length()>5000? jsonSt.substring(0,5000):jsonSt)+"]" );
+                loggerCustomPage.fine("#### "+pageName+": return json "+jsonSt.length()+" ["+(jsonSt.length()>5000? jsonSt.substring(0,5000):jsonSt)+"]" );
 
-                                out.write( jsonSt );
+                out.write( jsonSt );
                 out.flush();
                 out.close();
                 return;
