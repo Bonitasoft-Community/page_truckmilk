@@ -19,7 +19,6 @@ import java.util.Map;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
-import org.bonitasoft.truckmilk.plugin.MilkCancelCases;
 
 /* ******************************************************************************** */
 /*                                                                                  */
@@ -131,8 +130,8 @@ public class CSVOperation {
     public void writeCsvDocument(String [] listHeaderCSV, String separatorCSV) throws IOException {
         arrayOutputStream = new ByteArrayOutputStream();
         writerOutputStream= new OutputStreamWriter(arrayOutputStream);
-        this.separatorCSV = separatorCSV;
-                this.listHeaderCSV = listHeaderCSV;
+        this.separatorCSV = (separatorCSV==null ? ";":separatorCSV);
+        this.listHeaderCSV = listHeaderCSV;
             
         StringBuilder headerString = new StringBuilder();
         for (String header : listHeaderCSV) {
