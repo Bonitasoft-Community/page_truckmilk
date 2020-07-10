@@ -91,7 +91,7 @@
 					<div style="font-style: italic;">
 					The <span style="color: red;font-weight: bold;">B</span>onita <span style="color: red;font-weight: bold;">SC</span>heduler&nbsp;
 					</div>
-					<a href="" >V2.5.1 (July 2)</a>
+					<a href="" >V2.5.0 (July 10, 2020)</a>
 				</center>
 			</td></tr>
 			<tr><td>
@@ -163,8 +163,26 @@
 						
 			<table class="table table-striped table-hover table-condensed" style="border-collapse: collapse;">
 					<tr>
-						<th>Status</th>
-						<th>Name</th>
+						<th>
+							<table><tr><td>
+								<a ng-click="ctrl.setOrderMilkJob( 'enable')">
+									<div ng-if="ctrl.orderByFilter.milkTourField === 'enable' && ctrl.orderByFilter.milkTourReverse===true"><span class="glyphicon glyphicon-chevron-up" style="font-size:10px;"></span></div>
+									<div ng-if="ctrl.orderByFilter.milkTourField === 'enable' && ctrl.orderByFilter.milkTourReverse===false"><span class="glyphicon glyphicon-chevron-down" style="font-size:10px;"></span></div>
+									<div ng-if="ctrl.orderByFilter.milkTourField !== 'enable' "><span class="glyphicon glyphicon-minus" style="font-size:10px;"></span></div>
+								</a>
+							</td><td>Status
+							</td></tr></table>
+						</th>
+						<th>
+							<table><tr><td>
+								<a ng-click="ctrl.setOrderMilkJob( 'name')">
+									<div ng-if="ctrl.orderByFilter.milkTourField === 'name' && ctrl.orderByFilter.milkTourReverse===true"><span class="glyphicon glyphicon-chevron-up" style="font-size:10px;"></span></div>
+									<div ng-if="ctrl.orderByFilter.milkTourField === 'name' && ctrl.orderByFilter.milkTourReverse===false"><span class="glyphicon glyphicon-chevron-down" style="font-size:10px;"></span></div>
+									<div ng-if="ctrl.orderByFilter.milkTourField !== 'name' "><span class="glyphicon glyphicon-minus" style="font-size:10px;"></span></div>
+								</a>		
+							</td><td>Name
+							</td></tr></table>
+						</th>
 						<th>Execution</th>
 						<th>Report</th>
 						<th>Frequency</th>
@@ -174,7 +192,7 @@
 						<th></th>
 					</tr>
 					
-					<tbody ng-repeat="plugtour in ctrl.getListPlugTour() track by $index">
+					<tbody ng-repeat="plugtour in ctrl.getListPlugTourOrder() track by $index">
 					<tr style="border-top: 1px solid black;"> 
 						<td style="{{ctrl.getJobStyle(plugtour)}}">
 							<div ng-if="plugtour.enable">
@@ -491,7 +509,7 @@
 										<table width="100%">
 											<tr style="vertical-align: top; border-top: 1px solid #ddd;">
 												<td style="padding: 15px" >Name</td>
-												<td><input ng-model="plugtour.newname" size="50"></input></td>
+												<td><input ng-model="plugtour.newname" size="50" ng-disabled="ctrl.inprogress"></input></td>
 											</tr>
 											
 											<tr style="vertical-align: top; border-top: 1px solid #ddd;">
@@ -515,7 +533,7 @@
 											
 											<tr style="vertical-align: top; border-top: 1px solid #ddd;">
 												<td style="padding: 15px" >Description</td>
-												<td ><textarea rows="4" cols="100" ng-model="plugtour.description"></textarea></td>
+												<td ><textarea rows="4" cols="100" ng-model="plugtour.description" ng-disabled="ctrl.inprogress"></textarea></td>
 											</tr>
 											<tr>
 												<td colspan="2">
@@ -529,7 +547,7 @@
 																<tr>
 																	<td style="padding: 15px" >Number of saved execution</td>
 																	<td>
-																		<input ng-model="plugtour.nbSavedExecution" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >												
+																		<input ng-model="plugtour.nbSavedExecution" ng-disabled="ctrl.inprogress" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >												
 																	</td>
 																</tr>
 																
@@ -544,7 +562,7 @@
 																<tr ng-if="plugtour.hasMeasurement">
 																	<td style="padding: 15px" >Number of saved Measurement History</td>
 																	<td>
-																		<input ng-model="plugtour.nbHistoryMeasurement" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >
+																		<input ng-model="plugtour.nbHistoryMeasurement" ng-disabled="ctrl.inprogress" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >
 																	</td>
 																</tr>
 																<tr ng-if="plugtour.show.parametersexpl">
@@ -558,7 +576,7 @@
 																<tr>
 																	<td style="padding: 15px" >Saved report policy</td>
 																	<td>
-																		<select ng-model="plugtour.savedExecutionPolicy"  >
+																		<select ng-model="plugtour.savedExecutionPolicy" ng-disabled="ctrl.inprogress" >
 																			<option value="SAVEALL">Save all executions</option>
 																			<option value="SAVEONLYWORK">Only actual work</option>
 																		</select>
@@ -577,8 +595,8 @@
 																	<td style="padding: 15px" >Stop after x items processed</td>
 																	<td>
 																	
-																		<input ng-model="plugtour.stopafterNbItemsIN" type="checkbox" ng-change="ctrl.setLimitationItems(plugtour)">
-																		<input ng-model="plugtour.stopafterNbItems" ng-if="plugtour.stopafterNbItemsIN" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >												
+																		<input ng-model="plugtour.stopafterNbItemsIN" ng-disabled="ctrl.inprogress" type="checkbox" ng-change="ctrl.setLimitationItems(plugtour)">
+																		<input ng-model="plugtour.stopafterNbItems" ng-if="plugtour.stopafterNbItemsIN" ng-disabled="ctrl.inprogress" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >												
 																
 																	</td>
 																</tr>
@@ -592,8 +610,8 @@
 																<tr  ng-if="plugtour.jobCanBeStoppedDelay">
 																	<td style="padding: 15px" >Stop after x minutes</td>
 																	<td>
-																		<input ng-model="plugtour.stopafterNbMinutesIN" type="checkbox" ng-change="ctrl.setLimitationHour(plugtour)">
-																	<input ng-model="plugtour.stopafterNbMinutes" ng-if="plugtour.stopafterNbMinutesIN" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >
+																		<input ng-model="plugtour.stopafterNbMinutesIN" ng-disabled="ctrl.inprogress" type="checkbox" ng-change="ctrl.setLimitationHour(plugtour)">
+																	<input ng-model="plugtour.stopafterNbMinutes" ng-if="plugtour.stopafterNbMinutesIN" ng-disabled="ctrl.inprogress" type="number" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >
 																	
 																	</td>
 																</tr>
@@ -1130,7 +1148,7 @@
 												<th></th>
 												<th>Host</th>
 												<th>Items processed</th>
-												<th>Execution time bob</th>
+												<th>Execution time</th>
 
 											<tbody ng-repeat="savedExec in plugtour.savedExecution"> 
 											<tr  >
@@ -1294,15 +1312,24 @@
 				<td style="width: 20px;">
 					<input ng-model="ctrl.autorefresh" type="checkbox" title="Automatic refresh">
 				<td  style="width: 50px;">
-					<button ng-click="ctrl.refresh( false )" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress">Refresh</button>		
-				</td>
-				</td> <td  style="width: 50px;">
-					&nbsp;&nbsp;&nbsp;
-				</td><td  style="width: 250px;">
+					<button ng-click="ctrl.refresh( false )" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress" style="margin-right: 10px">Refresh</button>		
+				</td> 
+				<td  style="width: 50px;">
+					<button ng-click="ctrl.orderByFilter.reportExecution='today'" class="btn btn-primary btn-xs" ng-disabled="ctrl.inprogress" style="margin-right: 10px">Today</button>		
+				</td> 
+				<td  style="width: 50px;">
+					<button ng-click="ctrl.orderByFilter.reportExecution='yesterday'" class="btn btn-primary btn-xs" ng-disabled="ctrl.inprogress"style="margin-right: 10px">Yesterday</button>		
+				</td> 
+				<td  style="width: 50px;">
+					<button ng-click="ctrl.orderByFilter.reportExecution='all'" class="btn btn-primary btn-xs" ng-disabled="ctrl.inprogress" style="margin-right: 10px">All</button>		
+				</td> 
+				
+				<td  style="width: 250px;">
 					<div ng-if="ctrl.inprogress">
 						<span class="Loading">.</span>Please wait, work in progress
 					</div>
 				</td>
+				
 				<td style="text-align:right">
 					<button ng-click="ctrl.schedulerMaintenance('heartbeat')" class="btn btn-info btn-xs" ng-disabled="ctrl.inprogress" title="Force a HeartBeat">
 							<span class="glyphicon glyphicon-heart"></span>
@@ -1329,9 +1356,9 @@
 							<th></th>
 							<th ><div ng-if="ctrl.reports.showhost">Host</div></th>
 							<th>Items processed</th>
-							<th>Execution time bob</th>
+							<th>Execution time</th>
 							
-						<tbody ng-repeat="savedExec in ctrl.listreportsexecution" >
+						<tbody ng-repeat="savedExec in ctrl.getListReportExecutionFiltered()" >
 						<tr>
 							<td>{{savedExec.name}}</td>
 							<td style="font-style: italic;">{{savedExec.pluginname}}</td>
