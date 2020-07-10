@@ -13,9 +13,8 @@ import org.bonitasoft.properties.BonitaProperties;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
-import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJob.MapContentParameter;
-import org.bonitasoft.truckmilk.schedule.MilkScheduleQuartz;
+import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerFactory;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
@@ -532,8 +531,7 @@ public class MilkSerializeProperties {
 
         bonitaProperties.put(BONITAPROPERTIES_SCHEDULER_SCHEDULERTYPE, currentScheduler.getType().toString());
         listKeys.add(BONITAPROPERTIES_SCHEDULER_SCHEDULERTYPE);
-
-        MilkReportEngine reportEngine = MilkReportEngine.getInstance();
+        
         bonitaProperties.put(BONITAPROPERTIES_SCHEDULER_REPORTLOGHEART, currentScheduler.isLogHeartBeat() ? "true" : "false");
         listKeys.add(BONITAPROPERTIES_SCHEDULER_REPORTLOGHEART);
 
