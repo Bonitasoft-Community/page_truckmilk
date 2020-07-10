@@ -29,8 +29,6 @@ import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput.Chronometer;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
@@ -51,15 +49,15 @@ public class MilkDeleteProcesses extends MilkPlugIn {
     static MilkLog logger = MilkLog.getLogger(MilkDeleteProcesses.class.getName());
     private final static String LOGGER_LABEL = "MilkDeleteProcesses ";
 
-    private final static String CSTCOL_PROCESSNAME ="Process";
+    private final static String CSTCOL_PROCESSNAME = "Process";
     private final static String CSTCOL_PROCESSVERSION = "Version";
     private final static String CSTCOL_PROCESSRANGEINTHEVERSION = "Range Version";
-    private final static String CSTCOL_PROCESSID= "PID";
-    private final static String CSTCOL_ACTIVECASE ="Cases Active";
+    private final static String CSTCOL_PROCESSID = "PID";
+    private final static String CSTCOL_ACTIVECASE = "Cases Active";
     private final static String CSTCOL_ARCHIVECASE = "Cases Archived";
-    private final static String CSTCOL_STATUS = "Status"; 
+    private final static String CSTCOL_STATUS = "Status";
     private final static String CSTCOL_STATUSLEVEL = "StatusLevel";
-    
+
     private final static BEvent eventSearchFailed = new BEvent(MilkDeleteProcesses.class.getName(), 1, Level.ERROR,
             "Search failed", "Search failed task return an error", "No retry can be performed", "Check the error");
 
@@ -85,8 +83,8 @@ public class MilkDeleteProcesses extends MilkPlugIn {
     private final static String CSTVERSION_ONLYDISABLED = "Only Disabled";
     private final static String CSTVERSION_DISABLEANDENABLE = "Disabled and Enabled";
 
-    private final static String CSTROOTCASE_PURGEARCHIVED = "Purge Archived";
-    private final static String CSTROOTCASE_PURGEACTIVE = "Purge Archived and Active";
+    // private final static String CSTROOTCASE_PURGEARCHIVED = "Purge Archived";
+    // private final static String CSTROOTCASE_PURGEACTIVE = "Purge Archived and Active";
 
     private final static String CSTOPERATION_DETECTION = "Only detection";
     private final static String CSTOPERATION_DELETION = "Deletion";
@@ -119,7 +117,6 @@ public class MilkDeleteProcesses extends MilkPlugIn {
     private static PlugInParameter cstParamDisabledKeepLastVersion = PlugInParameter.createInstance("DisableKeepLastVersion", "Keep Last Version of the process", TypeParameter.BOOLEAN, Boolean.FALSE, "Keep the last version of the process")
             .withVisibleConditionParameterValueEqual(cstParamDisablead, true);
 
-    
     // not used process
     private static PlugInParameter cstParamNotUsed = PlugInParameter.createInstance("processNotUsed", "Process not used", TypeParameter.BOOLEAN, Boolean.FALSE, "Delete all Process not used in the delay (No Active/Archived case in the period)");
     private static PlugInParameter cstParamNotUsedDelay = PlugInParameter.createInstanceDelay("processNotUsedDelay", "No activity in this period", DELAYSCOPE.MONTH, 3, "Process is deleted only if there is not operation in this delay")
@@ -140,10 +137,12 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             .withVisibleConditionParameterValueEqual(cstParamMaxVersion, true);
 
     private static PlugInParameter cstParamRootCase = PlugInParameter.createInstance("subProcess", "Sub Process", TypeParameter.BOOLEAN, null, "A process can't be purge if it is called as a sub process. You allowed the tool to purge the Root cases");
-    private static PlugInParameter cstParamRootCasePolicy = PlugInParameter.createInstanceListValues("subProcessRootPolicy", "Purge the Root case",
+
+    /*private static PlugInParameter cstParamRootCasePolicy = PlugInParameter.createInstanceListValues("subProcessRootPolicy", "Purge the Root case",
             new String[] { CSTROOTCASE_PURGEARCHIVED, CSTROOTCASE_PURGEACTIVE }, CSTROOTCASE_PURGEARCHIVED,
             "Purge Root cases policy. Purge the root case only if it is archived, or Active and Archived cases")
             .withVisibleConditionParameterValueEqual(cstParamRootCase, true);
+            */
     private static PlugInParameter cstParamRootDelay = PlugInParameter.createInstanceDelay("SubProcessDelay", "Delay", DELAYSCOPE.MONTH, 3, "Root Case created more than this delay can be purged")
             .withVisibleConditionParameterValueEqual(cstParamRootCase, true);
 
@@ -208,10 +207,12 @@ public class MilkDeleteProcesses extends MilkPlugIn {
 
         return plugInDescription;
     }
+
     @Override
     public int getDefaultNbSavedExecution() {
         return 7;
     }
+
     @Override
     public int getDefaultNbHistoryMesures() {
         return 14;
@@ -226,7 +227,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
         public int processesPurged = 0;
         public String status;
         public STATUSLEVEL statusLevel;
-        
+
         public void add(StatsResult stats) {
             countCasesPurged += stats.countCasesPurged;
             countArchiveCasesPurged += stats.countArchiveCasesPurged;
@@ -245,7 +246,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
         //preparation
         ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
         StatsResult statsResult = new StatsResult();
-        
+
         StringBuilder finalReport = new StringBuilder();
         CSVOperation csvOperationOuput = new CSVOperation();
 
@@ -257,7 +258,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
 
             String separatorCSV = jobExecution.getInputStringParameter(cstParamSeparatorCSV);
 
-            csvOperationOuput.writeCsvDocument(new String[] { CSTCOL_PROCESSNAME, CSTCOL_PROCESSVERSION, CSTCOL_PROCESSRANGEINTHEVERSION, CSTCOL_ACTIVECASE, CSTCOL_ARCHIVECASE, CSTCOL_STATUS,CSTCOL_STATUSLEVEL }, separatorCSV);
+            csvOperationOuput.writeCsvDocument(new String[] { CSTCOL_PROCESSNAME, CSTCOL_PROCESSVERSION, CSTCOL_PROCESSRANGEINTHEVERSION, CSTCOL_ACTIVECASE, CSTCOL_ARCHIVECASE, CSTCOL_STATUS, CSTCOL_STATUSLEVEL }, separatorCSV);
 
             List<ProcessDeploymentInfo> listProcessPerimeters;
             SearchOptionsBuilder searchBuilderCase = new SearchOptionsBuilder(0, jobExecution.getJobStopAfterMaxItems() + 1);
@@ -275,7 +276,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
                     searchBuilderCase.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE, ActivationState.DISABLED.toString());
                 searchBuilderCase.sort(ProcessDeploymentInfoSearchDescriptor.NAME, Order.ASC);
                 searchBuilderCase.sort(ProcessDeploymentInfoSearchDescriptor.DEPLOYMENT_DATE, Order.ASC);
-                
+
                 SearchResult<ProcessDeploymentInfo> searchResultCurrentProcess = processAPI.searchProcessDeploymentInfos(searchBuilderCase.done());
                 listProcessPerimeters = searchResultCurrentProcess.getResult();
             } else
@@ -289,20 +290,20 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             // --------------------------  Options
             if (Boolean.TRUE.equals(disabled)) {
                 StatsResult statsResultOp = deleteBasedOnDisabled(jobExecution, CSTOPERATION_DELETION.equals(operation), listProcessPerimeters, setExclude, csvOperationOuput, milkJobOutput);
-                finalReport.append("Delete Disabled :"+statsResultOp.processesPurged+"<br>");
-                statsResult.add( statsResultOp );
+                finalReport.append("Delete Disabled :" + statsResultOp.processesPurged + "<br>");
+                statsResult.add(statsResultOp);
             }
 
             if (Boolean.TRUE.equals(notUsed)) {
-                StatsResult statsResultOp =deleteBasedOnNotUsed(jobExecution, CSTOPERATION_DELETION.equals(operation), listProcessPerimeters, setExclude, csvOperationOuput, milkJobOutput);
-                finalReport.append("Delete Not Used :"+statsResultOp.processesPurged+"<br>");
-                statsResult.add( statsResultOp );
+                StatsResult statsResultOp = deleteBasedOnNotUsed(jobExecution, CSTOPERATION_DELETION.equals(operation), listProcessPerimeters, setExclude, csvOperationOuput, milkJobOutput);
+                finalReport.append("Delete Not Used :" + statsResultOp.processesPurged + "<br>");
+                statsResult.add(statsResultOp);
             }
 
             if (Boolean.TRUE.equals(maxVersion)) {
                 StatsResult statsResultOp = deleteBasedOnMaxVersion(jobExecution, CSTOPERATION_DELETION.equals(operation), listProcessPerimeters, setExclude, csvOperationOuput, milkJobOutput);
-                finalReport.append("Delete Max Version :"+statsResultOp.processesPurged+"<br>");
-                statsResult.add( statsResultOp );
+                finalReport.append("Delete Max Version :" + statsResultOp.processesPurged + "<br>");
+                statsResult.add(statsResultOp);
             }
             csvOperationOuput.closeAndWriteToParameter(milkJobOutput, cstParamListOfProcessesDocument);
         } catch (Exception e) {
@@ -314,19 +315,15 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             logger.severe(LOGGER_LABEL + " Error[" + e.getMessage() + "] at " + exceptionDetails);
             return milkJobOutput;
         }
-        
 
-        
-        milkJobOutput.addReportInHtml( "<h3>Synthesis</h3>");
-        milkJobOutput.addReportInHtmlCR( finalReport.toString() );
-        milkJobOutput.addReportInHtmlCR( "Number of Active   cases deleted " + statsResult.countCasesPurged );
-        milkJobOutput.addReportInHtmlCR( "Number of Archived cases deleted " + statsResult.countArchiveCasesPurged);
-        milkJobOutput.addReportInHtmlCR( "Number of Active   Root cases deleted " + statsResult.rootCountCasesPurged);
-        milkJobOutput.addReportInHtmlCR( "Number of Archived Root cases deleted " + statsResult.rootArchivedCountCasesPurged);
-        milkJobOutput.addReportInHtmlCR( "Number of Process deleted " + statsResult.processesPurged );
+        milkJobOutput.addReportInHtml("<h3>Synthesis</h3>");
+        milkJobOutput.addReportInHtmlCR(finalReport.toString());
+        milkJobOutput.addReportInHtmlCR("Number of Active   cases deleted " + statsResult.countCasesPurged);
+        milkJobOutput.addReportInHtmlCR("Number of Archived cases deleted " + statsResult.countArchiveCasesPurged);
+        milkJobOutput.addReportInHtmlCR("Number of Active   Root cases deleted " + statsResult.rootCountCasesPurged);
+        milkJobOutput.addReportInHtmlCR("Number of Archived Root cases deleted " + statsResult.rootArchivedCountCasesPurged);
+        milkJobOutput.addReportInHtmlCR("Number of Process deleted " + statsResult.processesPurged);
         milkJobOutput.addChronometersInReport(false, true);
-
-        
 
         return milkJobOutput;
     }
@@ -383,6 +380,24 @@ public class MilkDeleteProcesses extends MilkPlugIn {
 
             // Only Detection
             if (!doTheDeletion) {
+
+                boolean countActive=false;
+                boolean countArchive=false;
+                
+                if (CSTDISABLED_PURGEARCHIVED.equals(policy)) {
+                    countActive=true;
+                }
+                if (CSTDISABLED_NO.equals(policy)) {
+                    countActive=true;
+                    countArchive=true;
+                }
+                if (countActive || countArchive) {
+                    // we can purge only process without an active case. So, check if we have an active case
+                    int countActiveInstance = countInstancesInProcess(processDeploymentInfo, countActive, countArchive, false, processAPI);
+                    if (countActiveInstance>0)
+                        continue;
+            }
+                
                 statsResult.processesPurged++;
                 milkJobOutput.nbItemsProcessed++;
                 int countActiveInstance = countInstancesInProcess(processDeploymentInfo, true, false, false, processAPI);
@@ -437,11 +452,9 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             
             statsResult.add(statsResultProcess);
         } // end loop
-        milkJobOutput.addReportTableEnd();
-        milkJobOutput.addReportInHtml("Number of process: " + statsResult.processesPurged);
+    milkJobOutput.addReportTableEnd();milkJobOutput.addReportInHtml("Number of process: "+statsResult.processesPurged);
 
-        jobExecution.setAvancement(30);
-        return statsResult;
+    jobExecution.setAvancement(30);return statsResult;
 
     }
 
@@ -454,13 +467,12 @@ public class MilkDeleteProcesses extends MilkPlugIn {
      * @param milkJobOutput
      * @return
      */
-    private StatsResult deleteBasedOnNotUsed(MilkJobExecution jobExecution, boolean doTheDeletion, List<ProcessDeploymentInfo> listProcess, Set<Long> setExclude,  CSVOperation csvOperation, MilkJobOutput milkJobOutput) {
+    private StatsResult deleteBasedOnNotUsed(MilkJobExecution jobExecution, boolean doTheDeletion, List<ProcessDeploymentInfo> listProcess, Set<Long> setExclude, CSVOperation csvOperation, MilkJobOutput milkJobOutput) {
         jobExecution.setAvancement(30);
         StatsResult statsResult = new StatsResult();
         ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
         milkJobOutput.addReportInHtml("<h3>Not used</h3>");
         writeRecordHeader(csvOperation, "Processes Not used");
-
 
         DelayResult delayResult = MilkPlugInToolbox.getTimeFromDelay(jobExecution, cstParamNotUsedDelay, new Date(), false);
         if (BEventFactory.isError(delayResult.listEvents)) {
@@ -470,10 +482,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
         }
         Boolean keepLastVersion = jobExecution.getInputBooleanParameter(cstParamNotUsedKeepLastVersion);
 
-        
-
-        milkJobOutput.addReportTableBegin(new String[] { CSTCOL_PROCESSNAME, CSTCOL_PROCESSVERSION, CSTCOL_PROCESSID, CSTCOL_ACTIVECASE, CSTCOL_ARCHIVECASE,CSTCOL_STATUS },20);
-
+        milkJobOutput.addReportTableBegin(new String[] { CSTCOL_PROCESSNAME, CSTCOL_PROCESSVERSION, CSTCOL_PROCESSID, CSTCOL_ACTIVECASE, CSTCOL_ARCHIVECASE, CSTCOL_STATUS }, 20);
 
         int count = 0;
 
@@ -505,8 +514,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
                 int countActiveInstance = countInstancesInProcess(processDeploymentInfo, true, false, false, processAPI);
                 int countArchiveInstance = countInstancesInProcess(processDeploymentInfo, false, true, false, processAPI);
 
-
-                reportLine(processDeploymentInfo, null, countActiveInstance, countArchiveInstance, "To be delete", STATUSLEVEL.INFO,csvOperation,milkJobOutput);
+                reportLine(processDeploymentInfo, null, countActiveInstance, countArchiveInstance, "To be delete", STATUSLEVEL.INFO, csvOperation, milkJobOutput);
 
                 continue;
             }
@@ -518,14 +526,14 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             statsResult.processesPurged++;
             milkJobOutput.nbItemsProcessed++;
 
-            reportLine(processDeploymentInfo, null, countCasesPurged, countArchiveCasesPurged, statsResultProcess.status, statsResultProcess.statusLevel,csvOperation,milkJobOutput);
+            reportLine(processDeploymentInfo, null, countCasesPurged, countArchiveCasesPurged, statsResultProcess.status, statsResultProcess.statusLevel, csvOperation, milkJobOutput);
 
             statsResult.countCasesPurged += countCasesPurged;
             statsResult.countArchiveCasesPurged += countArchiveCasesPurged;
             statsResult.add(statsResultProcess);
         }
         milkJobOutput.addReportTableEnd();
-        milkJobOutput.addReportInHtml("Number of process: " + statsResult.processesPurged );
+        milkJobOutput.addReportInHtml("Number of process: " + statsResult.processesPurged);
 
         jobExecution.setAvancement(60);
         return statsResult;
@@ -538,13 +546,12 @@ public class MilkDeleteProcesses extends MilkPlugIn {
      * @param milkJobOutput
      * @return
      */
-    private StatsResult deleteBasedOnMaxVersion(MilkJobExecution jobExecution, boolean doTheDeletion, List<ProcessDeploymentInfo> listProcess, Set<Long> setExclude,  CSVOperation csvOperation, MilkJobOutput milkJobOutput) {
+    private StatsResult deleteBasedOnMaxVersion(MilkJobExecution jobExecution, boolean doTheDeletion, List<ProcessDeploymentInfo> listProcess, Set<Long> setExclude, CSVOperation csvOperation, MilkJobOutput milkJobOutput) {
         jobExecution.setAvancement(60);
         StatsResult statsResult = new StatsResult();
         ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
         milkJobOutput.addReportInHtml("<h3>Version</h3>");
         writeRecordHeader(csvOperation, "Too many versions");
-
 
         long numberOfVersion = jobExecution.getInputLongParameter(cstParamVersionNumber);
         String versionPolicy = jobExecution.getInputStringParameter(cstParamVersionPolicy);
@@ -560,13 +567,10 @@ public class MilkDeleteProcesses extends MilkPlugIn {
 
         Collections.sort(listProcessName);
 
-        
-        milkJobOutput.addReportTableBegin(new String[] { CSTCOL_PROCESSNAME, CSTCOL_PROCESSVERSION, CSTCOL_PROCESSRANGEINTHEVERSION, CSTCOL_PROCESSID, CSTCOL_ACTIVECASE, CSTCOL_ARCHIVECASE,CSTCOL_STATUS },20);
-
+        milkJobOutput.addReportTableBegin(new String[] { CSTCOL_PROCESSNAME, CSTCOL_PROCESSVERSION, CSTCOL_PROCESSRANGEINTHEVERSION, CSTCOL_PROCESSID, CSTCOL_ACTIVECASE, CSTCOL_ARCHIVECASE, CSTCOL_STATUS }, 20);
 
         // process name per name
         int count = 0;
-
 
         for (String processName : listProcessName) {
             if (jobExecution.pleaseStop())
@@ -605,7 +609,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
                         statsResult.processesPurged++;
                         milkJobOutput.nbItemsProcessed++;
 
-                        reportLine(processDeploymentInfo, i, countActiveInstance, countArchiveInstance, "To be delete", STATUSLEVEL.INFO,csvOperation,milkJobOutput);
+                        reportLine(processDeploymentInfo, i, countActiveInstance, countArchiveInstance, "To be delete", STATUSLEVEL.INFO, csvOperation, milkJobOutput);
 
                         continue;
                     }
@@ -617,8 +621,8 @@ public class MilkDeleteProcesses extends MilkPlugIn {
 
                     statsResult.processesPurged++;
                     milkJobOutput.nbItemsProcessed++;
-                    
-                    reportLine(processDeploymentInfo, i, countCasesPurged, countArchiveCasesPurged, statsResultProcess.status, statsResultProcess.statusLevel,csvOperation,milkJobOutput);
+
+                    reportLine(processDeploymentInfo, i, countCasesPurged, countArchiveCasesPurged, statsResultProcess.status, statsResultProcess.statusLevel, csvOperation, milkJobOutput);
 
                     statsResult.countCasesPurged += countCasesPurged;
                     statsResult.countArchiveCasesPurged += countArchiveCasesPurged;
@@ -627,7 +631,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
                 }
             } catch (Exception e) {
                 milkJobOutput.addEvent(new BEvent(eventSearchFailed, e, " Exception " + e.getMessage()));
-                milkJobOutput.addReportTableLine(new Object[] { processName, " - " , " - " ,  getStatusForReport("Search failed " + e.getMessage(), STATUSLEVEL.ERROR)  });
+                milkJobOutput.addReportTableLine(new Object[] { processName, " - ", " - ", getStatusForReport("Search failed " + e.getMessage(), STATUSLEVEL.ERROR) });
 
                 milkJobOutput.executionStatus = ExecutionStatus.ERROR;
                 StringWriter sw = new StringWriter();
@@ -638,7 +642,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
 
         }
         milkJobOutput.addReportTableEnd();
-        milkJobOutput.addReportInHtml("Number of process: " + statsResult.processesPurged );
+        milkJobOutput.addReportInHtml("Number of process: " + statsResult.processesPurged);
 
         jobExecution.setAvancement(100);
         return statsResult;
@@ -659,7 +663,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
                 // do not delete it. API will allow to do it, but then we generated a lot of Dross data in database
                 milkJobOutput.addEvent(new BEvent(eventDeletionSuccess, getReportProcessName(processDeploymentInfo)));
                 statsResult.status = "Cases in the process, no deletion";
-                statsResult.statusLevel=STATUSLEVEL.WARNING;
+                statsResult.statusLevel = STATUSLEVEL.WARNING;
                 return statsResult;
             }
             // Now it's possible to purge the process - may be
@@ -673,7 +677,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             statsResult.processesPurged++;
             milkJobOutput.addEvent(new BEvent(eventDeletionSuccess, getReportProcessName(processDeploymentInfo)));
             statsResult.status = "Deleted";
-            statsResult.statusLevel= STATUSLEVEL.SUCCESS;
+            statsResult.statusLevel = STATUSLEVEL.SUCCESS;
             logger.info(LOGGER_LABEL + " Deleted " + getReportProcessName(processDeploymentInfo));
 
         } catch (ProcessActivationException e) {
@@ -684,7 +688,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             String exceptionDetails = sw.toString();
             logger.severe(LOGGER_LABEL + getReportProcessName(processDeploymentInfo) + "] Error[" + e.getMessage() + "] at " + exceptionDetails);
             statsResult.status = "Deactivation error";
-            statsResult.statusLevel=STATUSLEVEL.ERROR;
+            statsResult.statusLevel = STATUSLEVEL.ERROR;
         } catch (DeletionException e) {
             milkJobOutput.addEvent(new BEvent(eventDeletionFailed, e, getReportProcessName(processDeploymentInfo) + " Exception " + e.getMessage()));
             milkJobOutput.executionStatus = ExecutionStatus.ERROR;
@@ -693,7 +697,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             String exceptionDetails = sw.toString();
             logger.severe(LOGGER_LABEL + getReportProcessName(processDeploymentInfo) + "] Error[" + e.getMessage() + "] at " + exceptionDetails);
             statsResult.status = "Deletion error";
-            statsResult.statusLevel=STATUSLEVEL.ERROR;
+            statsResult.statusLevel = STATUSLEVEL.ERROR;
         } catch (Exception e) {
             milkJobOutput.addEvent(new BEvent(eventDeletionFailed, e, getReportProcessName(processDeploymentInfo) + " Exception " + e.getMessage()));
             milkJobOutput.executionStatus = ExecutionStatus.ERROR;
@@ -702,7 +706,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             String exceptionDetails = sw.toString();
             logger.severe(LOGGER_LABEL + getReportProcessName(processDeploymentInfo) + "] Error[" + e.getMessage() + "] at " + exceptionDetails);
             statsResult.status = "Error " + e.getMessage();
-            statsResult.statusLevel=STATUSLEVEL.ERROR;
+            statsResult.statusLevel = STATUSLEVEL.ERROR;
         }
         return statsResult;
     }
@@ -748,7 +752,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
                 ProcessInstance processInstance = searchProcessInstance.getResult().get(0);
                 Date lastUpdate = processInstance.getLastUpdate();
                 if (lastUpdate == null) {
-                    milkJobOutput.addReportTableLine(new Object[] { getReportProcessName(processDeploymentInfo), " - ", " - ", getStatusForReport("ArchiveCase[" + processInstance.getId() + "]: No LastUpdateDate, ignored", STATUSLEVEL.WARNING)} );
+                    milkJobOutput.addReportTableLine(new Object[] { getReportProcessName(processDeploymentInfo), " - ", " - ", getStatusForReport("ArchiveCase[" + processInstance.getId() + "]: No LastUpdateDate, ignored", STATUSLEVEL.WARNING) });
 
                 } else {
                     lastActiveActivity = lastUpdate.getTime();
@@ -763,7 +767,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
                 ArchivedProcessInstance processInstance = searchArchivedProcessInstance.getResult().get(0);
                 Date lastUpdate = processInstance.getLastUpdate();
                 if (lastUpdate == null) {
-                    milkJobOutput.addReportTableLine(new Object[] { getReportProcessName(processDeploymentInfo), " - ", " - ", getStatusForReport("ArchiveCase[" + processInstance.getSourceObjectId() + "]: No LastUpdateDate, ignored", STATUSLEVEL.WARNING)} );
+                    milkJobOutput.addReportTableLine(new Object[] { getReportProcessName(processDeploymentInfo), " - ", " - ", getStatusForReport("ArchiveCase[" + processInstance.getSourceObjectId() + "]: No LastUpdateDate, ignored", STATUSLEVEL.WARNING) });
 
                 } else
                     lastArchivedActivity = lastUpdate.getTime();
@@ -774,15 +778,15 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             String exceptionDetails = sw.toString();
             logger.severe(LOGGER_LABEL + getReportProcessName(processDeploymentInfo) + "] Error[" + e.getMessage() + "] at " + exceptionDetails);
         }
-        Long lastUpdateDate = processDeploymentInfo.getLastUpdateDate()==null ? 0L : processDeploymentInfo.getLastUpdateDate().getTime();
-        
+        Long lastUpdateDate = processDeploymentInfo.getLastUpdateDate() == null ? 0L : processDeploymentInfo.getLastUpdateDate().getTime();
+
         // collect the MAX of the tree value 
-        if (lastActiveActivity==null)
-            lastActiveActivity=0L;
-        if (lastArchivedActivity==null)
-            lastArchivedActivity=0L;
-        long maxValue= Math.max(lastActiveActivity, Math.max( lastArchivedActivity,lastUpdateDate));
-        if (maxValue==0)
+        if (lastActiveActivity == null)
+            lastActiveActivity = 0L;
+        if (lastArchivedActivity == null)
+            lastArchivedActivity = 0L;
+        long maxValue = Math.max(lastActiveActivity, Math.max(lastArchivedActivity, lastUpdateDate));
+        if (maxValue == 0)
             return null;
         return maxValue;
     }
@@ -936,9 +940,10 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             return "<label class=\"label label-success\">" + status + "</label>";
         return status;
     }
-    
+
     /**
      * calculate the list of object to return
+     * 
      * @param inHtml
      * @param processDeploymentInfo
      * @param rangeInTheVersion
@@ -948,54 +953,51 @@ public class MilkDeleteProcesses extends MilkPlugIn {
      * @param level
      * @return
      */
-    
-    private Map<String, String> getRecordForTableReport(ProcessDeploymentInfo processDeploymentInfo, Long rangeInTheVersion, long activeCases, long archiveCases, String status, STATUSLEVEL level ) {
-        Map<String, String> record = new HashMap<> ();
-        record.put(CSTCOL_PROCESSNAME, processDeploymentInfo.getName()); 
-        record.put(CSTCOL_PROCESSVERSION, processDeploymentInfo.getVersion());  
-        record.put(CSTCOL_PROCESSID,     String.valueOf(processDeploymentInfo.getProcessId()));
-        record.put(CSTCOL_PROCESSRANGEINTHEVERSION, rangeInTheVersion==null ? "" : String.valueOf(rangeInTheVersion));
+
+    private Map<String, String> getRecordForTableReport(ProcessDeploymentInfo processDeploymentInfo, Long rangeInTheVersion, long activeCases, long archiveCases, String status, STATUSLEVEL level) {
+        Map<String, String> record = new HashMap<>();
+        record.put(CSTCOL_PROCESSNAME, processDeploymentInfo.getName());
+        record.put(CSTCOL_PROCESSVERSION, processDeploymentInfo.getVersion());
+        record.put(CSTCOL_PROCESSID, String.valueOf(processDeploymentInfo.getProcessId()));
+        record.put(CSTCOL_PROCESSRANGEINTHEVERSION, rangeInTheVersion == null ? "" : String.valueOf(rangeInTheVersion));
         record.put(CSTCOL_ACTIVECASE, String.valueOf(activeCases));
-        record.put(CSTCOL_ARCHIVECASE, String.valueOf( archiveCases));
+        record.put(CSTCOL_ARCHIVECASE, String.valueOf(archiveCases));
         record.put(CSTCOL_STATUS, status);
         record.put(CSTCOL_STATUSLEVEL, level.toString());
         return record;
     }
-    
-    private void reportLine(ProcessDeploymentInfo processDeploymentInfo, Long rangeInTheVersion,  long activeCases, long archiveCases, String status, STATUSLEVEL level, CSVOperation csvOperation, MilkJobOutput milkJobOutput ) {
-        if (rangeInTheVersion==null) {
-            milkJobOutput.addReportTableLine( new Object[] { processDeploymentInfo.getName(), 
-                    processDeploymentInfo.getVersion(),  
-                    processDeploymentInfo.getProcessId(), 
-                    activeCases, 
+
+    private void reportLine(ProcessDeploymentInfo processDeploymentInfo, Long rangeInTheVersion, long activeCases, long archiveCases, String status, STATUSLEVEL level, CSVOperation csvOperation, MilkJobOutput milkJobOutput) {
+        if (rangeInTheVersion == null) {
+            milkJobOutput.addReportTableLine(new Object[] { processDeploymentInfo.getName(),
+                    processDeploymentInfo.getVersion(),
+                    processDeploymentInfo.getProcessId(),
+                    activeCases,
                     archiveCases,
-                    getStatusForReport( status, level)});
-            
-        }
-        else {
-            milkJobOutput.addReportTableLine( new Object[] { processDeploymentInfo.getName(), 
-                    processDeploymentInfo.getVersion(),  
-                    processDeploymentInfo.getProcessId(), 
-                    rangeInTheVersion, 
-                    activeCases, 
+                    getStatusForReport(status, level) });
+
+        } else {
+            milkJobOutput.addReportTableLine(new Object[] { processDeploymentInfo.getName(),
+                    processDeploymentInfo.getVersion(),
+                    processDeploymentInfo.getProcessId(),
+                    rangeInTheVersion,
+                    activeCases,
                     archiveCases,
-                    status});
+                    status });
         }
-        try
-        {
-            csvOperation.writeRecord( getRecordForTableReport(processDeploymentInfo, rangeInTheVersion, activeCases, archiveCases, status, level));
-        }
-        catch(Exception e) {
-            
+        try {
+            csvOperation.writeRecord(getRecordForTableReport(processDeploymentInfo, rangeInTheVersion, activeCases, archiveCases, status, level));
+        } catch (Exception e) {
+
         }
     }
-    
-    private void writeRecordHeader( CSVOperation csvOperation, String header) {
-        try 
-        {
-            Map<String,String> mapHeader = new HashMap();
-            mapHeader.put( CSTCOL_PROCESSNAME, "--------------------------- "+header);
-            csvOperation.writeRecord( mapHeader);        }catch(Exception e) {
+
+    private void writeRecordHeader(CSVOperation csvOperation, String header) {
+        try {
+            Map<String, String> mapHeader = new HashMap();
+            mapHeader.put(CSTCOL_PROCESSNAME, "--------------------------- " + header);
+            csvOperation.writeRecord(mapHeader);
+        } catch (Exception e) {
             // do not trace, continue in case of error
         }
 
