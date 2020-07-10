@@ -141,6 +141,38 @@
 			return this.listplugtour;
 		}
 
+		this.orderByFilter = {
+				'milkTourField' : 'name',
+				'milkTourReverse': false,
+				'reportExecution': 'today'
+		};
+		this.setOrderMilkJob = function( name ) {
+			this.orderByFilter.milkTourField= name; 
+			this.orderByFilter.milkTourReverse = ! this.orderByFilter.milkTourReverse;
+			// console.log("change listTourOrder ["+this.orderByFilter.milkTourField+"] reverse is now "+this.orderByFilter.milkTourReverse);
+		}
+		this.getListPlugTourOrder = function() {
+			// console.log("listTourOrder ["+this.orderByFilter.milkTourField+"] reverse="+this.orderByFilter.milkTourReverse);
+			var sortedItems = $filter('orderBy')(this.listplugtour, this.orderByFilter.milkTourField, this.orderByFilter.milkTourReverse);
+			return sortedItems;
+		}
+		
+		// Filter
+		this.getListReportExecutionFiltered = function() {
+			if (! this.listreportsexecution)
+				return [];
+			var tagdayfilter= this.todaytagday;
+			if (this.orderByFilter.reportExecution == 'all')
+				return this.listreportsexecution;
+			if (this.orderByFilter.reportExecution =='today')
+				tagdayfilter=this.todaytagday;
+			if (this.orderByFilter.reportExecution =='yesterday')
+				tagdayfilter= this.todaytagday-1;
+			var report= $filter('filter')(this.listreportsexecution, { 'tagDay':tagdayfilter} );
+			return report;
+			
+		}
+		
 		this.loadinit = function() {
 			var self = this;
 			
@@ -168,7 +200,7 @@
 				self.listevents 	= jsonResult.listevents;
 				self.deploimentsuc  = jsonResult.deploimentsuc;
 				self.deploimenterr  = jsonResult.deploimenterr;
-				
+				self.todaytagday  	= jsonResult.todaytagday;
 
 				// prepare default value
 				self.refreshListJobs();
@@ -242,7 +274,9 @@
 				}
 
 					
-				self.deploiment = jsonResult.deploiment;
+				self.deploiment 	= jsonResult.deploiment;
+				self.todaytagday  	= jsonResult.todaytagday;
+
 				// console.log("Result completeStatus ? "+self.completeStatus);
 				self.refreshPlugTourFromServer(self.completeStatus, self, jsonResult );
 
@@ -266,11 +300,11 @@
 		}
 		// 
 		this.refreshPlugTourFromServer = function( completeStatus, self, jsonResult ) {
-			// console.log("refreshPlugTourFromServer - complete="+completeStatus);
+			console.log("refreshPlugTourFromServer - complete="+completeStatus);
 		
 			if (completeStatus)
 			{
-				// console.log("refreshPlugTour True, update all  (scheduler)"+angular.toJson( self.scheduler)); 
+				console.log("refreshPlugTour True, update all  (scheduler)"+angular.toJson( self.scheduler)); 
 	
 				self.listplugtour 	= jsonResult.listplugtour;
 				self.refreshListJobs();
@@ -282,7 +316,7 @@
 			}
 			else
 			{
-				// console.log("refreshPlugTour completeStatus False"); 
+				console.log("refreshPlugTour completeStatus False"); 
 				for (var i in jsonResult.listplugtour)
 				{
 					var serverPlugTour = jsonResult.listplugtour[ i ];
@@ -405,6 +439,7 @@
 			this.operationJob('deactivateJob', param, milkJob, true);		
 		}
 
+		var milkJobSelf;
 		
 		this.updateJob= function(milkJob) {
 			// console.log("updateJob START")
@@ -412,6 +447,8 @@
 			var self=this;
 			// update maybe very heavy : truncate it
 			self.listeventsexecution="";
+			milkJobSelf = milkJob;
+			
 			milkJob.listevents='';
 			// first action will be a reset
 			// prepare the string
@@ -1523,9 +1560,24 @@
 					if (self.postParams.action=="updateJob")
 					{
 						self.listeventsexecution    		= jsonResult.listevents;
-						self.listeventsconfig 				= jsonResult.listeventsconfig;
-
-						self.refreshPlugTourFromServer(false, self, jsonResult ); 
+						
+						// bob update the current job
+						milkJobSelf 						= jsonResult.milkjob;
+						// ok, update the name of this job (name may have change)
+						console.log("Update nname milkJob="+milkJobSelf);
+						for (var i in self.listplugtour) {
+							var localPlugTour = self.listplugtour[ i ];
+							console.log("Compare local ["+localPlugTour.id+"]");
+							console.log(" with received["+ milkJobSelf.id+"]");
+							if (localPlugTour.id === milkJobSelf.id) {
+								console.log("Found it update local name["+localPlugTour.name+"]");
+								
+								localPlugTour.name = milkJobSelf.name;
+							}
+						}
+					
+						
+						// self.refreshPlugTourFromServer(false, self, jsonResult ); 
 
 					}
 					if (self.postParams.action=="testButton")
@@ -1544,7 +1596,7 @@
 				}
 				self.inprogress = false;				
 				});	
-			};
+		};
 		
 		// -----------------------------------------------------------------------------------------
 		// init
