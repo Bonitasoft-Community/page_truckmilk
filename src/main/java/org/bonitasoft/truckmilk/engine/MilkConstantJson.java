@@ -13,6 +13,9 @@ public class MilkConstantJson {
     
     public final static String CSTJSON_PREFIX_HUMANREADABLE = "st";
 
+    
+    public final static String CSTJSON_TODAYTAGDAY ="todaytagday";
+    
     /* ******************************************************************************** */
     /*                                                                                  */
     /* Milk Job */
@@ -51,10 +54,10 @@ public class MilkConstantJson {
     public final static String CSTJSON_JOB_ASKFORSTOP = "askForStop";
     public final static String CSTJSON_LAST_EXECUTION_STATUS = "lastexecutionstatus";
     public final static String CSTJSON_IN_EXECUTION = "inExecution";
-    public final static String cstJsonRegisterInExecutionHost = "inExecutionHost";
-    public final static String cstJsonInExecutionStartTime = "inExecutionStartTime";
-    public final static String cstJsonInExecutionPercent = "inExecutionPercent";
-    public final static String cstJsonInExecutionAvancementInformation = "inExecutionInfo";    
+    public final static String CSTJSON_INEXECUTION_HOST = "inExecutionHost";
+    public final static String CSTJSON_INEXECUTION_STARTTIME = "inExecutionStartTime";
+    public final static String CSTJSON_INEXECUTION_PERCENT = "inExecutionPercent";
+    public final static String CSTJSON_INEXECUTION_AVANCEMENTINFORMATION = "inExecutionInfo";    
     public final static String cstJsonInExecutionEndTimeEstimatedInMS = "inExecutionEndTimeEstimatedinMS";
     public final static String cstJsonInExecutionEndDateEstimated = "inExecutionEndDateEstimated";
     // saved last execution  

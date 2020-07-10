@@ -1275,13 +1275,13 @@ public @Data class MilkJob {
             map.put(MilkConstantJson.CSTJSON_LAST_EXECUTION_STATUS, executionStatus);
 
             map.put(MilkConstantJson.CSTJSON_IN_EXECUTION, trackExecution.inExecution);
-            map.put(MilkConstantJson.cstJsonInExecutionStartTime, trackExecution.startTime);
-            map.put(MilkConstantJson.cstJsonInExecutionPercent, trackExecution.percent);
-            map.put(MilkConstantJson.cstJsonInExecutionAvancementInformation, avancementInformation);
+            map.put(MilkConstantJson.CSTJSON_INEXECUTION_STARTTIME, trackExecution.startTime);
+            map.put(MilkConstantJson.CSTJSON_INEXECUTION_PERCENT, trackExecution.percent);
+            map.put(MilkConstantJson.CSTJSON_INEXECUTION_AVANCEMENTINFORMATION, avancementInformation);
             map.put(MilkConstantJson.cstJsonInExecutionEndTimeEstimatedInMS, trackExecution.endTimeEstimatedInMs);
             map.put(MilkConstantJson.cstJsonInExecutionEndTimeEstimatedInMS + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, getHumanTimeEstimated(false));
             map.put(MilkConstantJson.cstJsonInExecutionEndDateEstimated + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, trackExecution.endDateEstimated == null ? "" : sdf.format(trackExecution.endDateEstimated));
-            map.put(MilkConstantJson.cstJsonRegisterInExecutionHost, trackExecution.inExecutionHostName);
+            map.put(MilkConstantJson.CSTJSON_INEXECUTION_HOST, trackExecution.inExecutionHostName);
             return map;
         }
 
@@ -1303,16 +1303,16 @@ public @Data class MilkJob {
                 trackExecution.lastExecutionStatus = ExecutionStatus.valueOf(lastExecutionStatusReaded.toUpperCase());
 
             inExecution = getBooleanValue(jsonMap.get(MilkConstantJson.CSTJSON_IN_EXECUTION), false);
-            startTime = getLongValue(jsonMap.get(MilkConstantJson.cstJsonInExecutionStartTime), 0L);
-            percent = getLongValue(jsonMap.get(MilkConstantJson.cstJsonInExecutionPercent), 0L);
-            avancementInformation = (String) jsonMap.get(MilkConstantJson.cstJsonInExecutionAvancementInformation);
+            startTime = getLongValue(jsonMap.get(MilkConstantJson.CSTJSON_INEXECUTION_STARTTIME), 0L);
+            percent = getLongValue(jsonMap.get(MilkConstantJson.CSTJSON_INEXECUTION_PERCENT), 0L);
+            avancementInformation = (String) jsonMap.get(MilkConstantJson.CSTJSON_INEXECUTION_AVANCEMENTINFORMATION);
 
             endTimeEstimatedInMs = getLongValue(jsonMap.get(MilkConstantJson.cstJsonInExecutionEndTimeEstimatedInMS), 0L);
             endDateEstimated = null;
             if (startTime > 0 && endTimeEstimatedInMs > 0) {
                 endDateEstimated = new Date(startTime + endTimeEstimatedInMs);
             }
-            inExecutionHostName = (String) jsonMap.get(MilkConstantJson.cstJsonRegisterInExecutionHost);
+            inExecutionHostName = (String) jsonMap.get(MilkConstantJson.CSTJSON_INEXECUTION_HOST);
         }
 
     }

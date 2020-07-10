@@ -325,6 +325,8 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 });
 
                 executeAnswer.result.put("listplugin", listPlugInMap);
+                executeAnswer.result.put( MilkConstantJson.CSTJSON_TODAYTAGDAY, String.valueOf(System.currentTimeMillis() / 1000 / 60 / 60 / 24));
+
 
             } else if (VERBE.CHECKUPDATEENVIRONMENT.equals(verbEnum)) {
 
@@ -469,9 +471,16 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, saveJobParameters));
 
                     executeAnswer.listEvents.add(new BEvent(eventJobUpdated, "Job updated[" + milkJob.getName() + "]"));
+                    // return the current parameters values
+                    MapContentParameter mapContent = MapContentParameter.getInstanceWebMinimum();
+                    mapContent.withExplanation = true;
+                    mapContent.withHeader = true; // ask again : some information like nb of execution is part of the header
+                    mapContent.withParameters = true;                  
+                    executeAnswer.result.put( "milkjob", milkJob.getMap(mapContent, milkJobContext));
+                    
                     milkReportEngine.reportOperation(executeAnswer.listEvents);
                 }
-                executeAnswer.result.put(CST_RESULT_LISTJOBS, getListMilkJobsMap(milkJobFactory, milkJobContext));
+                // executeAnswer.result.put(CST_RESULT_LISTJOBS, getListMilkJobsMap(milkJobFactory, milkJobContext));
 
             } else if (VERBE.IMMEDIATEJOB.equals(verbEnum)) {
                 Long idJob = executeParameters.getParametersLong("id");
