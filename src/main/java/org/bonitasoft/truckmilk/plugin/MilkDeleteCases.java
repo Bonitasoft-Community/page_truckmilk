@@ -54,7 +54,7 @@ public class MilkDeleteCases extends MilkPlugIn {
             .withMandatory(false)
             .withFilterProcess(FilterProcess.ALL);
 
-    private static PlugInParameter cstParamDelay = PlugInParameter.createInstanceDelay("Delay", "Delay to delete case, based on the Create date", DELAYSCOPE.MONTH, 6, "All cases started before this delay will be purged");
+    private static PlugInParameter cstParamDelay = PlugInParameter.createInstanceDelay("Delay", "Delay to delete case, based on the Create date", DELAYSCOPE.MONTH, 6, "All cases STARTED before this delay will be purged, even if they have a task execution after");
 
     /**
      * it's faster to delete 100 per 100

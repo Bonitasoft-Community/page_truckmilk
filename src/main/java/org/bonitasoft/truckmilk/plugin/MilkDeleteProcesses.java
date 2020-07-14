@@ -114,14 +114,14 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             new String[] { CSTDISABLED_NO, CSTDISABLED_PURGEARCHIVED, CSTDISABLED_PURGEALL }, CSTDISABLED_NO,
             "Purge cases policy. If the process is called as a sub process, sub case is not purged")
             .withVisibleConditionParameterValueEqual(cstParamDisablead, true);
-    private static PlugInParameter cstParamDisableDelay = PlugInParameter.createInstanceDelay("DisabledDelay", "No activity in this period", DELAYSCOPE.MONTH, 3, "Process is deleted only after this delay (based on the last update modification)")
+    private static PlugInParameter cstParamDisableDelay = PlugInParameter.createInstanceDelay("DisabledDelay", "No activity in this period", DELAYSCOPE.MONTH, 3, "Process is deleted only if there is not operation in this delay (based on the case STARTED or Last Update Modification - an task executed after is not take into account)")
             .withVisibleConditionParameterValueEqual(cstParamDisablead, true);
     private static PlugInParameter cstParamDisabledKeepLastVersion = PlugInParameter.createInstance("DisableKeepLastVersion", "Keep Last Version of the process", TypeParameter.BOOLEAN, Boolean.FALSE, "Keep the last version of the process")
             .withVisibleConditionParameterValueEqual(cstParamDisablead, true);
 
     // not used process
-    private static PlugInParameter cstParamNotUsed = PlugInParameter.createInstance("processNotUsed", "Process not used", TypeParameter.BOOLEAN, Boolean.FALSE, "Delete all Process not used in the delay (No Active/Archived case in the period)");
-    private static PlugInParameter cstParamNotUsedDelay = PlugInParameter.createInstanceDelay("processNotUsedDelay", "No activity in this period", DELAYSCOPE.MONTH, 3, "Process is deleted only if there is not operation in this delay")
+    private static PlugInParameter cstParamNotUsed = PlugInParameter.createInstance("processNotUsed", "Process not used", TypeParameter.BOOLEAN, Boolean.FALSE, "Delete all Process not used in the delay (No Active/Archived case STARTED in the period)");
+    private static PlugInParameter cstParamNotUsedDelay = PlugInParameter.createInstanceDelay("processNotUsedDelay", "No activity in this period", DELAYSCOPE.MONTH, 3, "Process is deleted only if there is not operation in this delay (based on the case STARTED or Last Update Modification - an task executed after is not take into account)")
             .withVisibleConditionParameterValueEqual(cstParamNotUsed, true);
     private static PlugInParameter cstParamNotUsedKeepLastVersion = PlugInParameter.createInstance("processKeepLastVersion", "Keep Last Version of the process", TypeParameter.BOOLEAN, Boolean.FALSE, "Keep the last version of the process")
             .withVisibleConditionParameterValueEqual(cstParamNotUsed, true);
