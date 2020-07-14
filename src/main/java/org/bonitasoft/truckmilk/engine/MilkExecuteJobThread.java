@@ -219,7 +219,7 @@ public class MilkExecuteJobThread extends Thread {
                 } else {
                     // a Report HTML exist, so complete it by errors if there are
                     if (BEventFactory.isError(milkJobOutput.getListEvents())) {
-                        milkJobOutput.addReportTableBegin( null);
+                        milkJobOutput.addReportTableBegin( new String[] {""} );
                         for (BEvent event : milkJobOutput.getListEvents()) {
                             
                             if (! event.isError())
@@ -245,7 +245,7 @@ public class MilkExecuteJobThread extends Thread {
 
                 // force the status ABORD status
                 if (milkJobExecution.pleaseStop() && (milkJobOutput.executionStatus == ExecutionStatus.SUCCESS))
-                    milkJobOutput.executionStatus = ExecutionStatus.SUCCESSABORT;
+                    milkJobOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
                 // if the user ask to stop, then this is a successabort if this is correct (do not change a ERROR)
                 if (milkJob.isAskForStop() && (milkJobOutput.executionStatus == ExecutionStatus.SUCCESS || milkJobOutput.executionStatus == ExecutionStatus.SUCCESSPARTIAL))
                     milkJobOutput.executionStatus = ExecutionStatus.SUCCESSABORT;
