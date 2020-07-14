@@ -99,8 +99,8 @@ public class MilkJobOutput {
      * @param header
      */
     public void addReportTableBegin(String[] header) {
-
-        this.numberOfColumnsinTable=header.length;
+        
+        this.numberOfColumnsinTable= header==null ? 0 : header.length;
 
         StringBuilder tableHeader = new StringBuilder();
         
