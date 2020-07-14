@@ -47,6 +47,8 @@
 				return "label label-success btn-xs";
 			if (status.toUpperCase() === 'ERROR' || status.toUpperCase()=== 'BADCONFIGURATION')
 				return "label label-danger btn-xs";
+			if (status.toUpperCase() === 'SUCCESSABORT')
+				return "label label-primary btn-xs";
 			return "label label-default";
 		}
 		
@@ -832,6 +834,9 @@
 			});
 			
 		}
+		
+		this.reports= { "showhost": false, "showdetail":false, "showcontent": false };
+		
 		this.showreport = function(milkJob, c, p) {
 			// console.log("showreport:Start");
 			this.hideall(milkJob);
@@ -880,11 +885,12 @@
 			milkJob.c = milkJob.c+5;
 			this.showreport( milkJob,milkJob.c, 0 );			
 		}
+	
 		/**
 		 * 
 		 */
 		this.showreportdetail= function( milkJob, savedExec, fromTabReport ) {
-			// console.log("showReportDetail milkJobId="+ milkJob.id);
+			// console.log("showReportDetail milkJobId=["+ milkJob.id+"], fromTabReport="+fromTabReport);
 			var self=this;
 			self.inprogress=true;
 			self.fromTabReport= fromTabReport;
@@ -911,8 +917,10 @@
 				// console.log("getSavedExecution result="+angular.toJson(jsonResult.data, false));
 				savedExecSelf.reportinhtml 			=  jsonResult.data.milkjob.savedExecution[0].reportinhtml;
 				savedExecSelf.listevents 			=  jsonResult.data.milkjob.savedExecution[0].listevents;
+				
 				if (self.fromTabReport) {
-					self.showdetail=true;
+					self.reports.showcontent=true;
+					
 				}
 				return;
 			}, function ( jsonResult ) {
