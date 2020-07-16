@@ -190,7 +190,7 @@ public class MilkExecuteJobThread extends Thread {
             try {
 
                 milkReportEngine.reportHeartBeatInformation("Start Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")",false, false /* not a heatbreath */ );
-                savedStartExecution = milkJob.registerExecution(new Date(timeBegin), ExecutionStatus.START, hostName, "Start");
+                savedStartExecution = milkJob.registerNewExecution(new Date(timeBegin), ExecutionStatus.START, hostName, "Start");
                 // save the status in the database
                 // save the start Status (so general) and the track Status, plus askStop to false
                 listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceStartExecutionJob()));
@@ -199,7 +199,7 @@ public class MilkExecuteJobThread extends Thread {
                 
                 if (milkJobOutput.getReportInHtml().length()==0) {
                     // no report, then build one from the list of event
-                    milkJobOutput.addReportTableBegin( null);
+                    milkJobOutput.addReportTableBegin( new String[] {});
                     for (BEvent event : milkJobOutput.getListEvents()) {
                         String title;
                         

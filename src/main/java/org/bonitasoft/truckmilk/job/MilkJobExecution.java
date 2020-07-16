@@ -1,6 +1,7 @@
 package org.bonitasoft.truckmilk.job;
 
 import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
+import org.bonitasoft.truckmilk.job.MilkJob.SavedExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
@@ -37,18 +39,20 @@ public class MilkJobExecution {
      */
     MilkJobContext milkJobContext;
     
+    MilkJobOutput milkJobOuptput;
     public MilkJobExecution(MilkJobContext milkJobContext) {
         this.milkJob = null;
         this.jobParameters = null;
         this.milkJobContext = milkJobContext;
+        this.milkJobOuptput =  new MilkJobOutput(milkJob);
     }
 
     public MilkJobExecution(MilkJob milkJob, MilkJobContext milkJobContext) {
         this.milkJob = milkJob;
         this.jobParameters = milkJob.getJobParameters();
-
         this.milkJobContext = milkJobContext;
- 
+        this.milkJobOuptput =  new MilkJobOutput(milkJob);
+
         if ( milkJob.getPlugIn().getDescription().isJobCanBeStopByMaxMinutes()) {
             if (milkJob.getStopAfterMaxMinutes() > 0)
                 pleaseStopAfterMaxMinutes = milkJob.getStopAfterMaxMinutes();
@@ -67,9 +71,8 @@ public class MilkJobExecution {
                 pleaseStopAfterMaxItems = MilkJob.CSTDEFAULT_STOPAFTER_MAXITEMS;
         }
     }
-    
     public MilkJobOutput getMilkJobOutput() {
-        return new MilkJobOutput(milkJob);
+        return milkJobOuptput;
     }
 
     
@@ -262,7 +265,7 @@ public class MilkJobExecution {
             return true;
         if (isLimitationOnMaxMinutes()) {
             long currentTime = System.currentTimeMillis();
-            long timeInMn = (currentTime - startTimeMs) / 1000 / 60;
+            long timeInMn = (currentTime - milkJob.getTrackExecution().startTime) / 1000 / 60;
             if (timeInMn > pleaseStopAfterMaxMinutes) {
                 return true;
             }
@@ -284,7 +287,7 @@ public class MilkJobExecution {
             return "Administrator Manual stop";        
         if (pleaseStopAfterMaxMinutes != null && pleaseStopAfterMaxMinutes>0) {
             long currentTime = System.currentTimeMillis();
-            long timeInMn = (currentTime - startTimeMs) / 1000 / 60;
+            long timeInMn = (currentTime - milkJob.getTrackExecution().startTime) / 1000 / 60;
             if (timeInMn > pleaseStopAfterMaxMinutes) {
                 return "Too long : TimeInMn["+timeInMn+"], MaxTimeAllowed=["+pleaseStopAfterMaxMinutes+"]";
             }
@@ -335,12 +338,12 @@ public class MilkJobExecution {
         if (advancementInPercent != milkJob.getPercent()) {
             // update
             milkJob.setPercent( advancementInPercent );
-            long timeExecution = System.currentTimeMillis() - startTimeMs;
+            long timeExecution = System.currentTimeMillis() - milkJob.getTrackExecution().startTime;
             if (timeExecution > 0 && advancementInPercent > 0) {
                 milkJob.setTotalTimeEstimatedInMs ( timeExecution * 100 / advancementInPercent);
                 milkJob.setEndTimeEstimatedInMs( milkJob.getTotalTimeEstimatedInMs() - timeExecution );
-                milkJob.setEndDateEstimated( new Date(milkJob.getEndTimeEstimatedInMs() + startTimeMs));
-                saveAdvancement();
+                milkJob.setEndDateEstimated( new Date(milkJob.getEndTimeEstimatedInMs() + milkJob.getTrackExecution().startTime));
+                saveAdvancement( false );
             }
         }
         // register in the tour the % of advancement, and then calculated an estimated end date.
@@ -350,34 +353,37 @@ public class MilkJobExecution {
      * @param information
      */
     public void setAvancementInformation(String information) {
-        milkJob.setAvancementInformation( information );
-        saveAdvancement();
+        SimpleDateFormat sdfSynthetic = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        milkJob.setAvancementInformation( sdfSynthetic.format( new Date())+" "+ information );
+        saveAdvancement( false ); // avoid too much update
     }
     
     private long lastTimeSaved=0;
 
-    private void saveAdvancement() {
+    private void saveAdvancement(boolean force) {
         long currentTime = System.currentTimeMillis();
-        if (lastTimeSaved==0 || currentTime-lastTimeSaved>60*1000)
+        if (lastTimeSaved==0 || currentTime-lastTimeSaved>60*1000 || force)
         {
             // save the current advancement
+            SavedExecution savedExecution = milkJob.getCurrentExecution();
+            if (savedExecution!=null)
+                savedExecution.reportInHtml = milkJobOuptput.getReportInHtml();
+            
             SerializationJobParameters saveParameters = SerializationJobParameters.getInstanceTrackExecution();
             milkJob.milkJobFactory.dbSaveJob(milkJob, saveParameters);
             lastTimeSaved = currentTime;
         }
     }
-    private long startTimeMs;
+    
 
     /**
      * plug in can overwrite this method, but please call this
      */
     public void start() {
-        startTimeMs = System.currentTimeMillis();
         pleaseStop = false;
 
         milkJob.setImmediateExecution( false );
         milkJob.setInExecution( true );
-        milkJob.setStartTime( startTimeMs );
         milkJob.setPercent( 0 );
         milkJob.setEndTimeEstimatedInMs( -1 );
         milkJob.setEndDateEstimated( null );
@@ -393,6 +399,6 @@ public class MilkJobExecution {
     }
 
     public long getTimeFromStartupInMs() {
-        return System.currentTimeMillis() - startTimeMs;
+        return System.currentTimeMillis() - milkJob.getTrackExecution().startTime;
     }
 }

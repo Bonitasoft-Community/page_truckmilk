@@ -283,6 +283,7 @@ public class MilkSerializeProperties {
         public static SerializationJobParameters getInstanceTrackExecution() {
             SerializationJobParameters saveParameters = new SerializationJobParameters();
             saveParameters.trackExecution = true;
+            saveParameters.savedExecution = true; // save the current report line
             return saveParameters;
         }
 

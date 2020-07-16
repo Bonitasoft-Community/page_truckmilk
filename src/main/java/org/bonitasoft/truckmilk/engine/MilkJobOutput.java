@@ -82,7 +82,7 @@ public class MilkJobOutput {
             // update the PLUGIN parameters
             milkJob.setParameterStream(param, stream);
         } else {
-            logger.severe(LOGGER_LABEL+"setParameterStream not allowed on parameter[" + param.name + "] (plugin " + milkJob.getName() + "]");
+            logger.severe(LOGGER_LABEL + "setParameterStream not allowed on parameter[" + param.name + "] (plugin " + milkJob.getName() + "]");
         }
     }
 
@@ -92,18 +92,18 @@ public class MilkJobOutput {
     /*                                                                                  */
     /*                                                                                  */
     /* ******************************************************************************** */
-   
+
     /**
      * Note : the header my be null, then the table does not have a first th line
      * 
      * @param header
      */
     public void addReportTableBegin(String[] header) {
-        
-        this.numberOfColumnsinTable= header==null ? 0 : header.length;
+
+        this.numberOfColumnsinTable = header == null ? 0 : header.length;
 
         StringBuilder tableHeader = new StringBuilder();
-        
+
         tableHeader.append("<table class=\"table table-striped table-bordered table-sm\">");
         if (header != null) {
             tableHeader.append("<tr>");
@@ -112,36 +112,41 @@ public class MilkJobOutput {
             tableHeader.append("</tr>");
         }
         addReportInHtml(tableHeader.toString());
-        this.reportInATable=true;
-     
+        this.reportInATable = true;
+
     }
+
     private int limitNumberOfLines;
     private int countLinesInTable;
     private int numberOfColumnsinTable;
-        
+
     /**
-     * Start a table with a limiter. When the number of line access the limitter, then the report stop to store lines, and at the end, a message is set to display the number of line produced
+     * Start a table with a limiter. When the number of line access the limitter, then the report stop to store lines, and at the end, a message is set to
+     * display the number of line produced
+     * 
      * @param header
      * @param limitNumberOfLines
      */
     public void addReportTableBegin(String[] header, int limitNumberOfLines) {
-        this.limitNumberOfLines=limitNumberOfLines;
-        this.countLinesInTable=0;
+        this.limitNumberOfLines = limitNumberOfLines;
+        this.countLinesInTable = 0;
         addReportTableBegin(header);
-        
+
     }
+
     /**
      * Add a new line in the report table
+     * 
      * @param values
      */
     public void addReportTableLine(Object[] values) {
         countLinesInTable++;
 
-        if (limitNumberOfLines > 0 && countLinesInTable>=limitNumberOfLines) {
+        if (limitNumberOfLines > 0 && countLinesInTable >= limitNumberOfLines) {
             return; // no nothing
-            }
+        }
         StringBuilder tableLines = new StringBuilder();
-        
+
         tableLines.append("<tr>");
         for (Object colValue : values) {
             if (colValue instanceof Long || colValue instanceof Integer || colValue instanceof Double)
@@ -155,56 +160,53 @@ public class MilkJobOutput {
     }
 
     public void addReportTableEnd() {
-        if (limitNumberOfLines > 0 && countLinesInTable>=limitNumberOfLines) {
-            addReportInHtml("<tr><td colspan=\""+numberOfColumnsinTable+"\">Too many lines...("+countLinesInTable+" lines)</td></tr>");
+        if (limitNumberOfLines > 0 && countLinesInTable >= limitNumberOfLines) {
+            addReportInHtml("<tr><td colspan=\"" + numberOfColumnsinTable + "\">Too many lines...(" + countLinesInTable + " lines)</td></tr>");
         }
-        limitNumberOfLines=0; // stop the limiter
+        limitNumberOfLines = 0; // stop the limiter
         addReportInHtml("</table>");
     }
 
-    
     public final static int CST_MAXSIZEINREPORT = 20000; // 20 ko; // 50 Ko
-    boolean alreadyReportOverload=false;    
-    boolean reportInATable=false;
+    boolean alreadyReportOverload = false;
+    boolean reportInATable = false;
 
     /**
      * Add the line in the current report
+     * 
      * @param htmlLine
      * @return true if the line is added, false if the report is overloaded
      */
     public boolean addReportInHtml(String htmlLine) {
-        if (this.report.length() > CST_MAXSIZEINREPORT)
-        {
-            if (! this.alreadyReportOverload) {
+        if (this.report.length() > CST_MAXSIZEINREPORT) {
+            if (!this.alreadyReportOverload) {
                 if (this.reportInATable)
                     this.report.append("</table>");
-                this.report.append("Too many lines...");    
+                this.report.append("Too many lines...");
             }
-                
-            this.alreadyReportOverload=true;   
+
+            this.alreadyReportOverload = true;
             return false;
         }
         this.report.append(htmlLine);
         return true;
     }
+
     public boolean addReportInHtmlCR(String htmlLine) {
-        if (this.report.length() > CST_MAXSIZEINREPORT)
-        {
-            if (! this.alreadyReportOverload) {
+        if (this.report.length() > CST_MAXSIZEINREPORT) {
+            if (!this.alreadyReportOverload) {
                 if (this.reportInATable)
                     this.report.append("</table>");
-                this.report.append("Too many lines...");    
+                this.report.append("Too many lines...");
             }
-                
-            this.alreadyReportOverload=true;   
+
+            this.alreadyReportOverload = true;
             return false;
         }
         this.report.append(htmlLine).append("<br>");
         return true;
     }
-    
-    
-  
+
     public String getReportInHtml() {
         return report.toString();
     }
@@ -263,6 +265,7 @@ public class MilkJobOutput {
         nbOccurencesOperation.put(marker.operationName, nbOccurences + nbOccurenceOperation);
         return marker.getTimeExecution();
     }
+
     /**
      * return the time in MS of this mark (diff between the startMarker and the endMarker) and collect it
      * 
@@ -270,21 +273,23 @@ public class MilkJobOutput {
      * @return
      */
     public long endChronometer(Chronometer marker) {
-        return endChronometer(marker,1);
+        return endChronometer(marker, 1);
     }
 
     /**
      * add some time in a dedicated chronometer
+     * 
      * @param operationName
      * @param timeInMs
      */
     public void addTimeChronometer(String operationName, long timeInMs) {
         long sumTime = sumTimeOperation.get(operationName) == null ? 0 : sumTimeOperation.get(operationName);
         long nbOccurences = nbOccurencesOperation.get(operationName) == null ? 0 : nbOccurencesOperation.get(operationName);
-        
+
         sumTimeOperation.put(operationName, sumTime + timeInMs);
         nbOccurencesOperation.put(operationName, nbOccurences + 1);
     }
+
     public String collectPerformanceSynthesis(boolean keepOperationNoOccurrence) {
         StringBuilder result = new StringBuilder();
         for (String operationName : sumTimeOperation.keySet()) {
@@ -314,7 +319,7 @@ public class MilkJobOutput {
                 continue;
             addReportTableLine(new Object[] { operationName, TypesCast.getHumanDuration(sumTime, true) });
             if (nbOccurences > 0 && addAverage)
-                addReportTableLine(new Object[] { operationName + " ms/operation ("+nbOccurences+")", sumTime / nbOccurences });
+                addReportTableLine(new Object[] { operationName + " ms/operation (" + nbOccurences + ")", sumTime / nbOccurences });
         }
         addReportTableEnd();
     }
@@ -354,9 +359,9 @@ public class MilkJobOutput {
         addReportTableBegin(new String[] { "Measure", "Value" });
 
         for (PlugInMeasurement measure : milkJob.getPlugIn().getDescription().getMeasures()) {
-            if (measure.isEmbeded && ! withEmbededMeasure) 
+            if (measure.isEmbeded && !withEmbededMeasure)
                 continue;
-            
+
             Double measureValue = getMesure(measure);
             if (measureValue == null && !keepMesureValueNotDefine)
                 continue;

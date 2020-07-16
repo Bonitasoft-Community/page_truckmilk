@@ -147,5 +147,8 @@ public class MilkConstantJson {
     public final static String cstEnvironmentStatus = "ENVIRONMENTSTATUS";
     public final static String cstEnvironmentStatus_V_CORRECT = "OK";
     public final static String cstEnvironmentStatus_V_ERROR = "ERROR";
+    
+    
+    public final static String CSTJSON_THREADDUMP = "threadDump";
 
 }

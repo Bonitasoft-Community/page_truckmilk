@@ -416,9 +416,6 @@ public @Data class MilkJob {
         return this.trackExecution.startTime;
     }
 
-    public void setStartTime(long startTime) {
-        this.trackExecution.startTime = startTime;
-    }
 
     public long getPercent() {
         return this.trackExecution.percent;
@@ -534,8 +531,7 @@ public @Data class MilkJob {
     }
 
     public void setInExecution(boolean inExecution) {
-        if (trackExecution != null)
-            trackExecution.inExecution = inExecution;
+        trackExecution.inExecution = inExecution;
     }
 
     public void registerExecutionOnHost(String hostName) {
@@ -1268,9 +1264,9 @@ public @Data class MilkJob {
             map.put(MilkConstantJson.CSTJSON_JOB_IMMEDIATEEXECUTION, trackExecution.isImmediateExecution);
             map.put(MilkConstantJson.CSTJSON_JOB_ASKFORSTOP, trackExecution.askForStop);
             map.put(MilkConstantJson.CSTJSON_JOB_NEXTEXECUTION, trackExecution.nextExecutionDate == null ? 0 : trackExecution.nextExecutionDate.getTime());
-            map.put(MilkConstantJson.CSTJSON_JOB_NEXTEXECUTION + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, trackExecution.nextExecutionDate == null ? "" : sdf.format(trackExecution.nextExecutionDate.getTime()));
+            map.put(MilkConstantJson.CSTJSON_JOB_NEXTEXECUTION + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, TypesCast.getHumanDate( trackExecution.nextExecutionDate ) );
             map.put(MilkConstantJson.CSTJSON_JOB_LASTEXECUTION, trackExecution.lastExecutionDate == null ? 0 : trackExecution.lastExecutionDate.getTime());
-            map.put(MilkConstantJson.CSTJSON_JOB_LASTEXECUTION + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, trackExecution.lastExecutionDate == null ? "" : sdf.format(trackExecution.lastExecutionDate));
+            map.put(MilkConstantJson.CSTJSON_JOB_LASTEXECUTION + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, TypesCast.getHumanDate( trackExecution.lastExecutionDate ));
             String executionStatus = trackExecution.lastExecutionStatus == null ? null : trackExecution.lastExecutionStatus.toString().toLowerCase();
             map.put(MilkConstantJson.CSTJSON_LAST_EXECUTION_STATUS, executionStatus);
 
@@ -1280,8 +1276,9 @@ public @Data class MilkJob {
             map.put(MilkConstantJson.CSTJSON_INEXECUTION_AVANCEMENTINFORMATION, avancementInformation);
             map.put(MilkConstantJson.cstJsonInExecutionEndTimeEstimatedInMS, trackExecution.endTimeEstimatedInMs);
             map.put(MilkConstantJson.cstJsonInExecutionEndTimeEstimatedInMS + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, getHumanTimeEstimated(false));
-            map.put(MilkConstantJson.cstJsonInExecutionEndDateEstimated + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, trackExecution.endDateEstimated == null ? "" : sdf.format(trackExecution.endDateEstimated));
+            map.put(MilkConstantJson.cstJsonInExecutionEndDateEstimated + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, TypesCast.getHumanDate( trackExecution.endDateEstimated ));
             map.put(MilkConstantJson.CSTJSON_INEXECUTION_HOST, trackExecution.inExecutionHostName);
+            
             return map;
         }
 
@@ -1428,7 +1425,11 @@ public @Data class MilkJob {
     // keep a history of the last X execution. X is a parameters for each job.
     List<SavedExecution> listSavedExecution = new ArrayList<>();
 
-    public SavedExecution registerExecution(Date currentDate, ExecutionStatus executionOperation, String hostName, String reportInHtml) {
+    public SavedExecution registerNewExecution(Date currentDate, ExecutionStatus executionOperation, String hostName, String reportInHtml) {
+        // update the trackExecution
+        trackExecution.inExecutionHostName = hostName;
+        trackExecution.startTime = currentDate.getTime();
+        
         SavedExecution savedExecution = new SavedExecution(currentDate, executionOperation, hostName, reportInHtml, new ArrayList<BEvent>());
 
         addSavedExecution(savedExecution);
@@ -1439,6 +1440,11 @@ public @Data class MilkJob {
         if (savedExecution != null)
             listSavedExecution.remove(savedExecution);
         registerExecution(currentDate, output);
+    }
+    public SavedExecution getCurrentExecution() {
+        if (listSavedExecution.isEmpty())
+            return null;
+        return listSavedExecution.get(0);        
     }
 
     /**

@@ -1,6 +1,7 @@
 package org.bonitasoft.truckmilk.toolbox;
 
 import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class TypesCast {
 
@@ -47,7 +48,13 @@ public class TypesCast {
             return defaultValue;
         }
     }
+    private final static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+    public static String getHumanDate( Date date) {
+        if (date == null)
+            return "";
+        return sdf.format(date);
+    }
     public static String getHumanDuration(long durationInMsn, boolean withMs) {
         String result = "";
         long timeRes = durationInMsn;

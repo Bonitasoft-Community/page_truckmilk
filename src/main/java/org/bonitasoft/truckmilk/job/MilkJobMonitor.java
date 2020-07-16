@@ -1,5 +1,6 @@
 package org.bonitasoft.truckmilk.job;
 
+import java.util.Date;
 import java.util.Set;
 
 import org.bonitasoft.truckmilk.job.MilkJob.TrackExecution;
@@ -38,8 +39,10 @@ public class MilkJobMonitor {
         TrackExecution trackExecution = milkJob.getTrackExecution();
         if (trackExecution!=null) {
             result.append("<tr><td>Information</td><td>"+trackExecution.avancementInformation+"</td></tr>");
+            result.append("<tr><td>Started</td><td>"+ (trackExecution.startTime==0 ? "" : TypesCast.getHumanDate( new Date(trackExecution.startTime)))+"</td></tr>");
             result.append("<tr><td>% advancement</td><td >"+trackExecution.percent+" % </td></tr>");
             result.append("<tr><td>Estimation duration</td><td>"+ TypesCast.getHumanDuration(trackExecution.endTimeEstimatedInMs, false)+"</td></tr>");
+            result.append("<tr><td>Hostname</td><td>"+ trackExecution.inExecutionHostName+"</td></tr>");
         }
         
         boolean foundThread=false;

@@ -515,7 +515,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     detailsLogInfo.append("Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
 
                     milkJob.setAskForStop(true);
-                    milkJob.registerExecution(new Date(), ExecutionStatus.KILL, "", "Aborted by " + (userName == null ? "system" : userName));
+                    milkJob.registerNewExecution(new Date(), ExecutionStatus.KILL, "", "Aborted by " + (userName == null ? "system" : userName));
 
                     executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getAskStop()));
                     executeAnswer.listEvents.add(new BEvent(eventJobUpdated, "Job updated[" + milkJob.getName() + "]"));
@@ -621,7 +621,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                 } else if (milkJob == null) {
                     executeAnswer.listEvents.add(new BEvent(MilkJobFactory.EVENT_JOB_NOT_FOUND, "JobID[" + idJob + "]"));
                 } else {
-                    executeAnswer.result.put("threadDump", new MilkJobMonitor(milkJob).getThreadDump());
+                    executeAnswer.result.put( MilkConstantJson.CSTJSON_THREADDUMP, new MilkJobMonitor(milkJob).getThreadDump());
                     executeAnswer.result.put("tracexecution", milkJob.getTrackExecutionMap());
                 }
                 executeAnswer.result.put(CST_RESULT_LISTJOBS, getListMilkJobsMap(milkJobFactory, milkJobContext));
