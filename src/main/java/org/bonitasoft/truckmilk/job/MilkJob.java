@@ -56,7 +56,7 @@ public @Data class MilkJob {
 
     private final static MilkLog logger = MilkLog.getLogger(MilkJob.class.getName());
     private final static String LOGGER_HEADER = "MilkJob ";
-    
+
     private final SimpleDateFormat sdfSynthetic = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /**
@@ -416,7 +416,6 @@ public @Data class MilkJob {
         return this.trackExecution.startTime;
     }
 
-
     public long getPercent() {
         return this.trackExecution.percent;
     }
@@ -457,7 +456,7 @@ public @Data class MilkJob {
         return this.trackExecution.inExecutionHostName;
     }
 
-    public void setInExecutionHostName(String hostName,String ipAddress) {
+    public void setInExecutionHostName(String hostName, String ipAddress) {
         this.trackExecution.inExecutionHostName = hostName;
         this.trackExecution.inExecutionIpAddress = ipAddress;
     }
@@ -539,24 +538,27 @@ public @Data class MilkJob {
         trackExecution.inExecutionHostName = hostName;
         trackExecution.inExecutionIpAddress = ipAddress;
     }
+
     public void registerExecutionOnThisHost() {
-        
-    try {
-        InetAddress ip = InetAddress.getLocalHost();
-        if (ip==null)
-            return;
-        trackExecution.inExecutionHostName = ip.getHostName();
-        trackExecution.inExecutionIpAddress = ip.getHostAddress();
-    } catch (UnknownHostException e1) {
+
+        try {
+            InetAddress ip = InetAddress.getLocalHost();
+            if (ip == null)
+                return;
+            trackExecution.inExecutionHostName = ip.getHostName();
+            trackExecution.inExecutionIpAddress = ip.getHostAddress();
+        } catch (UnknownHostException e1) {
+        }
     }
-    }    
-    
+
     public String getHostNameRegistered() {
         return trackExecution.inExecutionHostName;
     }
+
     public String getIpAddressRegistered() {
         return trackExecution.inExecutionIpAddress;
     }
+
     /* ******************************************************************************** */
     /*                                                                                  */
     /*
@@ -882,7 +884,6 @@ public @Data class MilkJob {
 
         milkJob.idJob = getLongValue(jsonMap.get(MilkConstantJson.CSTJSON_JOB_ID), 0L);
 
-        
         // List<Map<String, Object>> listParametersDef = (List<Map<String, Object>>) jsonMap.get(MilkConstantJson.CSTJSON_PARAMETERS_DEF);
 
         milkJob.cronSt = (String) jsonMap.get(MilkConstantJson.CSTJSON_JOB_CRON);
@@ -1280,9 +1281,9 @@ public @Data class MilkJob {
             map.put(MilkConstantJson.CSTJSON_JOB_IMMEDIATEEXECUTION, trackExecution.isImmediateExecution);
             map.put(MilkConstantJson.CSTJSON_JOB_ASKFORSTOP, trackExecution.askForStop);
             map.put(MilkConstantJson.CSTJSON_JOB_NEXTEXECUTION, trackExecution.nextExecutionDate == null ? 0 : trackExecution.nextExecutionDate.getTime());
-            map.put(MilkConstantJson.CSTJSON_JOB_NEXTEXECUTION + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, TypesCast.getHumanDate( trackExecution.nextExecutionDate ) );
+            map.put(MilkConstantJson.CSTJSON_JOB_NEXTEXECUTION + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, TypesCast.getHumanDate(trackExecution.nextExecutionDate));
             map.put(MilkConstantJson.CSTJSON_JOB_LASTEXECUTION, trackExecution.lastExecutionDate == null ? 0 : trackExecution.lastExecutionDate.getTime());
-            map.put(MilkConstantJson.CSTJSON_JOB_LASTEXECUTION + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, TypesCast.getHumanDate( trackExecution.lastExecutionDate ));
+            map.put(MilkConstantJson.CSTJSON_JOB_LASTEXECUTION + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, TypesCast.getHumanDate(trackExecution.lastExecutionDate));
             String executionStatus = trackExecution.lastExecutionStatus == null ? null : trackExecution.lastExecutionStatus.toString().toLowerCase();
             map.put(MilkConstantJson.CSTJSON_LAST_EXECUTION_STATUS, executionStatus);
 
@@ -1292,9 +1293,10 @@ public @Data class MilkJob {
             map.put(MilkConstantJson.CSTJSON_INEXECUTION_AVANCEMENTINFORMATION, avancementInformation);
             map.put(MilkConstantJson.cstJsonInExecutionEndTimeEstimatedInMS, trackExecution.endTimeEstimatedInMs);
             map.put(MilkConstantJson.cstJsonInExecutionEndTimeEstimatedInMS + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, getHumanTimeEstimated(false));
-            map.put(MilkConstantJson.cstJsonInExecutionEndDateEstimated + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, TypesCast.getHumanDate( trackExecution.endDateEstimated ));
+            map.put(MilkConstantJson.cstJsonInExecutionEndDateEstimated + MilkConstantJson.CSTJSON_PREFIX_HUMANREADABLE, TypesCast.getHumanDate(trackExecution.endDateEstimated));
             map.put(MilkConstantJson.CSTJSON_INEXECUTION_HOST, trackExecution.inExecutionHostName);
-            
+            map.put(MilkConstantJson.CSTJSON_INEXECUTION_IPADDRESS, trackExecution.inExecutionIpAddress);
+
             return map;
         }
 
@@ -1326,6 +1328,8 @@ public @Data class MilkJob {
                 endDateEstimated = new Date(startTime + endTimeEstimatedInMs);
             }
             inExecutionHostName = (String) jsonMap.get(MilkConstantJson.CSTJSON_INEXECUTION_HOST);
+            inExecutionIpAddress = (String) jsonMap.get(MilkConstantJson.CSTJSON_INEXECUTION_IPADDRESS);
+            
         }
 
     }
@@ -1445,7 +1449,7 @@ public @Data class MilkJob {
         // update the trackExecution
         registerExecutionOnThisHost();
         trackExecution.startTime = currentDate.getTime();
-        
+
         SavedExecution savedExecution = new SavedExecution(currentDate, executionOperation, getHostNameRegistered(), reportInHtml, new ArrayList<BEvent>());
 
         addSavedExecution(savedExecution);
@@ -1457,10 +1461,11 @@ public @Data class MilkJob {
             listSavedExecution.remove(savedExecution);
         registerExecution(currentDate, output);
     }
+
     public SavedExecution getCurrentExecution() {
         if (listSavedExecution.isEmpty())
             return null;
-        return listSavedExecution.get(0);        
+        return listSavedExecution.get(0);
     }
 
     /**
