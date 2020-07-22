@@ -198,14 +198,14 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
         MilkJobContext milkJobContext = new MilkJobContext(executeParameters.tenantId, apiAccessor, tenantServiceAccessor);
         try {
             InetAddress ip = InetAddress.getLocalHost();
-
+            String localHost = (ip==null ? null : ip.getHostName());
             milkPlugInFactory = MilkPlugInFactory.getInstance(milkJobContext);
             milkJobFactory = MilkJobFactory.getInstance(milkPlugInFactory);
             for (MilkJob milkJob : milkJobFactory.getListJobs()) {
-                if (milkJob.inExecution() && milkJob.getHostRegistered().equals(ip.getHostAddress())) {
+                if (milkJob.inExecution() && milkJob.getHostNameRegistered().equals( localHost )) {
                     logger.info(" Server Restart reset jobId[" + milkJob.getId() + "]");
                     // cancel the job: server restart
-                    milkJob.killJob();;
+                    milkJob.killJob();
                     executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceAllInformations()));
                 }
             }
@@ -515,7 +515,7 @@ public class MilkCmdControl extends BonitaCommandApiAccessor {
                     detailsLogInfo.append("Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")");
 
                     milkJob.setAskForStop(true);
-                    milkJob.registerNewExecution(new Date(), ExecutionStatus.KILL, "", "Aborted by " + (userName == null ? "system" : userName));
+                    milkJob.registerNewExecution(new Date(), ExecutionStatus.KILL, "Aborted by " + (userName == null ? "system" : userName));
 
                     executeAnswer.listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getAskStop()));
                     executeAnswer.listEvents.add(new BEvent(eventJobUpdated, "Job updated[" + milkJob.getName() + "]"));

@@ -8,7 +8,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.bonitasoft.engine.connector.ConnectorAPIAccessorImpl;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkCmdControl;
@@ -42,10 +44,10 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
 
     public final static MilkHeartBeat milkHeartBeat = new MilkHeartBeat();
 
-    
-    public MilkScheduleThreadSleep( MilkSchedulerFactory factory ) {
-       super( factory );
+    public MilkScheduleThreadSleep(MilkSchedulerFactory factory) {
+        super(factory);
     }
+
     /* ******************************************************************************** */
     /*                                                                                  */
     /* Abstract for Milk Controler */
@@ -106,23 +108,23 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
     public boolean needRestartAtInitialization() {
         return true;
     }
+
     /**
-     *  A thread can be started on two different nodes 
-     * 
+     * A thread can be started on two different nodes
      */
     public boolean isClusterProtected() {
         return false;
     }
-    
+
     public List<BEvent> startup(long tenantId, boolean forceReset) {
         List<BEvent> listEvents = new ArrayList<>();
         MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
-        milkReportEngine.reportHeartBeatInformation("Startup ThreadScheduler reset[" + forceReset + "]",true, isLogHeartBeat());
+        milkReportEngine.reportHeartBeatInformation("Startup ThreadScheduler reset[" + forceReset + "]", true, isLogHeartBeat());
         try {
 
             // already register ? 
             synchronized (listSchedulerThread) {
-                SchedulerThread sch = getSchedulerThread( tenantId);
+                SchedulerThread sch = getSchedulerThread(tenantId);
                 if (sch != null) {
                     if (forceReset) {
                         if (sch.status == TypeStatus.STARTED)
@@ -135,7 +137,7 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
                 }
 
                 // Create a new thread in any case : a thread can be start only one time
-                sch = new SchedulerThread( tenantId );
+                sch = new SchedulerThread(tenantId);
                 listSchedulerThread.add(sch);
                 sch.start();
                 listEvents.add(eventSchedulerStarted);
@@ -147,13 +149,13 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();
-            logger.severeException(e, " ERROR startup scheduler at "+exceptionDetails);
+            logger.severeException(e, " ERROR startup scheduler at " + exceptionDetails);
             listEvents.add(new BEvent(eventSchedulerTreadSetup, e, ""));
         }
         return listEvents;
 
     }
-    
+
     /**
      * shutdown
      */
@@ -161,7 +163,7 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
 
         List<BEvent> listEvents = new ArrayList<>();
         MilkReportEngine milkReportEngine = MilkReportEngine.getInstance();
-        milkReportEngine.reportHeartBeatInformation( "SHUTDOWN Quartz Scheduler",true, isLogHeartBeat());
+        milkReportEngine.reportHeartBeatInformation("SHUTDOWN ThreadSleep Scheduler", true, isLogHeartBeat());
 
         // already register ? 
         synchronized (listSchedulerThread) {
@@ -177,6 +179,17 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
                 }
             } else {
                 listEvents.add(eventSchedulerStopped);
+            }
+        }
+
+        // double check : access all thread, if they are a Thread Scheduler, stop it
+        Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
+        for (Thread th : threadSet) {
+            if (TRUCK_MILK_SCHEDULER.equals(th.getName())) {
+                if (th instanceof SchedulerThread)
+                    if (((SchedulerThread) th).status == TypeStatus.STARTED) {
+                        ((SchedulerThread) th).shutdown();
+                    }
             }
         }
 
@@ -226,6 +239,7 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
     /*                                                                                  */
     /*                                                                                  */
     /* ******************************************************************************** */
+    public static final String TRUCK_MILK_SCHEDULER = "TruckMilkScheduler";
 
     private SchedulerThread getSchedulerThread(long tenantId) {
         for (SchedulerThread sch : listSchedulerThread) {
@@ -244,6 +258,8 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
         public int countToDebug = 0;
 
         SchedulerThread(long tenantId) {
+            super(TRUCK_MILK_SCHEDULER);
+
             this.tenantId = tenantId;
             status = TypeStatus.STARTED;
         }
@@ -262,13 +278,15 @@ public class MilkScheduleThreadSleep extends MilkSchedulerInt {
             while (status == TypeStatus.STARTED && countToDebug < 259200) {
                 countToDebug++;
                 try {
-                    logger.info(" SchedulerThread [" + tenantId + "] weakup (" + countToDebug + "/100)");
+                    logger.info(" SchedulerThread TenantId=[" + tenantId + "] weakup (" + countToDebug + "/100)");
                     MilkCmdControl milkCmdControl = MilkCmdControl.getStaticInstance();
                     // note : we can call directly the heartbeat. To start this scheduler, a command is called, and the thread is started from the command.
                     // so 
                     // -  Any initialisation is already done (first call the command is called)
                     // -  Command start the thread, so the thread is correctly directly on the server side
-                    MilkJobContext milkJobContext = new MilkJobContext(tenantId, null, null);
+                    ConnectorAPIAccessorImpl apiAccessor = new ConnectorAPIAccessorImpl(tenantId);
+
+                    MilkJobContext milkJobContext = new MilkJobContext(tenantId, apiAccessor, null);
                     milkHeartBeat.executeOneTimeNewThread(milkCmdControl, false, milkJobContext);
                     nextHeartBeat = new Date(System.currentTimeMillis() + 60000);
                     Thread.sleep(60000);

@@ -1,5 +1,7 @@
 package org.bonitasoft.truckmilk.job;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Date;
 import java.util.Set;
 
@@ -37,12 +39,22 @@ public class MilkJobMonitor {
         result.append("<table class=\"table table-striped table-hover table-condensed\">");
         result.append("<tr><td>Thread Name</td><td>"+threadNameSearched+"</td></tr>");
         TrackExecution trackExecution = milkJob.getTrackExecution();
+        String localIpAddress=null;
+        try {
+            InetAddress ip = InetAddress.getLocalHost();
+            localIpAddress=ip.getHostAddress();
+        } catch (UnknownHostException e1) {
+        
+        }
+        
         if (trackExecution!=null) {
             result.append("<tr><td>Information</td><td>"+trackExecution.avancementInformation+"</td></tr>");
             result.append("<tr><td>Started</td><td>"+ (trackExecution.startTime==0 ? "" : TypesCast.getHumanDate( new Date(trackExecution.startTime)))+"</td></tr>");
             result.append("<tr><td>% advancement</td><td >"+trackExecution.percent+" % </td></tr>");
             result.append("<tr><td>Estimation duration</td><td>"+ TypesCast.getHumanDuration(trackExecution.endTimeEstimatedInMs, false)+"</td></tr>");
-            result.append("<tr><td>Hostname</td><td>"+ trackExecution.inExecutionHostName+"</td></tr>");
+            result.append("<tr><td>Hostname</td><td>"+ trackExecution.inExecutionHostName
+                    +"(" + trackExecution.inExecutionIpAddress+")" 
+                    + (trackExecution.inExecutionIpAddress.equals(localIpAddress) ? " (this host)":"") + "</td></tr>");
         }
         
         boolean foundThread=false;

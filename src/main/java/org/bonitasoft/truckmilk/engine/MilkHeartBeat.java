@@ -5,7 +5,7 @@ import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import org.bonitasoft.engine.service.TenantServiceAccessor;
+import org.bonitasoft.engine.connector.ConnectorAPIAccessorImpl;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerFactory;
@@ -127,7 +127,10 @@ public class MilkHeartBeat {
 
         }
         // Recreate a new job context here, with the local apiAccessor and TenantServiceAccessor
-        MilkJobContext milkJobContext= new MilkJobContext(milkJobFactory.getMilkPlugInFactory().getMilkJobContext().getTenantId(), milkCmdControl.getApiAccessor(), milkCmdControl.getTenantServiceAccessor());
+        // to be safe, generate a new apiAccessor
+        ConnectorAPIAccessorImpl apiAccessor = new ConnectorAPIAccessorImpl(milkJobFactory.getMilkPlugInFactory().getMilkJobContext().getTenantId());
+
+        MilkJobContext milkJobContext= new MilkJobContext(milkJobFactory.getMilkPlugInFactory().getMilkJobContext().getTenantId(), apiAccessor, milkCmdControl.getTenantServiceAccessor());
         
         // Advance the scheduler that we run now !
         milkSchedulerFactory.informRunInProgress(milkJobContext.getTenantId());

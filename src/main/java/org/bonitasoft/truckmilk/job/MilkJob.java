@@ -457,8 +457,9 @@ public @Data class MilkJob {
         return this.trackExecution.inExecutionHostName;
     }
 
-    public void setInExecutionHostName(String inExecutionHostName) {
-        this.trackExecution.inExecutionHostName = inExecutionHostName;
+    public void setInExecutionHostName(String hostName,String ipAddress) {
+        this.trackExecution.inExecutionHostName = hostName;
+        this.trackExecution.inExecutionIpAddress = ipAddress;
     }
 
     public String getHumanTimeEstimated(boolean withMs) {
@@ -534,14 +535,28 @@ public @Data class MilkJob {
         trackExecution.inExecution = inExecution;
     }
 
-    public void registerExecutionOnHost(String hostName) {
+    public void registerExecutionOnHost(String hostName, String ipAddress) {
         trackExecution.inExecutionHostName = hostName;
+        trackExecution.inExecutionIpAddress = ipAddress;
     }
-
-    public String getHostRegistered() {
+    public void registerExecutionOnThisHost() {
+        
+    try {
+        InetAddress ip = InetAddress.getLocalHost();
+        if (ip==null)
+            return;
+        trackExecution.inExecutionHostName = ip.getHostName();
+        trackExecution.inExecutionIpAddress = ip.getHostAddress();
+    } catch (UnknownHostException e1) {
+    }
+    }    
+    
+    public String getHostNameRegistered() {
         return trackExecution.inExecutionHostName;
     }
-
+    public String getIpAddressRegistered() {
+        return trackExecution.inExecutionIpAddress;
+    }
     /* ******************************************************************************** */
     /*                                                                                  */
     /*
@@ -1253,6 +1268,7 @@ public @Data class MilkJob {
 
         public String avancementInformation;
         public String inExecutionHostName;
+        public String inExecutionIpAddress;
 
         public TrackExecution() {
             // nothing to do at this moment in the constructor
@@ -1425,12 +1441,12 @@ public @Data class MilkJob {
     // keep a history of the last X execution. X is a parameters for each job.
     List<SavedExecution> listSavedExecution = new ArrayList<>();
 
-    public SavedExecution registerNewExecution(Date currentDate, ExecutionStatus executionOperation, String hostName, String reportInHtml) {
+    public SavedExecution registerNewExecution(Date currentDate, ExecutionStatus executionOperation, String reportInHtml) {
         // update the trackExecution
-        trackExecution.inExecutionHostName = hostName;
+        registerExecutionOnThisHost();
         trackExecution.startTime = currentDate.getTime();
         
-        SavedExecution savedExecution = new SavedExecution(currentDate, executionOperation, hostName, reportInHtml, new ArrayList<BEvent>());
+        SavedExecution savedExecution = new SavedExecution(currentDate, executionOperation, getHostNameRegistered(), reportInHtml, new ArrayList<BEvent>());
 
         addSavedExecution(savedExecution);
         return savedExecution;

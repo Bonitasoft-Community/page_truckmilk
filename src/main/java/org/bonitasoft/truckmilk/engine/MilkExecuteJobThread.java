@@ -26,6 +26,7 @@ import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.job.MilkJobMonitor;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
+import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
 /**
  * Create a Thread to execute a job
@@ -93,6 +94,7 @@ public class MilkExecuteJobThread extends Thread {
                 // check if we need to start now
                 if ( (milkJob.getNextExecutionDate() != null
                         && milkJob.getNextExecutionDate().getTime() <= currentDate.getTime())) {
+                    executionDescription.append("NextExecution:"+TypesCast.getHumanDate(milkJob.getNextExecutionDate())+" / CurrentDate:"+TypesCast.getHumanDate(currentDate)+" START");
                     start=true;
                 }
             }
@@ -140,7 +142,7 @@ public class MilkExecuteJobThread extends Thread {
         }
         MilkJobFactory milkJobFactory = milkJob.milkJobFactory;
         // register this host to start
-        milkJob.registerExecutionOnHost(ip.getHostAddress());
+        milkJob.registerExecutionOnThisHost();
 
         // logger.info("synchronizeClusterDoubleStart StartJob - instantiationHost [" + ip.getHostAddress() + "]");
 
@@ -154,11 +156,11 @@ public class MilkExecuteJobThread extends Thread {
 
         // ok, read it : is that still me ?
         MilkFactoryOp milkJobRead = milkJobFactory.dbLoadJob(milkJob.getId());
-        if (milkJobRead.job != null && milkJobRead.job.getHostRegistered().equals(ip.getHostAddress()))
+        if (milkJobRead.job != null && milkJobRead.job.getHostNameRegistered().equals(ip.getHostName()))
             return null; // that's me ! 
 
         // someone else steel my job, be fair, do nothing
-        return "synchronizeClusterDoubleStart: Jobs already register on["+ (milkJobRead.job == null ? "Can't read job" : milkJobRead.job.getHostRegistered()) + "] myself=[" + ip.getHostAddress() + "]";
+        return "synchronizeClusterDoubleStart: Jobs already register on["+ (milkJobRead.job == null ? "Can't read job" : milkJobRead.job.getHostNameRegistered()) + "] myself=[" + ip.getHostName() + "]";
     }
 
     /** now do the real execution */
@@ -174,9 +176,11 @@ public class MilkExecuteJobThread extends Thread {
         SavedExecution savedStartExecution=null;
         try {
             String hostName = "";
+            String ipAddress="";
             try {
                 InetAddress ip = InetAddress.getLocalHost();
-                hostName = ip.getHostName() + "(" + ip.getHostAddress() + ")";
+                hostName = ip.getHostName() ;
+                ipAddress = ip.getHostAddress();
             } catch (UnknownHostException e1) {
                 logger.severe("MilkExecuteJobThread: can't get the ipAddress, synchronization on a cluster can't work");
             }
@@ -190,7 +194,7 @@ public class MilkExecuteJobThread extends Thread {
             try {
 
                 milkReportEngine.reportHeartBeatInformation("Start Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")",false, false /* not a heatbreath */ );
-                savedStartExecution = milkJob.registerNewExecution(new Date(timeBegin), ExecutionStatus.START, hostName, "Start");
+                savedStartExecution = milkJob.registerNewExecution(new Date(timeBegin), ExecutionStatus.START, "Start");
                 // save the status in the database
                 // save the start Status (so general) and the track Status, plus askStop to false
                 listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceStartExecutionJob()));
