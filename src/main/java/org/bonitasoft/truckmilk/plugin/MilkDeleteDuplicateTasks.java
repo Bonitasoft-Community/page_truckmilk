@@ -83,7 +83,9 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
         plugInDescription.setName("DeleteDuplicateTasks");
         plugInDescription.setLabel("Delete Duplicate Tasks");
         plugInDescription.setCategory(CATEGORY.TASKS);
-        plugInDescription.setExplanation("3 operations: PURGE/ GET LIST / PURGE FROM LIST. Purge (or get the list of) archived case according the filter. Filter based on different process, and purge cases older than the delai. At each round with Purge / Purge From list, a maximum case are deleted. If the maximum is over than 100000, it's reduce to this limit.");
+        plugInDescription.setExplanation("3 operations: PURGE/ GET LIST / PURGE FROM LIST. Purge (or get the list of) archived case according the filter. Filter based on different process, and purge cases older than the delai. At each round with Purge / Purge From list, a maximum case are deleted. If the maximum is over than 100000, it's reduce to this limit.<br>"
+                +"PlugIn does a executeQuery(update flownode_instance set STATECATEGORY='CANCELLING'<br>" + 
+                "and then it does a  processAPI.setActivityStateByName( ActivityStates.CANCELLED_STATE)");
         plugInDescription.setWarning("A case purged can't be retrieved. Operation is final. Use with caution.");
         plugInDescription.addParameter(cstParamOperation);
         plugInDescription.addParameter(cstParamProcessFilter);
@@ -128,13 +130,15 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
                 return milkJobOutput;
             }
             StringBuilder listProcessesId = new StringBuilder();
-            for (ProcessDeploymentInfo processDeployment : listProcessResult.listProcessDeploymentInfo) {
-                if (listProcessesId.length() > 0)
-                    listProcessesId.append(", ");
-                listProcessesId.append("?");
-                parameters.add(processDeployment.getProcessId());
+            if (! listProcessResult.listProcessDeploymentInfo.isEmpty() ) {
+                for (ProcessDeploymentInfo processDeployment : listProcessResult.listProcessDeploymentInfo) {
+                    if (listProcessesId.length() > 0)
+                        listProcessesId.append(", ");
+                    listProcessesId.append("?");
+                    parameters.add(processDeployment.getProcessId());
+                }
+                sqlRequest.append(" and pd.processid in (" + listProcessesId.toString() + ")");
             }
-            sqlRequest.append(" and pd.processid in (" + listProcessesId.toString() + ")");
             sqlRequest.append(" order by b.id");
 
             milkJobOutput.addReportInHtml(sqlRequest.toString() + "<br>");
