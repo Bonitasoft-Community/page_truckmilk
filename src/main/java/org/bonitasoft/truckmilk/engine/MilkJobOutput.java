@@ -1,6 +1,7 @@
 package org.bonitasoft.truckmilk.engine;
 
 import java.io.InputStream;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -148,9 +149,12 @@ public class MilkJobOutput {
         StringBuilder tableLines = new StringBuilder();
 
         tableLines.append("<tr>");
+        NumberFormat nf = NumberFormat.getInstance();
+        
+                
         for (Object colValue : values) {
             if (colValue instanceof Long || colValue instanceof Integer || colValue instanceof Double)
-                tableLines.append("<td style=\"text-align:right\">" + colValue + "</td>");
+                tableLines.append("<td style=\"text-align:right\">" + nf.format(colValue) + "</td>");
             else
                 tableLines.append("<td>" + colValue + "</td>");
         }
