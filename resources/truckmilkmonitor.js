@@ -776,7 +776,8 @@
 				}
 				self.inprogress=false;
 				// console.log("showthreaddump result="+angular.toJson(jsonResult.data, false));
-				milkJobSelf.threadDump 			=  jsonResult.data.threadDump;
+				milkJobSelf.threadDump 			= jsonResult.data.threadDump;
+				milkJobSelf.listeventthreaddump = jsonResult.data.listevents;
 				return;
 			}, function ( jsonResult ) {
 				console.log("showthreaddump HTTP THEN");
@@ -891,6 +892,7 @@
 		 */
 		this.showreportdetail= function( milkJob, savedExec, fromTabReport ) {
 			// console.log("showReportDetail milkJobId=["+ milkJob.id+"], fromTabReport="+fromTabReport);
+			savedExec.showThisReportDetail=true;
 			var self=this;
 			self.inprogress=true;
 			self.fromTabReport= fromTabReport;
@@ -1472,6 +1474,9 @@
 			return $sce.trustAsHtml(listevents);
 		}
 
+		this.getFormatNumber = function( number ) {
+			return number.toLocaleString();
+		}
 		// -----------------------------------------------------------------------------------------
 		// Delay Widget
 		// -----------------------------------------------------------------------------------------

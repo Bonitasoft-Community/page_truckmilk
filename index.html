@@ -91,7 +91,7 @@
 					<div style="font-style: italic;">
 					The <span style="color: red;font-weight: bold;">B</span>onita <span style="color: red;font-weight: bold;">SC</span>heduler&nbsp;
 					</div>
-					<a href="" >V2.5.0 (July 16, 2020)</a>
+					<a href="" >V2.5.0 (July 22, 2020)</a>
 				</center>
 			</td></tr>
 			<tr><td>
@@ -384,6 +384,7 @@
 									</div>
 										<div class="panel-body"></div>
 										<div ng-bind-html="ctrl.getHtml(plugtour.threadDump, 'threaddump')"></div>
+										<div ng-bind-html="ctrl.getHtml(plugtour.listeventthreaddump, 'threaddumpevent')"></div>
 									</div> <!-- panel body -->
 								</div> <!--  panel info -->
 							</div> <!--  shadow -->
@@ -1160,7 +1161,7 @@
 													</div>												
 												</td>
 												<td>{{savedExec.hostname}}</td>
-												<td style="text-align:right">{{savedExec.itemprocessed}}</td>
+												<td style="text-align:right">{{ctrl.getFormatNumber(savedExec.itemprocessed)}}</td>
 												<td style="text-align:right">{{savedExec.timeinmsst}}<br>
 													<span style="font-size:small">({{savedExec.timeinms}} ms)</span>
 												</td>
@@ -1372,19 +1373,34 @@
 							</td>
 												
 							<td ><div ng-if="ctrl.reports.showhost">{{savedExec.hostname}}</div></td>
-							<td style="text-align:right">{{savedExec.itemprocessed}}</td>
+							<td style="text-align:right">{{ctrl.getFormatNumber(savedExec.itemprocessed)}}</td>
 							<td style="text-align:right">{{savedExec.timeinmsst}}<br>
 								<span style="font-size:small">({{savedExec.timeinms}} ms)</span></td>
 						</tr>
-						<tr ng-if="ctrl.reports.showcontent">
-							<td></td>
-							<td colspan="6">
-								<table>
-									<tr>
-										<td style="padding: 10px; vertical-align:top"><div ng-bind-html="ctrl.getHtml( savedExec.reportinhtml, 'report')"></div></td>
-										<td style="padding: 10px; vertical-align:top" ng-if="ctrl.reports.showdetail"><div ng-bind-html="ctrl.getHtml( savedExec.listevents, 'saveExecListEvents plugtour='+plugtour.id+'savedExec.execDateSt='+savedExec.execDateSt )"></div></td>
-									</tr>
-								</table>
+						<tr ng-if="ctrl.reports.showcontent && savedExec.showThisReportDetail">							
+							<td colspan="8">
+								<div  style="box-shadow: 1px 1px 12px #555;">
+									<div class="panel panel-info">
+										<div class="panel-heading">
+											<h5 class="panel-title">Report</h5>
+											<div style="position: relative; top: -25px; right: 0px; font-size: 18px; float:right">
+													<a  ng-click="savedExec.showThisReportDetail=false" >
+													<span class="glyphicon glyphicon-remove" ></span>
+													</a>
+											</div>
+										</div>
+										<!--  Panel SHOW REPORT -->
+										<div class="panel-body">	
+											<table>
+												<tr>
+													<td style="padding: 10px; vertical-align:top"><div ng-bind-html="ctrl.getHtml( savedExec.reportinhtml, 'report')"></div></td>
+													<td style="padding: 10px; vertical-align:top" ng-if="ctrl.reports.showdetail"><div ng-bind-html="ctrl.getHtml( savedExec.listevents, 'saveExecListEvents plugtour='+plugtour.id+'savedExec.execDateSt='+savedExec.execDateSt )"></div></td>
+												</tr>
+											</table>
+										</div>
+									</div>
+								</div>
+								
 							</td>
 						</tbody>
 					</table>
@@ -1521,6 +1537,7 @@
 						<tr><td style="vertical-align:top">
 							<table>
 								<tr><td style="vertical-align:top">
+								<center>
 								<h3>
 									<div ng-if="ctrl.scheduler.status=='STARTED'">
 										<div class="label label-success " >
@@ -1537,24 +1554,28 @@
 											<span class="glyphicon glyphicon-ban-circle"> INACTIF
 										</div>
 									</div>
-									</h3>
+								</h3>
+								</center>
 								</tr>
 								<tr>
 									<td  style="padding: 10px;">
-										<div ng-if="ctrl.scheduler.status === 'STARTED'">
-											<button ng-click="ctrl.schedulerOperation( false )" class="btn btn-primary btn-xs" ng-disabled="ctrl.inprogress">
-												Stop
-											</button>
-										</div>
-										<div ng-if="ctrl.scheduler.status ==='SHUTDOWN' || ctrl.scheduler.status==='STOPPED'">					
-											<button ng-click="ctrl.schedulerOperation( true )" class="btn btn-primary btn-xs" ng-disabled="ctrl.inprogress">
-												Start
-											</button>
-										</div>
-										<button ng-click="ctrl.schedulerMaintenance('reset')" class="btn btn-warning btn-xs" ng-disabled="ctrl.inprogress" title="Reset the scheduler (Shutdown, Started)">
-											Reset
-										</button>
-										
+										<table> <tr>
+											<td ng-if="ctrl.scheduler.status === 'STARTED'" style="padding: 10px;">
+												<button ng-click="ctrl.schedulerOperation( false )" class="btn btn-primary btn-xs" ng-disabled="ctrl.inprogress">
+													Stop Scheduler
+												</button>
+											</td>										
+											<td ng-if="ctrl.scheduler.status ==='SHUTDOWN' || ctrl.scheduler.status==='STOPPED'" style="padding: 10px;">					
+												<button ng-click="ctrl.schedulerOperation( true )" class="btn btn-primary btn-xs" ng-disabled="ctrl.inprogress">
+													Start Scheduler
+												</button>
+											</td>
+											<td style="padding: 10px;">
+												<button ng-click="ctrl.schedulerMaintenance('reset')" class="btn btn-warning btn-xs" ng-disabled="ctrl.inprogress" title="Reset the scheduler (Shutdown, Started)">
+													Reset Scheduler
+												</button>
+											</td>
+										</tr> </table>
 									</td>
 								</tr>
 								<tr>
