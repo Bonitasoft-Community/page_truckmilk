@@ -54,7 +54,7 @@ public class MilkJobMonitor {
             result.append("<tr><td>Estimation duration</td><td>"+ TypesCast.getHumanDuration(trackExecution.endTimeEstimatedInMs, false)+"</td></tr>");
             result.append("<tr><td>Hostname</td><td>"+ trackExecution.inExecutionHostName
                     +"(" + trackExecution.inExecutionIpAddress+")" 
-                    + (trackExecution.inExecutionIpAddress.equals(localIpAddress) ? " (this host)":"") + "</td></tr>");
+                    + (localIpAddress.equals(trackExecution.inExecutionIpAddress) ? " (this host)":"") + "</td></tr>");
         }
         
         boolean foundThread=false;

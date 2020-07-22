@@ -55,6 +55,7 @@ public class MilkConstantJson {
     public final static String CSTJSON_LAST_EXECUTION_STATUS = "lastexecutionstatus";
     public final static String CSTJSON_IN_EXECUTION = "inExecution";
     public final static String CSTJSON_INEXECUTION_HOST = "inExecutionHost";
+    public final static String CSTJSON_INEXECUTION_IPADDRESS = "inExecutionIpAddress";
     public final static String CSTJSON_INEXECUTION_STARTTIME = "inExecutionStartTime";
     public final static String CSTJSON_INEXECUTION_PERCENT = "inExecutionPercent";
     public final static String CSTJSON_INEXECUTION_AVANCEMENTINFORMATION = "inExecutionInfo";    
