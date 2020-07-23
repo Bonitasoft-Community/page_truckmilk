@@ -280,7 +280,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
         StatsResult statsResult = new StatsResult();
 
         // StringBuilder finalReport = new StringBuilder();
-        List<Object[]>  listFinalReport = new ArrayList<>();
+        List<Object[]> listFinalReport = new ArrayList<>();
         CSVOperation csvOperationOuput = new CSVOperation();
         // collect the number of Active and Disable process at beginning
         long nbEnableProcessBefore = countNumberOfProcesses(Boolean.TRUE, processAPI);
@@ -329,26 +329,26 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             // --------------------------  Options
             if (Boolean.TRUE.equals(disabled)) {
                 StatsResult statsResultOp = deleteBasedOnDisabled(jobExecution, doTheDeletion, listProcessPerimeters, setExclude, csvOperationOuput, milkJobOutput);
-                listFinalReport.add( new Object[] { "<div class='label label-info'>Criteria Delete Disabled</div> "+(doTheDeletion ? " deleted" : " detected"), statsResultOp.processesPurged });
-                listFinalReport.add( new Object[] { "<li>Process with    active Process Instance :", statsResultOp.processesWithActiveInstance });
-                listFinalReport.add( new Object[] { "<li>Process with No active Process Instance :", statsResultOp.processesWithNoActiveInstance });
+                listFinalReport.add(new Object[] { "<div class='label label-info'>Criteria Delete Disabled</div> " + (doTheDeletion ? " deleted" : " detected"), statsResultOp.processesPurged });
+                listFinalReport.add(new Object[] { "<li>Process with    active Process Instance :", statsResultOp.processesWithActiveInstance });
+                listFinalReport.add(new Object[] { "<li>Process with No active Process Instance :", statsResultOp.processesWithNoActiveInstance });
 
                 statsResult.add(statsResultOp);
             }
 
             if (Boolean.TRUE.equals(notUsed)) {
                 StatsResult statsResultOp = deleteBasedOnNotUsed(jobExecution, doTheDeletion, listProcessPerimeters, setExclude, csvOperationOuput, milkJobOutput);
-                listFinalReport.add( new Object[] { "<div class='label label-info'>Criteria Delete Not Used</div> "+ (doTheDeletion ? "deleted" : " detected"), statsResultOp.processesPurged  });
-                listFinalReport.add( new Object[] { "<li>Process with    active Process Instance :", statsResultOp.processesWithActiveInstance });
-                listFinalReport.add( new Object[] { "<li>Process with No active Process Instance :", statsResultOp.processesWithNoActiveInstance });
+                listFinalReport.add(new Object[] { "<div class='label label-info'>Criteria Delete Not Used</div> " + (doTheDeletion ? "deleted" : " detected"), statsResultOp.processesPurged });
+                listFinalReport.add(new Object[] { "<li>Process with    active Process Instance :", statsResultOp.processesWithActiveInstance });
+                listFinalReport.add(new Object[] { "<li>Process with No active Process Instance :", statsResultOp.processesWithNoActiveInstance });
                 statsResult.add(statsResultOp);
             }
 
             if (Boolean.TRUE.equals(maxVersion)) {
                 StatsResult statsResultOp = deleteBasedOnMaxVersion(jobExecution, doTheDeletion, listProcessPerimeters, setExclude, csvOperationOuput, milkJobOutput);
-                listFinalReport.add( new Object[] { "<div class='label label-info'>Criteria Delete Max Version</div> "+(doTheDeletion ? "deleted" : " detected"), statsResultOp.processesPurged  });
-                listFinalReport.add( new Object[] { "<li>Process with    active Process Instance :", statsResultOp.processesWithActiveInstance });
-                listFinalReport.add( new Object[] { "<li>Process with No active Process Instance :", statsResultOp.processesWithNoActiveInstance });
+                listFinalReport.add(new Object[] { "<div class='label label-info'>Criteria Delete Max Version</div> " + (doTheDeletion ? "deleted" : " detected"), statsResultOp.processesPurged });
+                listFinalReport.add(new Object[] { "<li>Process with    active Process Instance :", statsResultOp.processesWithActiveInstance });
+                listFinalReport.add(new Object[] { "<li>Process with No active Process Instance :", statsResultOp.processesWithNoActiveInstance });
                 statsResult.add(statsResultOp);
             }
             csvOperationOuput.closeAndWriteToParameter(milkJobOutput, cstParamListOfProcessesDocument);
@@ -367,8 +367,8 @@ public class MilkDeleteProcesses extends MilkPlugIn {
 
         milkJobOutput.addReportTableBegin(new String[] { "", "" });
         for (Object[] line : listFinalReport)
-            milkJobOutput.addReportTableLine( line );
-        listFinalReport.add( new Object[] { "<div class='label label-info'>Conclusion</div> :", ""});
+            milkJobOutput.addReportTableLine(line);
+        listFinalReport.add(new Object[] { "<div class='label label-info'>Conclusion</div> :", "" });
 
         if (doTheDeletion) {
             long nbEnableProcessAfter = countNumberOfProcesses(Boolean.TRUE, processAPI);
@@ -502,7 +502,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             if (jobExecution.pleaseStop())
                 break;
             jobExecution.setAvancement(60 + (int) (30.0 * count / listProcess.size()));
-            
+
             count++;
 
             if (Boolean.TRUE.equals(keepLastVersion)) {
@@ -609,16 +609,25 @@ public class MilkDeleteProcesses extends MilkPlugIn {
                         CountCases countCases = countCasesInProcess(processDeploymentInfo, true, true, false, processAPI);
 
                         try {
-                            processAPI.disableProcess(processDeploymentInfo.getProcessId());
-                            statsResult.status = "Deactivation";
-                            statsResultProcess.statusLevel = STATUSLEVEL.SUCCESS;
-
+                            if (ActivationState.ENABLED.equals(processDeploymentInfo.getActivationState())) {
+                                if (doTheDeletion) {
+                                    processAPI.disableProcess(processDeploymentInfo.getProcessId());
+                                    statsResultProcess.status = "Deactivation";
+                                    statsResultProcess.statusLevel = STATUSLEVEL.SUCCESS;
+                                } else {
+                                    statsResultProcess.status = "To be Deactivate";
+                                    statsResultProcess.statusLevel = STATUSLEVEL.INFO;
+                                }
+                                
+                                milkJobOutput.nbItemsProcessed++;
+                                reportLine(processDeploymentInfo, i, countCases.countActives, countCases.countArchived, statsResultProcess.status, statsResultProcess.statusLevel, csvOperation, milkJobOutput);
+                            }
                         } catch (Exception e) {
                             milkJobOutput.addEvent(new BEvent(eventDisableFailed, e, getReportProcessName(processDeploymentInfo) + " Exception " + e.getMessage()));
-                            statsResult.status = "Deactivation error";
+                            statsResultProcess.status = "Deactivation error";
                             statsResultProcess.statusLevel = STATUSLEVEL.ERROR;
+                            reportLine(processDeploymentInfo, i, countCases.countActives, countCases.countArchived, statsResultProcess.status, statsResultProcess.statusLevel, csvOperation, milkJobOutput);
                         }
-                        reportLine(processDeploymentInfo, i, countCases.countActives, countCases.countArchived, statsResultProcess.status, statsResultProcess.statusLevel, csvOperation, milkJobOutput);
                         statsResult.add(statsResultProcess);
 
                         continue;
@@ -691,9 +700,9 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             MilkJobExecution jobExecution,
             MilkJobOutput milkJobOutput) {
         StatsResult statsResult = new StatsResult();
-        
+
         jobExecution.setAvancementInformation("Study [" + getReportProcessName(processDeploymentInfo) + "]");
-        
+
         // According the PurgeCase Policy, calculate if the process is in the scope or not
         CountCases countCases = countCasesInProcess(processDeploymentInfo, true, true, false, processAPI);
 
@@ -1170,7 +1179,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
         if (rangeInTheVersion == null) {
             milkJobOutput.addReportTableLine(new Object[] { processDeploymentInfo.getName(),
                     processDeploymentInfo.getVersion(),
-                    processDeploymentInfo.getProcessId(),
+                    String.valueOf( processDeploymentInfo.getProcessId() ), // do not format
                     activeCases,
                     archiveCases,
                     getStatusForReport(status, level) });
@@ -1178,7 +1187,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
         } else {
             milkJobOutput.addReportTableLine(new Object[] { processDeploymentInfo.getName(),
                     processDeploymentInfo.getVersion(),
-                    processDeploymentInfo.getProcessId(),
+                    String.valueOf( processDeploymentInfo.getProcessId() ),// do not format
                     rangeInTheVersion,
                     activeCases,
                     archiveCases,
