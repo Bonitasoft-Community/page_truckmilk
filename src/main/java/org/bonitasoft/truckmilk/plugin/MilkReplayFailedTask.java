@@ -1,6 +1,6 @@
 package org.bonitasoft.truckmilk.plugin;
 
-import java.util.ArrayList;
+import java.util.ArrayList; 
 import java.util.Date;
 import java.util.List;
 
@@ -49,6 +49,10 @@ public class MilkReplayFailedTask extends MilkPlugIn {
     private static BEvent eventSearchFailed = new BEvent(MilkCmdControl.class.getName(), 4, Level.ERROR,
             "Search failed", "Search failed task return an error", "No retry can be performed", "Check the error");
 
+    private final static String CSTACTION_REPLAY = "Replay";
+    private final static String CSTACTION_SKIP = "Skip";
+
+    
     private static PlugInParameter cstParamDelay = PlugInParameter.createInstanceDelay("delay", "Delay", DELAYSCOPE.MN, 5, "Delay before asking to replay a failed task");
     private static PlugInParameter cstParamMaximumTentatives = PlugInParameter.createInstance("maxtentative", "Max tentatives", TypeParameter.LONG, 5, "Maximum tentative to replay a failed task. After this number of tentative, job will not try to replay it.");
     private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Process Filter", TypeParameter.ARRAYPROCESSNAME, null, "List of processes in the perimeter. If no filter is given, all processes are in the perimeter")
@@ -56,6 +60,11 @@ public class MilkReplayFailedTask extends MilkPlugIn {
 
     private static PlugInParameter cstParamNumberOfTasks = PlugInParameter.createInstance("NumberOfTasks", "Number of tasks", TypeParameter.LONG, 1000, "Number of failed tasks detected, and replayed.");
     private static PlugInParameter cstParamOnlyDetection = PlugInParameter.createInstance("OnlyDetection", "Only Detection", TypeParameter.BOOLEAN, Boolean.FALSE, "Only detection, do not replay tasks");
+    private static PlugInParameter cstParamActionOnTasks = PlugInParameter.createInstanceListValues("actiononTasks", "Action on tasks : Replay or Skip",
+            new String[] { CSTACTION_REPLAY, CSTACTION_SKIP }, CSTACTION_REPLAY, "Task are replay, or skipped")
+            .withVisibleConditionParameterValueEqual(cstParamOnlyDetection, false);
+
+
     private static PlugInParameter cstParamTasksInReport = PlugInParameter.createInstance("TasksInReport", "Task and case in report", TypeParameter.BOOLEAN, Boolean.FALSE, "In the report, the list of Task/Case processed is saved");
 
     public MilkReplayFailedTask() {
@@ -87,7 +96,9 @@ public class MilkReplayFailedTask extends MilkPlugIn {
         long retrySuccess = 0;
         long retrySkip = 0;
         Long numberOfTasks = jobExecution.getInputLongParameter(cstParamNumberOfTasks);
+        
         Boolean onlyDetection = jobExecution.getInputBooleanParameter(cstParamOnlyDetection);
+        String policy = jobExecution.getInputStringParameter(cstParamActionOnTasks);
         Boolean tasksInReport = jobExecution.getInputBooleanParameter(cstParamTasksInReport);
 
         try {
@@ -144,7 +155,10 @@ public class MilkReplayFailedTask extends MilkPlugIn {
                         if ((onlyDetection != null) && Boolean.FALSE.equals(onlyDetection)) {
                             // add the comment
                             processAPI.addProcessComment(activityInstance.getRootContainerId(), commentString.toString());
-                            processAPI.retryTask(activityInstance.getId());
+                            if (CSTACTION_REPLAY.equals(policy))
+                                    processAPI.retryTask(activityInstance.getId());
+                            else
+                                processAPI.setActivityStateByName(activityInstance.getId(), ActivityStates.SKIPPED_STATE);
                             listTasksCases.append(activityInstance.getId() + "/" + activityInstance.getRootContainerId() + ", ");
                             retrySuccess++;
                         }
@@ -156,6 +170,7 @@ public class MilkReplayFailedTask extends MilkPlugIn {
                     retryFailed++;
                 }
             }
+            plugTourOutput.nbItemsProcessed=retrySuccess;
             if (retryFailed > 0) {
                 plugTourOutput.addEvent(new BEvent(eventRetryFailed,
                         collectFirstException,
@@ -189,6 +204,7 @@ public class MilkReplayFailedTask extends MilkPlugIn {
         plugInDescription.addParameter(cstParamProcessFilter);
         plugInDescription.addParameter(cstParamNumberOfTasks);
         plugInDescription.addParameter(cstParamOnlyDetection);
+        plugInDescription.addParameter(cstParamActionOnTasks);
         plugInDescription.addParameter(cstParamTasksInReport);
 
         plugInDescription.setJobCanBeStopped(JOBSTOPPER.BOTH);
