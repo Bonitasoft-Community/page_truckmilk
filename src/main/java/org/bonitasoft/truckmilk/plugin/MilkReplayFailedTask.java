@@ -162,6 +162,8 @@ public class MilkReplayFailedTask extends MilkPlugIn {
                             listTasksCases.append(activityInstance.getId() + "/" + activityInstance.getRootContainerId() + ", ");
                             retrySuccess++;
                         }
+                        else
+                            retrySuccess++;
                     }
                 } catch (Exception e) {
                     logger.severe("Error Retry rootContainerId=[" + activityInstance.getRootContainerId() + "] ActiId[" + activityInstance.getId() + "] Error[" + e.getMessage() + "]");
