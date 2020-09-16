@@ -103,7 +103,9 @@ public class MilkMeteor extends MilkPlugIn {
             
             if (MeteorSimulation.STATUS.DONE.toString().equals( statusSimulation )) {
                 stillWait=false;
-                plugTourOutput.addEvent(new BEvent( eventExecutionSuccessfull, "Test executed with success : SimulationId["+simulationId+"]" ));
+                String total = (String) resultStatus.get( "total");
+
+                plugTourOutput.addEvent(new BEvent( eventExecutionSuccessfull, "Test executed with success : SimulationId["+simulationId+"] "+total ));
 
                 plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
             
@@ -125,7 +127,7 @@ public class MilkMeteor extends MilkPlugIn {
         if (jobExecution.pleaseStop())
         {
             plugTourOutput.addEvent(new BEvent( eventExecutionDontFinish, "SimulationId["+simulationId+"] ScenarioName["+scenarioName+"]" ));
-            plugTourOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
+            plugTourOutput.executionStatus = ExecutionStatus.ERROR; // scenarion isn't finish in the expected time, this is an error
 
         }
         return plugTourOutput;

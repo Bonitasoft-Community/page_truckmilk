@@ -29,6 +29,7 @@ import org.bonitasoft.truckmilk.plugin.MilkRadarBonitaEngine;
 import org.bonitasoft.truckmilk.plugin.MilkReplayFailedTask;
 import org.bonitasoft.truckmilk.plugin.MilkRestartFlowNodes;
 import org.bonitasoft.truckmilk.plugin.MilkSLA;
+import org.bonitasoft.truckmilk.plugin.MilkSonar;
 import org.bonitasoft.truckmilk.plugin.MilkUnassignTasks;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
@@ -103,6 +104,7 @@ public class MilkPlugInFactory {
         listPlugIns.add(new MilkDeleteDuplicateTasks() );
         listPlugIns.add(new MilkLogObserver() );
         listPlugIns.add(new MilkDeleteProcesses() );
+        listPlugIns.add(new MilkSonar() );
     }
 
     /**

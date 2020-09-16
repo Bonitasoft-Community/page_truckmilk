@@ -25,6 +25,10 @@ import org.bonitasoft.truckmilk.job.MilkJobContext;
 /* ******************************************************************************** */
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 
+/**
+ * Register the embeded plug in in MilkPlugInFactory.collectListPlugIn()
+ *
+ */
 public class MilkPing extends MilkPlugIn {
 
     private final static PlugInParameter cstParamAddDate = PlugInParameter.createInstance("addDate", "Add a date", TypeParameter.BOOLEAN, true, "If set, the date of execution is added in the status of execution");

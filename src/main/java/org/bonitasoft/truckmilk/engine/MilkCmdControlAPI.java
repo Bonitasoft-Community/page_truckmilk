@@ -113,7 +113,7 @@ public class MilkCmdControlAPI {
         BonitaCommandDescription commandDescription = new BonitaCommandDescription(MilkCmdControl.cstCommandName, pageDirectory);
         commandDescription.forceDeploy = false;
         commandDescription.mainCommandClassName = MilkCmdControl.class.getName();
-        commandDescription.mainJarFile = "TruckMilk-2.5-Page.jar";
+        commandDescription.mainJarFile = "TruckMilk-2.6-Page.jar";
         commandDescription.commandDescription = MilkCmdControl.cstCommandDescription;
 
 
@@ -123,15 +123,24 @@ public class MilkCmdControlAPI {
         cmdDependency=commandDescription.addJarDependencyLastVersion(BonitaCommandDeployment.NAME, BonitaCommandDeployment.VERSION, BonitaCommandDeployment.JAR_NAME);
         cmdDependency.setForceDeploy( true );
         
+        commandDescription.addJarDependencyLastVersion("mail", "1.5.0", "mail-1.5.0-b01.jar");
+        commandDescription.addJarDependencyLastVersion("activation", "1.1.1", "activation-1.1.1.jar");
             
         cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-event", "1.9.0", "bonita-event-1.9.0.jar");
         cmdDependency.setForceDeploy( true );
 
-        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.4.0", "bonita-properties-2.4.0.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.6.0", "bonita-properties-2.6.0.jar");
         cmdDependency.setForceDeploy( true );
 
-        commandDescription.addJarDependencyLastVersion("mail", "1.5.0", "mail-1.5.0-b01.jar");
-        commandDescription.addJarDependencyLastVersion("activation", "1.1.1", "activation-1.1.1.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-meteor", "3.2.0", "CustomPageMeteor-3.2.0.jar");
+        cmdDependency.setForceDeploy( true );
+
+        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-sonar", "1.1.0", "CustomPageSonar-1.1.0.jar");
+        cmdDependency.setForceDeploy( true );
+
+        cmdDependency=commandDescription.addJarDependencyLastVersion("CodeNarc", "1.6.1", "CodeNarc-1.6.1.jar");
+        cmdDependency.setForceDeploy( true );
+
         cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-worker", "1.8.0", "CustomPageWorker-1.8.0.jar");
         cmdDependency.setForceDeploy( true );
         

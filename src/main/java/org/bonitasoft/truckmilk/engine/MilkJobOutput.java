@@ -78,6 +78,11 @@ public class MilkJobOutput {
         this.nbItemsProcessed = nbItemsProcessed;
     }
 
+    /**
+     * Set a parameterStream ==> WRITE
+     * @param param
+     * @param stream
+     */
     public void setParameterStream(PlugInParameter param, InputStream stream) {
         if (param.typeParameter == TypeParameter.FILEWRITE || param.typeParameter == TypeParameter.FILEREADWRITE) {
             // update the PLUGIN parameters

@@ -419,7 +419,10 @@ public @Data class MilkJob {
     public long getPercent() {
         return this.trackExecution.percent;
     }
-
+    /**
+     * give a percent
+     * @param percent 0<= x <=100
+     */
     public void setPercent(long percent) {
         this.trackExecution.percent = percent;
     }
