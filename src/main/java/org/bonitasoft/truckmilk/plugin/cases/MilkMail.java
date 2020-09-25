@@ -1,4 +1,4 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.cases;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +34,7 @@ public class MilkMail extends MilkPlugIn {
     };
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution input) {
+    public MilkJobOutput executeJob(MilkJobExecution input) {
         return input.getMilkJobOutput();
         
     }

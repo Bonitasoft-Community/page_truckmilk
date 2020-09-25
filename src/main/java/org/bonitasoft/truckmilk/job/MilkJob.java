@@ -29,7 +29,7 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.DelayResult;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 import org.json.simple.JSONValue;
@@ -1210,7 +1210,8 @@ public @Data class MilkJob {
                     valueScope = plugInParameter.defaultValue;
                 if (valueScope == null)
                     valueScope = "";
-                DelayResult delayResult = MilkPlugInToolbox.getTimeFromDelay(null, valueScope.toString(), new Date(), true);
+                
+                DelayResult delayResult = MilkJobExecution.getTimeFromDelay(null,valueScope.toString(), new Date(), true);
                 valueMapDelay.put(MilkConstantJson.CSTJSON_PARAMETER_DELAY_SCOPE, delayResult.scopeInput.toString());
                 valueMapDelay.put(MilkConstantJson.CSTJSON_PARAMETER_DELAY_VALUE, delayResult.delayInput);
                 mapParametersValue.put(plugInParameter.name, valueMapDelay);

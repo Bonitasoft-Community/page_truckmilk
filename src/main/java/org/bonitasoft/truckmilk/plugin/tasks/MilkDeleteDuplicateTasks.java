@@ -1,8 +1,7 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.tasks;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -15,22 +14,20 @@ import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfo;
 import org.bonitasoft.engine.exception.SearchException;
 import org.bonitasoft.engine.search.SearchOptionsBuilder;
 import org.bonitasoft.log.event.BEvent;
-import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.log.event.BEvent.Level;
+import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.properties.BonitaEngineConnection;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput.Chronometer;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMeasurement;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.ListProcessesResult;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
 public class MilkDeleteDuplicateTasks extends MilkPlugIn {
@@ -99,7 +96,7 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
     }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
+    public MilkJobOutput executeJob(MilkJobExecution jobExecution) {
         MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
 
         ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
@@ -121,7 +118,7 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
         SearchOptionsBuilder sob = new SearchOptionsBuilder(0, 100);
 
         try {
-            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, sob, ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, jobExecution.getApiAccessor().getProcessAPI());
+            ListProcessesResult listProcessResult = jobExecution.getInputArrayProcess( cstParamProcessFilter, false, sob, ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, jobExecution.getApiAccessor().getProcessAPI());
 
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
@@ -174,7 +171,7 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
                 jobExecution.setAvancementTotalStep(max);
 
                 for (int i = 0; i < max; i++) {
-                    if (jobExecution.pleaseStop())
+                    if (jobExecution.isStopRequired())
                         break;
                     Map<String, Object> report = listResult.get(i);
                     jobExecution.setAvancementStep(i);

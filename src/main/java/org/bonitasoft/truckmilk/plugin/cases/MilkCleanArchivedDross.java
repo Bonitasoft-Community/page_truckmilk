@@ -1,4 +1,4 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.cases;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -88,7 +88,7 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
     }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
+    public MilkJobOutput executeJob(MilkJobExecution jobExecution) {
         List<BEvent> listEvents = new ArrayList<>();
 
         MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
@@ -110,7 +110,7 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
         //------------------------------- detection
         if (cstOperationDetection.equals(operation)) {
             for (TypeDrossDefinition typeDross : listTypeDross) {
-                if (jobExecution.pleaseStop())
+                if (jobExecution.isStopRequired())
                     break;
 
                 advancementStep++;
@@ -149,7 +149,7 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
             totalDross = 0; // we want to count the number of deletion 
             // first get the
             for (TypeDrossDefinition typeDross : listTypeDross) {
-                if (jobExecution.pleaseStop()) {
+                if (jobExecution.isStopRequired()) {
                     logger.info(loggerHeader + "Stop Asked type[" + typeDross.name + "] " + jobExecution.getStopExplanation());
                     break;
                 }
@@ -225,7 +225,7 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
 
         public boolean pleaseStop(int numberOfDeletion) {
             jobExecution.addManagedItems(numberOfDeletion);
-            return jobExecution.pleaseStop();
+            return jobExecution.isStopRequired();
         }
 
         @Override

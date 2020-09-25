@@ -1,4 +1,4 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.tasks;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -110,7 +110,7 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
 
     @SuppressWarnings("unchecked")
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
+    public MilkJobOutput executeJob(MilkJobExecution jobExecution) {
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         // read profiles
@@ -133,7 +133,7 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
             List<Long> listProfileId = new ArrayList<>();
             for (int i = 0; i < listProfilesName.size(); i++) {
                 jobExecution.setAvancementTotalStep(baseAdvancement + (100 * i) / listProfilesName.size());
-                if (jobExecution.pleaseStop())
+                if (jobExecution.isStopRequired())
                     break;
 
                 SearchOptionsBuilder searchOptionsBuilder = new SearchOptionsBuilder(0, 10000);
@@ -160,7 +160,7 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
             SearchOptionsBuilder searchOptionsBuilder = new SearchOptionsBuilder(0, 10000);
             for (int i = 0; i < listProfileId.size(); i++) {
                 jobExecution.setAvancementTotalStep(baseAdvancement + (100 * i) / listProfileId.size());
-                if (jobExecution.pleaseStop())
+                if (jobExecution.isStopRequired())
                     break;
 
                 if (i > 0)
@@ -208,7 +208,7 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
             for (int i = 0; i < userIdToSendEmail.size(); i++) {
 
                 jobExecution.setAvancementTotalStep(baseAdvancement + (100L * i) / userIdToSendEmail.size());
-                if (jobExecution.pleaseStop())
+                if (jobExecution.isStopRequired())
                     break;
 
                 Long userId = userIdToSendEmail.get(i);
@@ -269,7 +269,7 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
                     totalMessageOperationSt = totalMessageOperationSt.substring(0, 1000) + "...";
                 plugTourOutput.addEvent(new BEvent(EVENT_OPERATION_ERROR, "Users checks: " + userIdToSendEmail.size() + ", Emails sent: " + numberOfEmailsSent + ",Error:" + totalMessageOperationSt));
             }
-            if (plugTourOutput.executionStatus == ExecutionStatus.SUCCESS && jobExecution.pleaseStop())
+            if (plugTourOutput.executionStatus == ExecutionStatus.SUCCESS && jobExecution.isStopRequired())
                 plugTourOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
 
         } catch (Exception e) {

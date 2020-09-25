@@ -1,4 +1,4 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.cases;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -13,11 +13,8 @@ import org.bonitasoft.engine.bpm.process.ProcessInstanceSearchDescriptor;
 import org.bonitasoft.engine.exception.DeletionException;
 import org.bonitasoft.engine.exception.SearchException;
 import org.bonitasoft.engine.search.Order;
-import org.bonitasoft.engine.search.SearchOptions;
 import org.bonitasoft.engine.search.SearchOptionsBuilder;
 import org.bonitasoft.engine.search.SearchResult;
-import org.bonitasoft.engine.search.Sort;
-import org.bonitasoft.engine.search.impl.SearchFilter;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
@@ -29,12 +26,12 @@ import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
-import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJob;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.DelayResult;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.ListProcessesResult;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 /**
@@ -95,23 +92,23 @@ public class MilkDeleteCases extends MilkPlugIn {
     }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
-        MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
+    public MilkJobOutput executeJob(MilkJobExecution milkJobExecution) {
+        MilkJobOutput milkJobOutput = milkJobExecution.getMilkJobOutput();
 
-        DelayResult delayResult = MilkPlugInToolbox.getTimeFromDelay(jobExecution, cstParamDelay, new Date(), false);
+        DelayResult delayResult = milkJobExecution.getInputDelayParameter( cstParamDelay, new Date(), false);
         if (BEventFactory.isError(delayResult.listEvents)) {
             milkJobOutput.addEvents(delayResult.listEvents);
             milkJobOutput.executionStatus = ExecutionStatus.ERROR;
             return milkJobOutput;
         }
 
-        ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
+        ProcessAPI processAPI = milkJobExecution.getApiAccessor().getProcessAPI();
         // get Input 
-        SearchOptionsBuilder searchBuilderCase = new SearchOptionsBuilder(0, jobExecution.getJobStopAfterMaxItems() + 1);
+        SearchOptionsBuilder searchBuilderCase = new SearchOptionsBuilder(0, milkJobExecution.getJobStopAfterMaxItems() + 1);
 
         Chronometer deletionMarker = milkJobOutput.beginChronometer("deletion");
         try {
-            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, searchBuilderCase, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
+            ListProcessesResult listProcessResult =  milkJobExecution.getInputArrayProcess( cstParamProcessFilter, false, searchBuilderCase, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
 
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
@@ -129,9 +126,9 @@ public class MilkDeleteCases extends MilkPlugIn {
 
             int totalCaseDeleted;
             if (delayResult.delayInMs == 0)
-                totalCaseDeleted = deleteCasesNoDelay(jobExecution, listProcessResult, milkJobOutput);
+                totalCaseDeleted = deleteCasesNoDelay(milkJobExecution, listProcessResult, milkJobOutput);
             else
-                totalCaseDeleted = deleteCasesWithDelay(jobExecution, listProcessResult, delayResult, milkJobOutput);
+                totalCaseDeleted = deleteCasesWithDelay(milkJobExecution, listProcessResult, delayResult, milkJobOutput);
 
             milkJobOutput.setNbItemsProcessed(totalCaseDeleted);
 
@@ -142,7 +139,7 @@ public class MilkDeleteCases extends MilkPlugIn {
 
             if (totalCaseDeleted == 0)
                 milkJobOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
-            else if (jobExecution.pleaseStop())
+            else if (milkJobExecution.isStopRequired())
                 milkJobOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
             else
                 milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
@@ -182,12 +179,12 @@ public class MilkDeleteCases extends MilkPlugIn {
             reportOperation.append("Number of process:" + listProcessesInScope.size());
 
             for (ProcessDeploymentInfo processDefinition : listProcessResult.listProcessDeploymentInfo) {
-                if (jobExecution.pleaseStop())
+                if (jobExecution.isStopRequired())
                     return totalNumberCaseDeleted;
 
                 int countNumberThisPass = 1;
                 while (count < maximumArchiveDeletionPerRound && countNumberThisPass > 0) {
-                    if (jobExecution.pleaseStop())
+                    if (jobExecution.isStopRequired())
                         return totalNumberCaseDeleted;
                     countNumberThisPass = 0;
 
@@ -294,7 +291,7 @@ public class MilkDeleteCases extends MilkPlugIn {
             // do the purge now = from 10 to 50 %
             int localCount = 0;
             for (ProcessInstance processInstance : searchProcessInstance.getResult()) {
-                if (jobExecution.pleaseStop())
+                if (jobExecution.isStopRequired())
                     return totalNumberCaseDeleted;
                 // proceed page per page
                 processInstances.add(processInstance.getId());
@@ -354,7 +351,7 @@ public class MilkDeleteCases extends MilkPlugIn {
             // do the purge now
             localCount = 0;
             for (ArchivedProcessInstance archivedProcessInstance : searchArchivedProcessInstance.getResult()) {
-                if (jobExecution.pleaseStop())
+                if (jobExecution.isStopRequired())
                     return totalNumberCaseDeleted;
                 // proceed page per page
                 archivedProcessInstances.add(archivedProcessInstance.getSourceObjectId());
@@ -406,7 +403,7 @@ public class MilkDeleteCases extends MilkPlugIn {
 
         public int nbActiveCasePurged = 0;
         public int nbArchivedCasePurged = 0;
-        public List<BEvent> listEvents = new ArrayList<BEvent>();
+        public List<BEvent> listEvents = new ArrayList<>();
 
         public int getNbCasesPurged() {
             return nbActiveCasePurged + nbArchivedCasePurged;

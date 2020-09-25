@@ -1,4 +1,4 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.tasks;
 
 import java.io.PrintWriter;
 import java.io.Serializable;
@@ -47,11 +47,11 @@ import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.ListProcessesResult;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.PlaceHolder;
 import org.bonitasoft.truckmilk.toolbox.SendMail;
@@ -60,6 +60,7 @@ import org.bonitasoft.truckmilk.toolbox.SendMailParameters;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 import org.json.simple.JSONValue;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
+import org.bonitasoft.truckmilk.plugin.cases.MilkPurgeArchive;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 public class MilkSLA extends MilkPlugIn {
 
@@ -340,7 +341,7 @@ public class MilkSLA extends MilkPlugIn {
     /* ******************************************************************************** */
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution milkJobExecution) {
+    public MilkJobOutput executeJob(MilkJobExecution milkJobExecution) {
 
         MilkJobOutput plugTourOutput = executeSLA(milkJobExecution, null, milkJobExecution.getApiAccessor());
         plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
@@ -484,7 +485,7 @@ public class MilkSLA extends MilkPlugIn {
                 plugTourOutput.addEvent(eventNoProcessFilter);
                 return plugTourOutput;
             }
-           ListProcessesResult listProcessesResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessName, true, null, null, processAPI);
+           ListProcessesResult listProcessesResult = jobExecution.getInputArrayProcess( cstParamProcessName, true, null, null, processAPI);
                    
             if (listProcessesResult.listProcessDeploymentInfo.isEmpty()) {
                 plugTourOutput.addEvents( listProcessesResult.listEvents );

@@ -1,4 +1,4 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.cases;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -30,8 +30,6 @@ import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
@@ -40,6 +38,8 @@ import org.bonitasoft.truckmilk.engine.MilkJobOutput.Chronometer;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.DelayResult;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.ListProcessesResult;
 import org.bonitasoft.truckmilk.toolbox.CSVOperation;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
@@ -157,20 +157,20 @@ public class MilkCancelCases extends MilkPlugIn {
         return plugInDescription;
     }
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
-        MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
+    public MilkJobOutput executeJob(MilkJobExecution milkJobExecution) {
+        MilkJobOutput milkJobOutput = milkJobExecution.getMilkJobOutput();
 
-        ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
+        ProcessAPI processAPI = milkJobExecution.getApiAccessor().getProcessAPI();
         // get Input 
 
-        String separatorCSV = jobExecution.getInputStringParameter(cstParamSeparatorCSV);
+        String separatorCSV = milkJobExecution.getInputStringParameter(cstParamSeparatorCSV);
 
         try {
             // +1 so we can detect the SUCCESSPARTIAL
 
-            SearchOptionsBuilder searchBuilderCase = new SearchOptionsBuilder(0, jobExecution.getJobStopAfterMaxItems() + 1);
+            SearchOptionsBuilder searchBuilderCase = new SearchOptionsBuilder(0, milkJobExecution.getJobStopAfterMaxItems() + 1);
 
-            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, searchBuilderCase, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
+            ListProcessesResult listProcessResult = milkJobExecution.getInputArrayProcess( cstParamProcessFilter, false, searchBuilderCase, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
 
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
@@ -180,17 +180,17 @@ public class MilkCancelCases extends MilkPlugIn {
             }
 
             // Get the list of cases to process
-            DelayResult delayResult = MilkPlugInToolbox.getTimeFromDelay(jobExecution, cstParamDelayInDay, new Date(), false);
+            DelayResult delayResult = milkJobExecution.getInputDelayParameter( cstParamDelayInDay, new Date(), false);
             if (BEventFactory.isError(delayResult.listEvents)) {
                 milkJobOutput.addEvents(delayResult.listEvents);
                 milkJobOutput.executionStatus = ExecutionStatus.ERROR;
                 return milkJobOutput;
             }
 
-            String operation = jobExecution.getInputStringParameter(cstParamOperation);
-            String action = jobExecution.getInputStringParameter(cstParamActionOnCases);
+            String operation = milkJobExecution.getInputStringParameter(cstParamOperation);
+            String action = milkJobExecution.getInputStringParameter(cstParamActionOnCases);
 
-            String trigger = jobExecution.getInputStringParameter(cstParamTriggerOnCases);
+            String trigger = milkJobExecution.getInputStringParameter(cstParamTriggerOnCases);
 
             // report
             ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
@@ -207,7 +207,7 @@ public class MilkCancelCases extends MilkPlugIn {
             } else if (CSTOPERATION_FROMLIST.equals(operation)) {
                 sourceData = new SourceDataCSV();
                 try {
-                    ((SourceDataCSV) sourceData).initialize(jobExecution, cstParamInputDocument, separatorCSV, processAPI);
+                    ((SourceDataCSV) sourceData).initialize(milkJobExecution, cstParamInputDocument, separatorCSV, processAPI);
                 } catch (Exception e) {
                     milkJobOutput.addEvent(new BEvent(eventLoadCsvFailed, e, ""));
                     milkJobOutput.executionStatus = ExecutionStatus.ERROR;
@@ -237,11 +237,11 @@ public class MilkCancelCases extends MilkPlugIn {
             long beginTime = System.currentTimeMillis();
             int count = 0;
             int totalNumberCase = 0;
-            jobExecution.setAvancementTotalStep(sourceData.getCount());
+            milkJobExecution.setAvancementTotalStep(sourceData.getCount());
             while (count < sourceData.getCount()) {
-                if (jobExecution.pleaseStop())
+                if (milkJobExecution.isStopRequired())
                     break;
-                jobExecution.setAvancementStep(count);
+                milkJobExecution.setAvancementStep(count);
                 count++;
                 SourceProcessInstance sourceProcessInstance = sourceData.getNextProcessInstance();
 

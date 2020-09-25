@@ -1,8 +1,7 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.processes;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -35,12 +34,11 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.DelayResult;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.ListProcessesResult;
 import org.bonitasoft.truckmilk.toolbox.CSVOperation;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
@@ -271,12 +269,12 @@ public class MilkDeleteProcesses extends MilkPlugIn {
     }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
-        MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
+    public MilkJobOutput executeJob(MilkJobExecution milkJobExecution) {
+        MilkJobOutput milkJobOutput = milkJobExecution.getMilkJobOutput();
         logger.info(LOGGER_LABEL + " Start to MilkDeleteProcess ");
 
         //preparation
-        ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
+        ProcessAPI processAPI = milkJobExecution.getApiAccessor().getProcessAPI();
         StatsResult statsResult = new StatsResult();
 
         // StringBuilder finalReport = new StringBuilder();
@@ -286,21 +284,21 @@ public class MilkDeleteProcesses extends MilkPlugIn {
         long nbEnableProcessBefore = countNumberOfProcesses(Boolean.TRUE, processAPI);
         long nbDisabledProcessBefore = countNumberOfProcesses(Boolean.FALSE, processAPI);
 
-        String operation = jobExecution.getInputStringParameter(cstParamOperation);
+        String operation = milkJobExecution.getInputStringParameter(cstParamOperation);
         boolean doTheDeletion = CSTOPERATION_DELETION.equals(operation);
 
         try {
-            Boolean disabled = jobExecution.getInputBooleanParameter(cstParamDisablead);
-            Boolean notUsed = jobExecution.getInputBooleanParameter(cstParamNotUsed);
-            Boolean maxVersion = jobExecution.getInputBooleanParameter(cstParamMaxVersion);
+            Boolean disabled = milkJobExecution.getInputBooleanParameter(cstParamDisablead);
+            Boolean notUsed = milkJobExecution.getInputBooleanParameter(cstParamNotUsed);
+            Boolean maxVersion = milkJobExecution.getInputBooleanParameter(cstParamMaxVersion);
 
-            String separatorCSV = jobExecution.getInputStringParameter(cstParamSeparatorCSV);
+            String separatorCSV = milkJobExecution.getInputStringParameter(cstParamSeparatorCSV);
 
             csvOperationOuput.writeCsvDocument(new String[] { CSTCOL_PROCESSNAME, CSTCOL_PROCESSVERSION, CSTCOL_PROCESSID, CSTCOL_PROCESSRANGEINTHEVERSION, CSTCOL_ACTIVECASE, CSTCOL_ARCHIVECASE, CSTCOL_STATUS, CSTCOL_STATUSLEVEL }, separatorCSV);
 
             List<ProcessDeploymentInfo> listProcessPerimeters;
-            SearchOptionsBuilder searchBuilderCase = new SearchOptionsBuilder(0, jobExecution.getJobStopAfterMaxItems() + 1);
-            ListProcessesResult listProcess = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamScopeProcessFilter, false, searchBuilderCase, ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
+            SearchOptionsBuilder searchBuilderCase = new SearchOptionsBuilder(0, milkJobExecution.getJobStopAfterMaxItems() + 1);
+            ListProcessesResult listProcess =  milkJobExecution.getInputArrayProcess( cstParamScopeProcessFilter, false, searchBuilderCase, ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
             if (BEventFactory.isError(listProcess.listEvents)) {
                 milkJobOutput.addEvents(listProcess.listEvents);
                 milkJobOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
@@ -309,7 +307,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             if (listProcess.listProcessDeploymentInfo.isEmpty()) {
                 // search get ALL process
                 // Attention, according the policy, we should search only some kind of process
-                searchBuilderCase = new SearchOptionsBuilder(0, jobExecution.isLimitationOnMaxItem() ? jobExecution.getJobStopAfterMaxItems() + 1 : 50000);
+                searchBuilderCase = new SearchOptionsBuilder(0, milkJobExecution.isLimitationOnMaxItem() ? milkJobExecution.getJobStopAfterMaxItems() + 1 : 50000);
                 if (!(Boolean.TRUE.equals(notUsed) || Boolean.TRUE.equals(maxVersion)))
                     searchBuilderCase.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE, ActivationState.DISABLED.toString());
                 searchBuilderCase.sort(ProcessDeploymentInfoSearchDescriptor.NAME, Order.ASC);
@@ -320,7 +318,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             } else
                 listProcessPerimeters = listProcess.listProcessDeploymentInfo;
 
-            ListProcessesResult listProcessExclude = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamExclusionProcessFilter, false, searchBuilderCase, ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
+            ListProcessesResult listProcessExclude =  milkJobExecution.getInputArrayProcess( cstParamExclusionProcessFilter, false, searchBuilderCase, ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
             Set<Long> setExclude = new HashSet<>();
             for (ProcessDeploymentInfo processDeploymentInfo : listProcessExclude.listProcessDeploymentInfo) {
                 setExclude.add(processDeploymentInfo.getProcessId());
@@ -328,7 +326,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
 
             // --------------------------  Options
             if (Boolean.TRUE.equals(disabled)) {
-                StatsResult statsResultOp = deleteBasedOnDisabled(jobExecution, doTheDeletion, listProcessPerimeters, setExclude, csvOperationOuput, milkJobOutput);
+                StatsResult statsResultOp = deleteBasedOnDisabled(milkJobExecution, doTheDeletion, listProcessPerimeters, setExclude, csvOperationOuput, milkJobOutput);
                 listFinalReport.add(new Object[] { "<div class='label label-info'>Criteria Delete Disabled</div> " + (doTheDeletion ? " deleted" : " detected"), statsResultOp.processesPurged });
                 listFinalReport.add(new Object[] { "<li>Process with    active Process Instance :", statsResultOp.processesWithActiveInstance });
                 listFinalReport.add(new Object[] { "<li>Process with No active Process Instance :", statsResultOp.processesWithNoActiveInstance });
@@ -337,7 +335,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             }
 
             if (Boolean.TRUE.equals(notUsed)) {
-                StatsResult statsResultOp = deleteBasedOnNotUsed(jobExecution, doTheDeletion, listProcessPerimeters, setExclude, csvOperationOuput, milkJobOutput);
+                StatsResult statsResultOp = deleteBasedOnNotUsed(milkJobExecution, doTheDeletion, listProcessPerimeters, setExclude, csvOperationOuput, milkJobOutput);
                 listFinalReport.add(new Object[] { "<div class='label label-info'>Criteria Delete Not Used</div> " + (doTheDeletion ? "deleted" : " detected"), statsResultOp.processesPurged });
                 listFinalReport.add(new Object[] { "<li>Process with    active Process Instance :", statsResultOp.processesWithActiveInstance });
                 listFinalReport.add(new Object[] { "<li>Process with No active Process Instance :", statsResultOp.processesWithNoActiveInstance });
@@ -345,7 +343,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             }
 
             if (Boolean.TRUE.equals(maxVersion)) {
-                StatsResult statsResultOp = deleteBasedOnMaxVersion(jobExecution, doTheDeletion, listProcessPerimeters, setExclude, csvOperationOuput, milkJobOutput);
+                StatsResult statsResultOp = deleteBasedOnMaxVersion(milkJobExecution, doTheDeletion, listProcessPerimeters, setExclude, csvOperationOuput, milkJobOutput);
                 listFinalReport.add(new Object[] { "<div class='label label-info'>Criteria Delete Max Version</div> " + (doTheDeletion ? "deleted" : " detected"), statsResultOp.processesPurged });
                 listFinalReport.add(new Object[] { "<li>Process with    active Process Instance :", statsResultOp.processesWithActiveInstance });
                 listFinalReport.add(new Object[] { "<li>Process with No active Process Instance :", statsResultOp.processesWithNoActiveInstance });
@@ -397,37 +395,37 @@ public class MilkDeleteProcesses extends MilkPlugIn {
     }
 
     /**
-     * @param jobExecution
+     * @param milkJobExecution
      * @param milkJobOutput
      */
-    private StatsResult deleteBasedOnDisabled(MilkJobExecution jobExecution, boolean doTheDeletion, List<ProcessDeploymentInfo> listProcess, Set<Long> setExclude, CSVOperation csvOperation, MilkJobOutput milkJobOutput) {
-        ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
+    private StatsResult deleteBasedOnDisabled(MilkJobExecution milkJobExecution, boolean doTheDeletion, List<ProcessDeploymentInfo> listProcess, Set<Long> setExclude, CSVOperation csvOperation, MilkJobOutput milkJobOutput) {
+        ProcessAPI processAPI = milkJobExecution.getApiAccessor().getProcessAPI();
         StatsResult statsResult = new StatsResult();
         milkJobOutput.addReportInHtml("<h3>Disabled</h3>");
 
         writeRecordHeader(csvOperation, "Disabled Processes");
 
-        String policyOnCase = jobExecution.getInputStringParameter(cstParamDisabledPurgeCasePolicy);
+        String policyOnCase = milkJobExecution.getInputStringParameter(cstParamDisabledPurgeCasePolicy);
 
-        DelayResult delayResult = MilkPlugInToolbox.getTimeFromDelay(jobExecution, cstParamDisableDelay, new Date(), false);
+        DelayResult delayResult = milkJobExecution.getInputDelayParameter( cstParamDisableDelay, new Date(), false);
         if (BEventFactory.isError(delayResult.listEvents)) {
             milkJobOutput.addEvents(delayResult.listEvents);
             milkJobOutput.executionStatus = ExecutionStatus.ERROR;
             return statsResult;
         }
-        Boolean keepLastVersion = jobExecution.getInputBooleanParameter(cstParamDisabledKeepLastVersion);
+        Boolean keepLastVersion = milkJobExecution.getInputBooleanParameter(cstParamDisabledKeepLastVersion);
 
         // root policy
         // Boolean rootCasePurge = jobExecution.getInputBooleanParameter(cstParamRootCase);
 
-        jobExecution.setAvancement(0);
+        milkJobExecution.setAvancement(0);
         int count = 0;
 
         milkJobOutput.addReportTableBegin(new String[] { CSTCOL_PROCESSNAME, CSTCOL_PROCESSVERSION, CSTCOL_PROCESSID, CSTCOL_ACTIVECASE, CSTCOL_ARCHIVECASE, CSTCOL_STATUS }, 20);
         for (ProcessDeploymentInfo processDeploymentInfo : listProcess) {
-            if (jobExecution.pleaseStop())
+            if (milkJobExecution.isStopRequired())
                 break;
-            jobExecution.setAvancement(0 + (int) (30.0 * count / listProcess.size()));
+            milkJobExecution.setAvancement(0 + (int) (30.0 * count / listProcess.size()));
             count++;
             if (setExclude.contains(processDeploymentInfo.getProcessId()))
                 continue;
@@ -450,7 +448,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
                     policyOnCase,
                     processAPI,
                     csvOperation,
-                    jobExecution, milkJobOutput);
+                    milkJobExecution, milkJobOutput);
             if (!statsResultProcess.inScope)
                 continue;
 
@@ -463,7 +461,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
         milkJobOutput.addReportTableEnd();
         milkJobOutput.addReportInHtml(CST_NUMBER_OF_PROCESS + statsResult.processesPurged);
 
-        jobExecution.setAvancement(30);
+        milkJobExecution.setAvancement(30);
         return statsResult;
 
     }
@@ -471,37 +469,37 @@ public class MilkDeleteProcesses extends MilkPlugIn {
     /**
      * Delete process inactif
      * 
-     * @param jobExecution
+     * @param milkJobExecution
      * @param listProcess
      * @param setExclude
      * @param milkJobOutput
      * @return
      */
-    private StatsResult deleteBasedOnNotUsed(MilkJobExecution jobExecution, boolean doTheDeletion, List<ProcessDeploymentInfo> listProcess, Set<Long> setExclude, CSVOperation csvOperation, MilkJobOutput milkJobOutput) {
-        jobExecution.setAvancement(30);
+    private StatsResult deleteBasedOnNotUsed(MilkJobExecution milkJobExecution, boolean doTheDeletion, List<ProcessDeploymentInfo> listProcess, Set<Long> setExclude, CSVOperation csvOperation, MilkJobOutput milkJobOutput) {
+        milkJobExecution.setAvancement(30);
         StatsResult statsResult = new StatsResult();
-        ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
+        ProcessAPI processAPI = milkJobExecution.getApiAccessor().getProcessAPI();
         milkJobOutput.addReportInHtml("<h3>Not used</h3>");
         writeRecordHeader(csvOperation, "Processes Not used");
 
-        String policyOnCase = jobExecution.getInputStringParameter(cstParamNotUsedPurgeCasePolicy);
+        String policyOnCase = milkJobExecution.getInputStringParameter(cstParamNotUsedPurgeCasePolicy);
 
-        DelayResult delayResult = MilkPlugInToolbox.getTimeFromDelay(jobExecution, cstParamNotUsedDelay, new Date(), false);
+        DelayResult delayResult = milkJobExecution.getInputDelayParameter( cstParamNotUsedDelay, new Date(), false);
         if (BEventFactory.isError(delayResult.listEvents)) {
             milkJobOutput.addEvents(delayResult.listEvents);
             milkJobOutput.executionStatus = ExecutionStatus.ERROR;
             return statsResult;
         }
-        Boolean keepLastVersion = jobExecution.getInputBooleanParameter(cstParamNotUsedKeepLastVersion);
+        Boolean keepLastVersion = milkJobExecution.getInputBooleanParameter(cstParamNotUsedKeepLastVersion);
 
         milkJobOutput.addReportTableBegin(new String[] { CSTCOL_PROCESSNAME, CSTCOL_PROCESSVERSION, CSTCOL_PROCESSID, CSTCOL_ACTIVECASE, CSTCOL_ARCHIVECASE, CSTCOL_STATUS }, 20);
 
         int count = 0;
 
         for (ProcessDeploymentInfo processDeploymentInfo : listProcess) {
-            if (jobExecution.pleaseStop())
+            if (milkJobExecution.isStopRequired())
                 break;
-            jobExecution.setAvancement(60 + (int) (30.0 * count / listProcess.size()));
+            milkJobExecution.setAvancement(60 + (int) (30.0 * count / listProcess.size()));
 
             count++;
 
@@ -524,7 +522,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
                     policyOnCase,
                     processAPI,
                     csvOperation,
-                    jobExecution, milkJobOutput);
+                    milkJobExecution, milkJobOutput);
             if (!statsResultProcess.inScope)
                 continue;
 
@@ -537,7 +535,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
         milkJobOutput.addReportTableEnd();
         milkJobOutput.addReportInHtml(CST_NUMBER_OF_PROCESS + statsResult.processesPurged);
 
-        jobExecution.setAvancement(60);
+        milkJobExecution.setAvancement(60);
         return statsResult;
     }
 
@@ -582,7 +580,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
         int count = 0;
 
         for (String processName : listProcessName) {
-            if (jobExecution.pleaseStop())
+            if (jobExecution.isStopRequired())
                 break;
             jobExecution.setAvancement(60 + (int) (60.0 * count / listProcessName.size()));
             count++;
@@ -957,7 +955,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
         long result = 0;
         try {
             do {
-                if (jobExecution.pleaseStop())
+                if (jobExecution.isStopRequired())
                     break;
 
                 SearchOptionsBuilder sob = new SearchOptionsBuilder(0, cstMaxDeletion + 1);
@@ -1004,7 +1002,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
         jobExecution.setAvancementInformation("Purge Active cases in [" + getReportProcessName(processDeploymentInfo) + "]");
         try {
             do {
-                if (jobExecution.pleaseStop())
+                if (jobExecution.isStopRequired())
                     break;
                 SearchOptionsBuilder sob = new SearchOptionsBuilder(0, cstMaxDeletion + 1);
                 sob.filter(ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, processDeploymentInfo.getProcessId());
@@ -1044,18 +1042,18 @@ public class MilkDeleteProcesses extends MilkPlugIn {
     }
 
     /**
-     * @param jobExecution
+     * @param milkJobExecution
      * @param processDeploymentInfo
      * @param milkJobOutput
      * @return
      */
-    private StatsResult purgeRootCase(MilkJobExecution jobExecution, ProcessDeploymentInfo processDeploymentInfo, MilkJobOutput milkJobOutput) {
+    private StatsResult purgeRootCase(MilkJobExecution milkJobExecution, ProcessDeploymentInfo processDeploymentInfo, MilkJobOutput milkJobOutput) {
 
         // ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
         StatsResult statsResult = new StatsResult();
 
         // String policyRoot = jobExecution.getInputStringParameter(cstParamRootCasePolicy);
-        DelayResult delayRoot = MilkPlugInToolbox.getTimeFromDelay(jobExecution, cstParamRootDelay, new Date(), false);
+        DelayResult delayRoot = milkJobExecution.getInputDelayParameter( cstParamRootDelay, new Date(), false);
         if (BEventFactory.isError(delayRoot.listEvents)) {
             milkJobOutput.addEvents(delayRoot.listEvents);
             milkJobOutput.executionStatus = ExecutionStatus.ERROR;

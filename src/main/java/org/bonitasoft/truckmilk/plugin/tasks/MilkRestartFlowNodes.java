@@ -1,4 +1,4 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.tasks;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -17,11 +17,10 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.DelayResult;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 public class MilkRestartFlowNodes  extends MilkPlugIn {
@@ -85,12 +84,12 @@ public class MilkRestartFlowNodes  extends MilkPlugIn {
         }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
+    public MilkJobOutput executeJob(MilkJobExecution jobExecution) {
         MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
         
         ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
         
-        DelayResult delayResult = MilkPlugInToolbox.getTimeFromDelay(jobExecution, cstParamDelay, new Date(), false);
+        DelayResult delayResult = jobExecution.getInputDelayParameter( cstParamDelay, new Date(), false);
         if (BEventFactory.isError(delayResult.listEvents)) {
             milkJobOutput.addEvents(delayResult.listEvents);
             milkJobOutput.executionStatus = ExecutionStatus.ERROR;
@@ -154,7 +153,7 @@ ORDER BY id;
         int countErrors=0; 
         for (int i=0;i<stuckFlowNodes.listStuckFlowNode.size();i++)
         {
-            if (jobExecution.pleaseStop())
+            if (jobExecution.isStopRequired())
                 break;
             jobExecution.setAvancementStep( i );
 

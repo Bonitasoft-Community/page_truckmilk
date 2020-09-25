@@ -1,4 +1,4 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.monitor;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -113,7 +113,7 @@ public class MilkDirectory extends MilkPlugIn {
     }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
+    public MilkJobOutput executeJob(MilkJobExecution jobExecution) {
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
         try {
             StringBuilder analysis = new StringBuilder();

@@ -61,8 +61,8 @@ public abstract class MilkPlugIn {
 
     /**
      * the base keep the description available.
-     * To be sure this is correclty initialised, the factoryPlugIn, who create object, call the
-     * initialise after
+     * To be sure this is correctly initialized, the factoryPlugIn, who create object, call the
+     * initialize after
      */
     private MilkPlugInDescription description;
 
@@ -117,7 +117,8 @@ public abstract class MilkPlugIn {
     public abstract List<BEvent> checkPluginEnvironment(MilkJobExecution milkJobExecution);
 
     /**
-     * check the JOB environnement, with the job parameters
+     * check the JOB environnment, with the job parameters.
+     * Result is based on the listEvent: if the list events contains a ERROR, then the job is not executed
      * 
      * @param milkJobExecution
      * @return
@@ -575,7 +576,7 @@ public abstract class MilkPlugIn {
      */
     public abstract MilkPlugInDescription getDefinitionDescription(MilkJobContext milkJobContext);
 
-    public abstract MilkJobOutput execute(MilkJobExecution input);
+    public abstract MilkJobOutput executeJob(MilkJobExecution input);
 
     /**
      * this method can be override by the plug in if it create a button "BUTTONPARAMETERS"

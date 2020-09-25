@@ -1,4 +1,4 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.monitor;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -91,7 +91,7 @@ public class MilkGrumman extends MilkPlugIn {
      * execution of the job. Just calculated the result according the parameters, and return it.
      */
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
+    public MilkJobOutput executeJob(MilkJobExecution jobExecution) {
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
         
         // task name is required
@@ -171,7 +171,7 @@ public class MilkGrumman extends MilkPlugIn {
         logger.fine("Finished checking tasks to unassign");
         plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
         
-        if (jobExecution.pleaseStop())
+        if (jobExecution.isStopRequired())
             plugTourOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
 
         return plugTourOutput;

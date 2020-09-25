@@ -1,6 +1,6 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.tasks;
 
-import java.util.ArrayList; 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -25,12 +25,11 @@ import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.DelayResult;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.ListProcessesResult;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 public class MilkReplayFailedTask extends MilkPlugIn {
@@ -86,27 +85,27 @@ public class MilkReplayFailedTask extends MilkPlugIn {
     }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
-        ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
-        MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
+    public MilkJobOutput executeJob(MilkJobExecution milkJobExecution) {
+        ProcessAPI processAPI = milkJobExecution.getApiAccessor().getProcessAPI();
+        MilkJobOutput plugTourOutput = milkJobExecution.getMilkJobOutput();
 
         // get Input 
-        Long maxTentatives = jobExecution.getInputLongParameter(cstParamMaximumTentatives);
+        Long maxTentatives = milkJobExecution.getInputLongParameter(cstParamMaximumTentatives);
         long retryFailed = 0;
         long retrySuccess = 0;
         long retrySkip = 0;
-        Long numberOfTasks = jobExecution.getInputLongParameter(cstParamNumberOfTasks);
+        Long numberOfTasks = milkJobExecution.getInputLongParameter(cstParamNumberOfTasks);
         
-        Boolean onlyDetection = jobExecution.getInputBooleanParameter(cstParamOnlyDetection);
-        String policy = jobExecution.getInputStringParameter(cstParamActionOnTasks);
-        Boolean tasksInReport = jobExecution.getInputBooleanParameter(cstParamTasksInReport);
+        Boolean onlyDetection = milkJobExecution.getInputBooleanParameter(cstParamOnlyDetection);
+        String policy = milkJobExecution.getInputStringParameter(cstParamActionOnTasks);
+        Boolean tasksInReport = milkJobExecution.getInputBooleanParameter(cstParamTasksInReport);
 
         try {
 
             // Filter on process?
             SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, numberOfTasks == null ? 1000 : numberOfTasks.intValue());
 
-            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, searchActBuilder, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, jobExecution.getApiAccessor().getProcessAPI());
+            ListProcessesResult listProcessResult = milkJobExecution.getInputArrayProcess( cstParamProcessFilter, false, searchActBuilder, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, milkJobExecution.getApiAccessor().getProcessAPI());
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
                 plugTourOutput.addEvents(listProcessResult.listEvents);
@@ -114,7 +113,7 @@ public class MilkReplayFailedTask extends MilkPlugIn {
                 return plugTourOutput;
             }
 
-            DelayResult delayResult = MilkPlugInToolbox.getTimeFromDelay(jobExecution, cstParamDelay, new Date(), false);
+            DelayResult delayResult = milkJobExecution.getInputDelayParameter( cstParamDelay, new Date(), false);
             if (BEventFactory.isError(delayResult.listEvents)) {
                 plugTourOutput.addEvents(delayResult.listEvents);
                 plugTourOutput.executionStatus = ExecutionStatus.ERROR;

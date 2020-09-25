@@ -1,4 +1,4 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.tasks;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -22,8 +22,6 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
@@ -37,6 +35,7 @@ import org.bonitasoft.truckmilk.job.MilkJobContext;
 /*                                                                                  */
 /* ******************************************************************************** */
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.ListProcessesResult;
 
 import groovy.time.TimeCategory;
 import groovy.time.TimeDuration;
@@ -103,7 +102,7 @@ public class MilkUnassignTasks extends MilkPlugIn {
      * execution of the job. Just calculated the result according the parameters, and return it.
      */
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
+    public MilkJobOutput executeJob(MilkJobExecution jobExecution) {
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         // task name is required
@@ -114,7 +113,7 @@ public class MilkUnassignTasks extends MilkPlugIn {
         try {
             // one process name is required
             SearchOptionsBuilder searchTasks = new SearchOptionsBuilder(0, 10000);
-            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessName, false, searchTasks, HumanTaskInstanceSearchDescriptor.PROCESS_DEFINITION_ID, jobExecution.getApiAccessor().getProcessAPI());
+            ListProcessesResult listProcessResult = jobExecution.getInputArrayProcess( cstParamProcessName, false, searchTasks, HumanTaskInstanceSearchDescriptor.PROCESS_DEFINITION_ID, jobExecution.getApiAccessor().getProcessAPI());
 
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 plugTourOutput.addEvents(listProcessResult.listEvents);
@@ -147,7 +146,7 @@ public class MilkUnassignTasks extends MilkPlugIn {
             long count = 0;
             for (HumanTaskInstance task : tasks) {
 
-                if (jobExecution.pleaseStop()) {
+                if (jobExecution.isStopRequired()) {
                     break;
                 }
                 jobExecution.setAvancementStep(count);
@@ -184,7 +183,7 @@ public class MilkUnassignTasks extends MilkPlugIn {
         logger.fine("Finished checking tasks to unassign");
         plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
 
-        if (jobExecution.pleaseStop())
+        if (jobExecution.isStopRequired())
             plugTourOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
 
         return plugTourOutput;

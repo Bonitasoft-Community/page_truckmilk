@@ -25,10 +25,10 @@ import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.ListProcessesResult;
 import org.bonitasoft.truckmilk.toolbox.PlaceHolder;
 import org.json.simple.JSONValue;
 
@@ -163,7 +163,7 @@ public class Mapper {
 
     public enum MAPPER_POLICY {
         CASECREATION, TASKEXECUTION, BOTH
-    };
+    }
 
     private MAPPER_POLICY policy;
 
@@ -211,9 +211,10 @@ public class Mapper {
             if (processIndentificationStatic.equals(processIdentificationMode))
             {
                 try {
-                    listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, true, new SearchOptionsBuilder(0,100), ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, jobExecution.getApiAccessor().getProcessAPI());
+                    listProcessResult = jobExecution.getInputArrayProcess( cstParamProcessFilter, true, new SearchOptionsBuilder(0,100), ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, jobExecution.getApiAccessor().getProcessAPI());
                     listEvents.addAll( listProcessResult.listEvents);
                 } catch (SearchException e) {
+                    // Nothing to do
                 }
                 if ( ! BEventFactory.isError(listEvents) 
                         && (listProcessResult.listProcessDeploymentInfo.size() != 1))

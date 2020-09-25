@@ -1,4 +1,4 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.other;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -66,7 +66,7 @@ public class MilkMeteor extends MilkPlugIn {
     }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
+    public MilkJobOutput executeJob(MilkJobExecution jobExecution) {
        
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
@@ -89,7 +89,7 @@ public class MilkMeteor extends MilkPlugIn {
         }
         // get the status
         boolean stillWait=true;
-        while ( stillWait && ! jobExecution.pleaseStop()) 
+        while ( stillWait && ! jobExecution.isStopRequired()) 
         {
             // check the result of the simulation
             StatusParameters statusParameters = new StatusParameters();
@@ -124,7 +124,7 @@ public class MilkMeteor extends MilkPlugIn {
                 }
             }
         }
-        if (jobExecution.pleaseStop())
+        if (jobExecution.isStopRequired())
         {
             plugTourOutput.addEvent(new BEvent( eventExecutionDontFinish, "SimulationId["+simulationId+"] ScenarioName["+scenarioName+"]" ));
             plugTourOutput.executionStatus = ExecutionStatus.ERROR; // scenarion isn't finish in the expected time, this is an error

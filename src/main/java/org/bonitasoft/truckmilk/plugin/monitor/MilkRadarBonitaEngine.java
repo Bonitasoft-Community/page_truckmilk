@@ -1,4 +1,4 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.monitor;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -24,12 +24,11 @@ import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.DelayResult;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 public class MilkRadarBonitaEngine extends MilkPlugIn {
@@ -101,8 +100,8 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
     }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
-        MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
+    public MilkJobOutput executeJob(MilkJobExecution milkJobExecution) {
+        MilkJobOutput milkJobOutput = milkJobExecution.getMilkJobOutput();
 
         milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
 
@@ -115,8 +114,8 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
         List<RadarPhoto> listPhoto = new ArrayList<>();
         milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
 
-        if (Boolean.TRUE.equals(jobExecution.getInputBooleanParameter(cstParamMonitorConnector))) {
-            RadarTimeTrackerConnector radarTimeTrackerConnector = (RadarTimeTrackerConnector) radarFactory.getInstance(RADAR_NAME_CONNECTORTIMETRACKER, RadarTimeTrackerConnector.CLASS_RADAR_NAME, jobExecution.getTenantId(), jobExecution.getApiAccessor());
+        if (Boolean.TRUE.equals(milkJobExecution.getInputBooleanParameter(cstParamMonitorConnector))) {
+            RadarTimeTrackerConnector radarTimeTrackerConnector = (RadarTimeTrackerConnector) radarFactory.getInstance(RADAR_NAME_CONNECTORTIMETRACKER, RadarTimeTrackerConnector.CLASS_RADAR_NAME, milkJobExecution.getTenantId(), milkJobExecution.getApiAccessor());
 
             if (radarTimeTrackerConnector == null) {
                 milkJobOutput.addEvent(new BEvent(eventErrorNoRadarTrackerConnector, "Radar Worker[" + RadarWorkers.CLASS_RADAR_NAME + "] not found"));
@@ -124,10 +123,10 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
             } else {
 
                 // update the configuration
-                radarTimeTrackerConnector.setSpringAccessor(jobExecution.getTenantServiceAccessor());
+                radarTimeTrackerConnector.setSpringAccessor(milkJobExecution.getTenantServiceAccessor());
 
-                radarTimeTrackerConnector.setThresholdDuration(jobExecution.getInputLongParameter(cstParamConnectorDurationInSecond) * 1000);
-                DelayResult delay = jobExecution.getInputDelayParameter(cstParamConnectorFrame, new Date(), false);
+                radarTimeTrackerConnector.setThresholdDuration(milkJobExecution.getInputLongParameter(cstParamConnectorDurationInSecond) * 1000);
+                DelayResult delay = milkJobExecution.getInputDelayParameter(cstParamConnectorFrame, new Date(), false);
                 long delayFrameInMs = -delay.delayInMs;
                 radarTimeTrackerConnector.setFrameMonitorInMs(delayFrameInMs);
 
@@ -163,7 +162,7 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
 
                     milkJobOutput.addReportTableLine(new Object[] { "Connector call", connectorCall });
                     milkJobOutput.addReportTableLine(new Object[] { "connectorOverload", connectorOverload });
-                    milkJobOutput.addReportTableLine(new Object[] { "Threshold (in sec)", jobExecution.getInputLongParameter(cstParamConnectorDurationInSecond) });
+                    milkJobOutput.addReportTableLine(new Object[] { "Threshold (in sec)", milkJobExecution.getInputLongParameter(cstParamConnectorDurationInSecond) });
 
                     for (IndicatorPhoto indicator : list)
                         milkJobOutput.addReportTableLine(new String[] { indicator.getName(), indicator.details == null ? "" : indicator.details });
@@ -177,10 +176,10 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
             if (everythingIsCalm && milkJobOutput.executionStatus == ExecutionStatus.SUCCESS)
                 milkJobOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
         }
-        if (Boolean.TRUE.equals(jobExecution.getInputBooleanParameter(cstParamStatisticsProcess))) {
+        if (Boolean.TRUE.equals(milkJobExecution.getInputBooleanParameter(cstParamStatisticsProcess))) {
             String[] listRadarsName = new String[] { RadarCase.CLASS_RADAR_NAME, RadarProcess.CLASS_RADAR_NAME };
 
-            DelayResult delayDeploymentResult = MilkPlugInToolbox.getTimeFromDelay(jobExecution, cstParamProcessDelayDeployment, new Date(), false);
+            DelayResult delayDeploymentResult = milkJobExecution.getInputDelayParameter( cstParamProcessDelayDeployment, new Date(), false);
             if (BEventFactory.isError(delayDeploymentResult.listEvents)) {
                 milkJobOutput.addEvents(delayDeploymentResult.listEvents);
                 milkJobOutput.executionStatus = ExecutionStatus.ERROR;
@@ -192,14 +191,14 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
             milkJobOutput.addReportTableBegin(new String[] { "Measure", "Value" });
 
             for (String radarName : listRadarsName) {
-                Radar radar = radarFactory.getInstance(radarName, radarName, jobExecution.getTenantId(), jobExecution.getApiAccessor());
+                Radar radar = radarFactory.getInstance(radarName, radarName, milkJobExecution.getTenantId(), milkJobExecution.getApiAccessor());
 
                 if (radar == null) {
                     milkJobOutput.addEvent(new BEvent(eventErrorNoRadarTrackerConnector, "Radar Worker[" + RadarWorkers.CLASS_RADAR_NAME + "] not found"));
                     milkJobOutput.executionStatus = ExecutionStatus.ERROR;
                     continue;
                 }
-                RadarPhotoResult result = radar.takePhoto( getRadarPhotoParameter(radar,jobExecution));
+                RadarPhotoResult result = radar.takePhoto( getRadarPhotoParameter(radar,milkJobExecution));
                 milkJobOutput.addEvents(result.listEvents);
                 for (RadarPhoto photo : result.listPhotos) {
                     for (IndicatorPhoto indicator : photo.getListIndicators()) {
@@ -219,10 +218,10 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
     /*                                                                                  */
     /* ******************************************************************************** */
 
-    private RadarPhotoParameter getRadarPhotoParameter( Radar radar,MilkJobExecution jobExecution ) {
+    private RadarPhotoParameter getRadarPhotoParameter( Radar radar,MilkJobExecution milkJobExecution ) {
         if (radar instanceof RadarProcess) {
             ParameterProcess parameter=new RadarProcess.ParameterProcess();
-            DelayResult delayDeploymentResult = MilkPlugInToolbox.getTimeFromDelay(jobExecution, cstParamProcessDelayDeployment, new Date(), false);
+            DelayResult delayDeploymentResult = milkJobExecution.getInputDelayParameter( cstParamProcessDelayDeployment, new Date(), false);
             
             parameter.dateDeploymentAfter = delayDeploymentResult.delayDate.getTime();
             return parameter;
@@ -289,7 +288,7 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
         boolean anAnotherJobExist = false;
         // is an another job exist ?
         for (MilkJob milkJobs : milkJob.getMilkJobFactory().getListJobs()) {
-            if (milkJob.getPlugIn().getClass().equals(this.getClass())) {
+            if (milkJobs.getPlugIn().getClass().equals(this.getClass())) {
                 anAnotherJobExist = true;
             }
         }

@@ -1,4 +1,4 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.monitor;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -75,7 +75,7 @@ public class MilkLogObserver extends MilkPlugIn {
     }
 
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
+    public MilkJobOutput executeJob(MilkJobExecution jobExecution) {
 
         MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
 

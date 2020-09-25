@@ -57,9 +57,17 @@ public class MilkJobOutput {
      */
     public long nbItemsProcessed = 0;
 
+    /**
+     * this can be call by the CheckJobEnvironment method
+     * Default Constructor.
+     */
+    public MilkJobOutput() {
+        this.executionStatus = ExecutionStatus.SUCCESS;
+    }
+
     // if you have a PlugInTourInput, create the object from this
-    public MilkJobOutput(MilkJob plugInTour) {
-        this.milkJob = plugInTour;
+    public MilkJobOutput(MilkJob milkJob) {
+        this.milkJob = milkJob;
     }
 
     public void addEvent(BEvent event) {
@@ -317,14 +325,15 @@ public class MilkJobOutput {
     /**
      * Add the markers in the report
      * 
-     * @param keepOperationNoOccurrence
+     * @param addNumberOfOccurrence if true, the number of occurrence is added in the report
+     * @param addAverage if true, the average is added in the report (total time / numberOfOccurent
      */
-    public void addChronometersInReport(boolean keepOperationNoOccurrence, boolean addAverage) {
+    public void addChronometersInReport(boolean addNumberOfOccurrence, boolean addAverage) {
         addReportTableBegin(new String[] { "Chronometer", "Time" });
         for (String operationName : sumTimeOperation.keySet()) {
             long sumTime = sumTimeOperation.get(operationName);
             long nbOccurences = nbOccurencesOperation.get(operationName);
-            if (nbOccurences == 0 && !keepOperationNoOccurrence)
+            if (nbOccurences == 0 && !addNumberOfOccurrence)
                 continue;
             addReportTableLine(new Object[] { operationName, TypesCast.getHumanDuration(sumTime, true) });
             if (nbOccurences > 0 && addAverage)
@@ -364,6 +373,11 @@ public class MilkJobOutput {
 
     public static SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:MM:ss");
 
+    /**
+     * Add measures in the report. Measures are saved in the Measure table, but can be add in the report to have "all in one place"
+     * @param keepMesureValueNotDefine if true, a measure not defined in the execution is added in the report, with the value 0
+     * @param withEmbededMeasure Some measure are embedded : number of items processed and time to execute. They can be added in the report.
+     */
     public void addMeasuresInReport(boolean keepMesureValueNotDefine, boolean withEmbededMeasure) {
         addReportTableBegin(new String[] { "Measure", "Value" });
 

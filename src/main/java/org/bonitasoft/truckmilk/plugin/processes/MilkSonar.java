@@ -1,4 +1,4 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.processes;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -43,12 +43,12 @@ import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.DelayResult;
-import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox.ListProcessesResult;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.DelayResult;
+import org.bonitasoft.truckmilk.job.MilkJobExecution.ListProcessesResult;
 
 public class MilkSonar extends MilkPlugIn {
 
@@ -172,10 +172,10 @@ public class MilkSonar extends MilkPlugIn {
      * execution of the job. Just calculated the result according the parameters, and return it.
      */
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
-        MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
+    public MilkJobOutput executeJob(MilkJobExecution milkJobExecution) {
+        MilkJobOutput milkJobOutput = milkJobExecution.getMilkJobOutput();
 
-        Integer maximumArchiveDeletionPerRound = jobExecution.getJobStopAfterMaxItems();
+        Integer maximumArchiveDeletionPerRound = milkJobExecution.getJobStopAfterMaxItems();
         // default value is 1 Million
         if (maximumArchiveDeletionPerRound == null || maximumArchiveDeletionPerRound.equals(MilkJob.CSTDEFAULT_STOPAFTER_MAXITEMS))
             maximumArchiveDeletionPerRound = 1000000;
@@ -186,7 +186,7 @@ public class MilkSonar extends MilkPlugIn {
         try {
             // ----------------------- Parameters
             // List of process ENABLE AND DISABLE
-            ListProcessesResult listProcessResult = MilkPlugInToolbox.completeListProcess(jobExecution, cstParamProcessFilter, false, searchActBuilder, ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, jobExecution.getApiAccessor().getProcessAPI());
+            ListProcessesResult listProcessResult =  milkJobExecution.getInputArrayProcess( cstParamProcessFilter, false, searchActBuilder, ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, milkJobExecution.getApiAccessor().getProcessAPI());
 
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
@@ -195,8 +195,8 @@ public class MilkSonar extends MilkPlugIn {
                 return milkJobOutput;
             }
 
-            String processVersionPolicy = jobExecution.getInputStringParameter(cstParamProcessVersionPolicy);
-            String processStatusPolicy = jobExecution.getInputStringParameter(cstParamProcessStatusPolicy);
+            String processVersionPolicy = milkJobExecution.getInputStringParameter(cstParamProcessVersionPolicy);
+            String processStatusPolicy = milkJobExecution.getInputStringParameter(cstParamProcessStatusPolicy);
 
             if (CSTPROCESSSTATUS_ENABLE.equals(processStatusPolicy))
                 listProcessResult.sob.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE, ActivationState.ENABLED.toString());
@@ -204,7 +204,7 @@ public class MilkSonar extends MilkPlugIn {
                 listProcessResult.sob.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE, ActivationState.DISABLED.toString());
 
             // if the date has to be added in the result ?
-            DelayResult delayResult = MilkPlugInToolbox.getTimeFromDelay(jobExecution, cstParamDelay, new Date(), false);
+            DelayResult delayResult = milkJobExecution.getInputDelayParameter( cstParamDelay, new Date(), false);
             if (BEventFactory.isError(delayResult.listEvents)) {
                 milkJobOutput.addEvents(delayResult.listEvents);
                 milkJobOutput.executionStatus = ExecutionStatus.ERROR;
@@ -213,12 +213,12 @@ public class MilkSonar extends MilkPlugIn {
             if (delayResult.delayInMs > 0)
                 listProcessResult.sob.greaterThan(ProcessDeploymentInfoSearchDescriptor.DEPLOYMENT_DATE, delayResult.delayDate.getTime());
 
-            String action = jobExecution.getInputStringParameter(cstParamProcessStatusPolicy);
+            String action = milkJobExecution.getInputStringParameter(cstParamProcessStatusPolicy);
 
 
             /* Configuration */
-            SonarConfiguration sonarConfiguration = new SonarConfiguration(jobExecution.getApiAccessor().getProcessAPI(), jobExecution.getTenantId());
-            TenantServiceAccessor tenantServiceAccessor = jobExecution.getMilkJobContext().getTenantServiceAccessor();
+            SonarConfiguration sonarConfiguration = new SonarConfiguration(milkJobExecution.getApiAccessor().getProcessAPI(), milkJobExecution.getTenantId());
+            TenantServiceAccessor tenantServiceAccessor = milkJobExecution.getMilkJobContext().getTenantServiceAccessor();
             if (tenantServiceAccessor != null) {
                 ClassLoader classLoader = tenantServiceAccessor.getClassLoaderService().getGlobalClassLoader();
                 sonarConfiguration.setClassLoader(classLoader);
@@ -226,12 +226,12 @@ public class MilkSonar extends MilkPlugIn {
 
             List<BEvent> listEvents = new ArrayList<>();
 
-            String parameters = jobExecution.getInputStringParameter(cstParamParameters);
+            String parameters = milkJobExecution.getInputStringParameter(cstParamParameters);
             if (CSTCONFIGURATION_SONARPAGE.equals(parameters)) {
                 listEvents.addAll(sonarConfiguration.readRulesParameters());
             }
 
-            String qualification = jobExecution.getInputStringParameter(cstParamQualification);
+            String qualification = milkJobExecution.getInputStringParameter(cstParamQualification);
             if (CSTCONFIGURATION_SONARPAGE.equals(qualification)) {
                 listEvents.addAll(sonarConfiguration.readQualification());
             }
@@ -241,7 +241,7 @@ public class MilkSonar extends MilkPlugIn {
                 return milkJobOutput;
             }
 
-            String reportLevel = jobExecution.getInputStringParameter( cstParamReportLevel );
+            String reportLevel = milkJobExecution.getInputStringParameter( cstParamReportLevel );
             SEVERITY severity = SEVERITY.SUCCESS;
             if (CSTREPORTLEVEL_INFO.equals(reportLevel))
                 severity = SEVERITY.INFO;
@@ -255,16 +255,16 @@ public class MilkSonar extends MilkPlugIn {
             SearchResult<ProcessDeploymentInfo> searchProcess;
 
             Set<String> processName = new HashSet<>();
-            searchProcess = jobExecution.getApiAccessor().getProcessAPI().searchProcessDeploymentInfos(listProcessResult.sob.done());
+            searchProcess = milkJobExecution.getApiAccessor().getProcessAPI().searchProcessDeploymentInfos(listProcessResult.sob.done());
 
-            MilkSonarTrackExecution milkSonarTrackExecution = new MilkSonarTrackExecution(jobExecution);
+            MilkSonarTrackExecution milkSonarTrackExecution = new MilkSonarTrackExecution(milkJobExecution);
             milkSonarTrackExecution.init(searchProcess.getResult().size());
 
             SonarEngine sonarEngine = SonarEngine.getInstance();
             SonarResult sonarResult = new SonarResult();
             // ----------------------- loop on each process
             for (ProcessDeploymentInfo processDeploymentInfo : searchProcess.getResult()) {
-                if (jobExecution.pleaseStop())
+                if (milkJobExecution.isStopRequired())
                     break;
 
                 // register the process name. We ordered by Deployment date, so if the policy is "older" and the name is already register, skip it
@@ -278,7 +278,7 @@ public class MilkSonar extends MilkPlugIn {
                 }
                 processName.add(processDeploymentInfo.getName());
 
-                SonarProcess sonarProcess = new SonarProcess(jobExecution.getApiAccessor().getProcessAPI(), jobExecution.getTenantId());
+                SonarProcess sonarProcess = new SonarProcess(milkJobExecution.getApiAccessor().getProcessAPI(), milkJobExecution.getTenantId());
                 listEvents = sonarProcess.loadProcess(processDeploymentInfo.getProcessId());
                 milkJobOutput.addEvents(listEvents);
                 if (BEventFactory.isError(listEvents)) {
@@ -292,7 +292,7 @@ public class MilkSonar extends MilkPlugIn {
                 if (sonarResultProcess.isError()) {
                     if (CSTACTION_DISABLE.equals(action)) {
                         try {
-                            jobExecution.getApiAccessor().getProcessAPI().disableProcess(sonarProcess.getProcessDefinitionId());
+                            milkJobExecution.getApiAccessor().getProcessAPI().disableProcess(sonarProcess.getProcessDefinitionId());
                             sonarResultProcess.actionProcessDisabled = true;
                         } catch (ProcessDefinitionNotFoundException | ProcessActivationException e) {
                             // nothing special here
@@ -300,7 +300,7 @@ public class MilkSonar extends MilkPlugIn {
                     }
                 }
 
-                jobExecution.addManagedItems(1);
+                milkJobExecution.addManagedItems(1);
                 milkJobOutput.nbItemsProcessed++;
             } // end for
             
@@ -335,7 +335,7 @@ public class MilkSonar extends MilkPlugIn {
         milkJobOutput.addChronometersInReport(false, true);
 
         // it maybe already in error, so don't change it
-        if (jobExecution.pleaseStop() && milkJobOutput.executionStatus == ExecutionStatus.SUCCESS)
+        if (milkJobExecution.isStopRequired() && milkJobOutput.executionStatus == ExecutionStatus.SUCCESS)
             milkJobOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
 
         return milkJobOutput;

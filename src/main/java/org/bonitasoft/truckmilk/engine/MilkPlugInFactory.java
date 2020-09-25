@@ -11,26 +11,25 @@ import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.ReplacementPlugIn;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
-import org.bonitasoft.truckmilk.plugin.MilkCancelCases;
-import org.bonitasoft.truckmilk.plugin.MilkCleanArchivedDross;
-import org.bonitasoft.truckmilk.plugin.MilkDeleteCases;
-import org.bonitasoft.truckmilk.plugin.MilkDeleteDuplicateTasks;
-import org.bonitasoft.truckmilk.plugin.MilkDeleteProcesses;
-import org.bonitasoft.truckmilk.plugin.MilkDirectory;
-import org.bonitasoft.truckmilk.plugin.MilkEmailUsersTasks;
-import org.bonitasoft.truckmilk.plugin.MilkGrumman;
-import org.bonitasoft.truckmilk.plugin.MilkLogObserver;
-import org.bonitasoft.truckmilk.plugin.MilkMeteor;
-import org.bonitasoft.truckmilk.plugin.MilkPing;
-import org.bonitasoft.truckmilk.plugin.MilkPurgeArchive;
-
-
-import org.bonitasoft.truckmilk.plugin.MilkRadarBonitaEngine;
-import org.bonitasoft.truckmilk.plugin.MilkReplayFailedTask;
-import org.bonitasoft.truckmilk.plugin.MilkRestartFlowNodes;
-import org.bonitasoft.truckmilk.plugin.MilkSLA;
-import org.bonitasoft.truckmilk.plugin.MilkSonar;
-import org.bonitasoft.truckmilk.plugin.MilkUnassignTasks;
+import org.bonitasoft.truckmilk.plugin.cases.MilkCancelCases;
+import org.bonitasoft.truckmilk.plugin.cases.MilkCleanArchivedDross;
+import org.bonitasoft.truckmilk.plugin.cases.MilkDeleteCases;
+import org.bonitasoft.truckmilk.plugin.cases.MilkMoveArchive;
+import org.bonitasoft.truckmilk.plugin.cases.MilkPurgeArchive;
+import org.bonitasoft.truckmilk.plugin.monitor.MilkDirectory;
+import org.bonitasoft.truckmilk.plugin.monitor.MilkGrumman;
+import org.bonitasoft.truckmilk.plugin.monitor.MilkLogObserver;
+import org.bonitasoft.truckmilk.plugin.monitor.MilkRadarBonitaEngine;
+import org.bonitasoft.truckmilk.plugin.other.MilkMeteor;
+import org.bonitasoft.truckmilk.plugin.other.MilkPing;
+import org.bonitasoft.truckmilk.plugin.processes.MilkDeleteProcesses;
+import org.bonitasoft.truckmilk.plugin.processes.MilkSonar;
+import org.bonitasoft.truckmilk.plugin.tasks.MilkDeleteDuplicateTasks;
+import org.bonitasoft.truckmilk.plugin.tasks.MilkEmailUsersTasks;
+import org.bonitasoft.truckmilk.plugin.tasks.MilkReplayFailedTask;
+import org.bonitasoft.truckmilk.plugin.tasks.MilkRestartFlowNodes;
+import org.bonitasoft.truckmilk.plugin.tasks.MilkSLA;
+import org.bonitasoft.truckmilk.plugin.tasks.MilkUnassignTasks;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
 /**
@@ -105,6 +104,7 @@ public class MilkPlugInFactory {
         listPlugIns.add(new MilkLogObserver() );
         listPlugIns.add(new MilkDeleteProcesses() );
         listPlugIns.add(new MilkSonar() );
+        listPlugIns.add(new MilkMoveArchive() );
     }
 
     /**

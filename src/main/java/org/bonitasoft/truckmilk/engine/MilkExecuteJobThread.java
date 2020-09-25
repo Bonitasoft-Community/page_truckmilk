@@ -10,17 +10,14 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
-
-
-
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory.MilkFactoryOp;
-import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
-import org.bonitasoft.truckmilk.job.MilkJob.SavedExecution;
 import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializationJobParameters;
 import org.bonitasoft.truckmilk.job.MilkJob;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
+import org.bonitasoft.truckmilk.job.MilkJob.SavedExecution;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.job.MilkJobMonitor;
@@ -115,7 +112,7 @@ public class MilkExecuteJobThread extends Thread {
                 // now, it's locked on this node 
                 executionDescription.append( "<b>*** STARTED ***</b>;");
                 this.start();
-                this.setName(  getThreadName(milkJob) );
+                this.setName( getThreadName(milkJob) );
             } else if (saveJob) {
                 milkJob.milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceStartExecutionJob());
 
@@ -176,11 +173,11 @@ public class MilkExecuteJobThread extends Thread {
         SavedExecution savedStartExecution=null;
         try {
             String hostName = "";
-            String ipAddress="";
+            // String ipAddress="";
             try {
                 InetAddress ip = InetAddress.getLocalHost();
                 hostName = ip.getHostName() ;
-                ipAddress = ip.getHostAddress();
+                // ipAddress = ip.getHostAddress();
             } catch (UnknownHostException e1) {
                 logger.severe("MilkExecuteJobThread: can't get the ipAddress, synchronization on a cluster can't work");
             }
@@ -199,7 +196,22 @@ public class MilkExecuteJobThread extends Thread {
                 // save the start Status (so general) and the track Status, plus askStop to false
                 listEvents.addAll(milkJobFactory.dbSaveJob(milkJob, SerializationJobParameters.getInstanceStartExecutionJob()));
 
-                milkJobOutput = plugIn.execute(milkJobExecution);
+                // this is the moment to check the environment again
+                listEvents = plugIn.checkJobEnvironment(milkJobExecution);
+                
+                // ---------------------- check environment
+                if ( BEventFactory.isError(listEvents)) {
+                    milkJobOutput = new MilkJobOutput();
+                    milkJobOutput.milkJob = milkJob;
+                    milkJobOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
+                    milkJobOutput.addReportInHtml("Job's Environment is not correct, job can't be start");
+                    milkJobOutput.addEvents(listEvents);
+                }
+                
+                // ----------------- execution >
+                else {
+                    milkJobOutput = plugIn.executeJob(milkJobExecution);
+                }
                 
                 if (milkJobOutput.getReportInHtml().length()==0) {
                     // no report, then build one from the list of event
@@ -248,7 +260,7 @@ public class MilkExecuteJobThread extends Thread {
                 logger.info("End Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")" + listEventsSt.toString());
 
                 // force the status ABORD status
-                if (milkJobExecution.pleaseStop() && (milkJobOutput.executionStatus == ExecutionStatus.SUCCESS))
+                if (milkJobExecution.isStopRequired() && (milkJobOutput.executionStatus == ExecutionStatus.SUCCESS))
                     milkJobOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
                 // if the user ask to stop, then this is a successabort if this is correct (do not change a ERROR)
                 if (milkJob.isAskForStop() && (milkJobOutput.executionStatus == ExecutionStatus.SUCCESS || milkJobOutput.executionStatus == ExecutionStatus.SUCCESSPARTIAL))

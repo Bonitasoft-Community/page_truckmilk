@@ -113,7 +113,7 @@ public class MilkCmdControlAPI {
         BonitaCommandDescription commandDescription = new BonitaCommandDescription(MilkCmdControl.cstCommandName, pageDirectory);
         commandDescription.forceDeploy = false;
         commandDescription.mainCommandClassName = MilkCmdControl.class.getName();
-        commandDescription.mainJarFile = "TruckMilk-2.6-Page.jar";
+        commandDescription.mainJarFile = "TruckMilk-2.7.0-Page.jar";
         commandDescription.commandDescription = MilkCmdControl.cstCommandDescription;
 
 
@@ -129,9 +129,12 @@ public class MilkCmdControlAPI {
         cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-event", "1.9.0", "bonita-event-1.9.0.jar");
         cmdDependency.setForceDeploy( true );
 
-        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.6.0", "bonita-properties-2.6.0.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.7.0", "bonita-properties-2.7.0.jar");
         cmdDependency.setForceDeploy( true );
 
+        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-casedetails", "1.1.0", "bonita-casedetails-1.1.0.jar");
+        cmdDependency.setForceDeploy( true );
+        
         cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-meteor", "3.2.0", "CustomPageMeteor-3.2.0.jar");
         cmdDependency.setForceDeploy( true );
 

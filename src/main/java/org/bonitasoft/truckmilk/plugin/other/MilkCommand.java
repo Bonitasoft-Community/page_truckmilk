@@ -1,4 +1,4 @@
-package org.bonitasoft.truckmilk.plugin;
+package org.bonitasoft.truckmilk.plugin.other;
 
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
@@ -78,7 +78,7 @@ public class MilkCommand extends MilkPlugIn {
      * execution of the job. Just calculated the result according the parameters, and return it.
      */
     @Override
-    public MilkJobOutput execute(MilkJobExecution jobExecution) {
+    public MilkJobOutput executeJob(MilkJobExecution jobExecution) {
         MilkJobOutput plugTourOutput = jobExecution.getMilkJobOutput();
 
         // if the date has to be added in the result ?
@@ -88,7 +88,7 @@ public class MilkCommand extends MilkPlugIn {
         // call the command
 
         plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
-        if (jobExecution.pleaseStop())
+        if (jobExecution.isStopRequired())
             plugTourOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
 
         return plugTourOutput;
