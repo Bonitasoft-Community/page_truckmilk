@@ -157,49 +157,7 @@ public class DatabaseTables {
         return listEvents;
     }
 
-    public class ConnectionResult {
-
-        public Connection con = null;
-        public List<BEvent> listEvents = new ArrayList<>();
-    }
-
-    public ConnectionResult getConnection(String dataSourceName) throws SQLException {
-        // logger.info(loggerLabel+".getDataSourceConnection() start");
-        ConnectionResult connectionResult = new ConnectionResult();
-        List<String> listDataSource = new ArrayList<>();
-        listDataSource.add(dataSourceName);
-        if (!dataSourceName.startsWith("java:/comp/env/"))
-            listDataSource.add("java:/comp/env/" + dataSourceName);
-        // logger.info(loggerLabel + ".getDataSourceConnection() check[" + dataSourceString + "]");
-        String msg = "";
-        for (String dataSourceIterator : listDataSource) {
-            try {
-
-                final Context ctx = new InitialContext();
-                final Object dataSource = ctx.lookup(dataSourceIterator);
-                if (dataSource == null)
-                    continue;
-                // in Postgres, this object is not a javax.sql.DataSource, but a specific Object.
-                // see https://jdbc.postgresql.org/development/privateapi/org/postgresql/xa/PGXADataSource.html
-                // but each has a method "getConnection()
-                Method m = dataSource.getClass().getMethod("getConnection");
-
-                connectionResult.con = (Connection) m.invoke(dataSource);
-                // logger.info(loggerLabel + ".getDataSourceConnection() [" + dataSourceString + "] isOk");
-                connectionResult.listEvents.clear(); // clear error on previous tentative
-                return connectionResult;
-            } catch (NameNotFoundException e) {
-                // nothing to do, expected
-            } catch (NamingException | NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-                logger.info(loggerLabel + ".getDataSourceConnection() error[" + dataSourceName + "] : " + e.toString());
-                msg += "DataSource[" + dataSourceName + "] : error " + e.toString() + ";";
-                connectionResult.listEvents.add(new BEvent(eventConnectDatabase, "Datasource[" + dataSourceIterator + "] Error:" + e.getMessage()));
-            }
-        }
-
-        logger.severe(loggerLabel + ".getDataSourceConnection: Can't found a datasource : " + msg);
-        return connectionResult;
-    }
+   
 
     /* ******************************************************************************** */
     /*                                                                                  */
@@ -385,6 +343,8 @@ public class DatabaseTables {
 
             while (rs.next()) {
                 String indexName = rs.getString("INDEX_NAME");
+                if (indexName==null)
+                    continue;
                 indexName = indexName.toLowerCase();
                 IndexDescription indexDescription = mapIndexes.get(indexName);
                 if (indexDescription == null) {
@@ -408,6 +368,9 @@ public class DatabaseTables {
 
             while (rs.next()) {
                 String indexName = rs.getString("INDEX_NAME");
+                if (indexName==null)
+                    continue;
+           
                 indexName = indexName.toLowerCase();
                 IndexDescription indexDescription = mapIndexes.get(indexName);
                 if (indexDescription == null) {

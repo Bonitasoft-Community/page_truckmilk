@@ -194,7 +194,7 @@ public class MilkSLA extends MilkPlugIn {
                             + ACTION.STARTPROCESS.toString() + ":<processName (<processVersion)>;<JSONinput>,"
                             + ACTION.SENDMESSAGE.toString() + ":<messageName>;<targetProcess (<processversion>);<targetFlowNode>;<JSONMessageContent>;<JSONMessageCorrelation>",
                             TypeParameter.TEXT, 50)),
-            null, "Give a list of rules. Each rule describe the threshold in percent 0-task start, 100% due date, and action");
+            null, "Give a list of rules. Each rule describes the threshold in percent 0-task start, 100% due date, and action");
 
     private static PlugInParameter cstParamSeparatorEmail = PlugInParameter.createInstance("Mail", "Parameters mail", TypeParameter.SEPARATOR, "", "SLA Job may have a EMAIL action. This is then the email configuration.");
     private static PlugInParameter cstParamEmailFrom = PlugInParameter.createInstance("emailfrom", "Email from", TypeParameter.STRING, "bonitasoftreminder@myserver.com", "The 'mail from' attribute");

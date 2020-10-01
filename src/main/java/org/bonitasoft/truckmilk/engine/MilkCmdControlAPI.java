@@ -135,22 +135,25 @@ public class MilkCmdControlAPI {
         cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-casedetails", "1.1.0", "bonita-casedetails-1.1.0.jar");
         cmdDependency.setForceDeploy( true );
         
-        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-meteor", "3.2.0", "CustomPageMeteor-3.2.0.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-meteor", "3.3.0", "bonita-meteor-3.3.0.jar");
         cmdDependency.setForceDeploy( true );
 
-        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-sonar", "1.1.0", "CustomPageSonar-1.1.0.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-sonar", "1.1.0", "bonita-sonar-1.1.0.jar");
         cmdDependency.setForceDeploy( true );
 
         cmdDependency=commandDescription.addJarDependencyLastVersion("CodeNarc", "1.6.1", "CodeNarc-1.6.1.jar");
         cmdDependency.setForceDeploy( true );
 
-        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-worker", "1.8.0", "CustomPageWorker-1.8.0.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-worker", "1.9.0", "bonita-worker-1.9.0.jar");
         cmdDependency.setForceDeploy( true );
         
-        cmdDependency= commandDescription.addJarDependencyLastVersion("custompage-grumman", "1.1.0", "CustomPageGrumman-1.1.0.jar");
+        cmdDependency= commandDescription.addJarDependencyLastVersion("custompage-grumman", "1.2.0", "bonita-grumman-1.2.0.jar");
         cmdDependency.setForceDeploy( true );
 
-        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-logaccess", "2.6.0", "CustomPageLogAccess-2.6.0.jar");
+        cmdDependency= commandDescription.addJarDependencyLastVersion("custompage-explorer", "1.0.0", "bonita-explorer-1.0.0.jar");
+        cmdDependency.setForceDeploy( true );
+
+        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-logaccess", "2.6.0", "bonita-log-2.6.1.jar");
         cmdDependency.setForceDeploy( true );
         
         // don't add the Meteor Dependency : with Bonita, all dependencies are GLOBAL. If we reference the MeteorAPI, we will have the same API for all pages

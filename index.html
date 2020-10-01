@@ -91,7 +91,7 @@
 					<div style="font-style: italic;">
 					The <span style="color: red;font-weight: bold;">B</span>onita <span style="color: red;font-weight: bold;">SC</span>heduler&nbsp;
 					</div>
-					<a href="" >V2.7.0 (Sept 22, 2020)</a>
+					<a href="" >V2.7.0 (Sept 25, 2020)</a>
 				</center>
 			</td></tr>
 			<tr><td>
@@ -114,6 +114,11 @@
 			</li>
 			<li ng-class="{active: active, disabled: false}" id="form-tab" heading="Timer" active="true" title="Maintenance" select="ctrl.navbaractiv == 'Maintenance'" class="{{ctrl.getNavClass('Maintenance')}}" style="{{ctrl.getNavStyle('Maintenance')}}">
 				  <a  ng-click="ctrl.navbaractiv='Maintenance'" class="ng-binding">Maintenance</a>
+			</li>
+			<li ng-class="{active: active, disabled: false}" id="form-tab" heading="Installation guide" active="true" title="Installation" select="ctrl.navbaractiv == 'Installation'" 
+					class="{{ctrl.getNavClass('Installation')}}" 
+					style="{{ctrl.getNavStyle('Installation')}}">
+				  <a  ng-click="ctrl.navbaractiv='Installation'" class="ng-binding">Installation</a>
 			</li>
 
 		</ul>
@@ -1487,7 +1492,7 @@
 					</div>
 					<div style="padding: 10px;">
 						<table class="table table-striped table-hover table-condensed" >
-							<tr  ng-repeat="traceexec in ctrl.scheduler.lastheartbeat track by $index"><td><div ng-bind-html="ctrl.getHtml(traceexec)"</div></td></tr>
+							<tr  ng-repeat="traceexec in ctrl.scheduler.lastheartbeat track by $index"><td><div ng-bind-html="ctrl.getHtml(traceexec)"></div></td></tr>
 						</table>					
 					</div>
 				</div>
@@ -1648,6 +1653,51 @@
 			</table>
 			
 		</div> <!--  end maintenance -->
+		
+		<!--  ************************************************************  -->	
+		<!--  Tab Installation		 										-->
+		<!--  ************************************************************  -->		
+		<!-- Keep it ng-show, else the file drop will not work ! -->	
+		<div class="col-lg-12" ng-show="ctrl.navbaractiv == 'Installation'">
+			Visit the complete documentation here 
+				<a href="https://github.com/Bonitasoft-Community/page_truckmilk/blob/master/Truckmilk%20Manual.pdf">Truckmilk Documentation</a><p>
+				
+			<h3>Get the resource and install the page</h3>
+				Download the page from the community, and Then install the page as a Resource and reference it in a Profile or Application.
+				Note: if you see this page, you have already did theses steps !<br>
+			<h3>First access</h3> 
+			The first access, you should see a banner to explain the command is deployed with success<br>
+			<center>			
+			<img src="documentation/homepage.jpg"/>
+			</center>
+			<p>
+			
+			A Bonita Command is a JAVA Class deployed on the server. This allow the controller to check and start new jobs even if user is disconnected.
+			On a Cluster environment, each node will install the command. Command is saved in the database, and is backup when you back up the Bonita database
+			The second step consist to install the Quartz Job JAR file.
+			<h3>Install the Quartz</h3>
+			Unzip the Truck milk ZIP file.<br>
+			<center>
+ 			<img src="documentation/accesszipfile.jpg"/>
+ 			</center>
+
+			<p>
+			
+			Access the lib directory<br>
+			<center>
+ 			<img src="documentation/accessziplib.jpg"/>
+ 			</center>
+			<br>
+			Copy the jar name “TruckMilk<version>-Quartzjob.jar” under the path 
+			<BONITASERVER>/server/webapps/bonita/WEB-INF/lib
+			
+			<li>You can copy it on your Bonita Studio: path is <STUDIO>/workspace/tomcat/server/webapps/bonita/WEB-INF/lib</li>
+			<li>On a Cluster, you have to copy this file on each node.</li>
+			
+				Restart your server (on a studio, go to Server / Restart Web Server)
+				Then, access the page. Go to the tab “Maintenance” and click on START
+
+		</div> <!--  end Installation -->
 
 		<!-- Register a new plug in 
 		<div class="col-lg-12">	

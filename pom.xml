@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.bonitasoft.custompage</groupId>
-	<artifactId>TruckMilk</artifactId>
+	<groupId>org.bonitasoft.custompage</groupId>
+	<artifactId>bonita-truckmilk</artifactId>
 	<!-- Attention, when number change here, update -->
 	<!-- * MilkCmdControlAPI.checkAndDeployCommand ( commandDescription.mainJarFile = "TruckMilk-2.6-Page.jar") -->
 
@@ -41,7 +41,7 @@
 		<dependency>
 			<groupId>org.bonitasoft.properties</groupId>
 			<artifactId>bonita-properties</artifactId>
-			<version>2.7.0</version>
+			<version>2.8.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.bonitasoft.tools</groupId>
@@ -49,14 +49,14 @@
 			<version>1.1.0</version>
 		</dependency>
 		<dependency>
-			<groupId>com.bonitasoft.custompage</groupId>
-			<artifactId>CustomPageMeteor</artifactId>
-			<version>3.2.0</version>
+			<groupId>org.bonitasoft.custompage</groupId>
+			<artifactId>bonita-meteor</artifactId>
+			<version>3.3.0</version>
 		</dependency>
 		<!-- Change here ? report the modification in MilkCmdControlAPI.getMilkCommandDescription() -->
 		<dependency>
-			<groupId>com.bonitasoft.custompage</groupId>
-			<artifactId>CustomPageSonar</artifactId>
+			<groupId>org.bonitasoft.custompage</groupId>
+			<artifactId>bonita-sonar</artifactId>
 			<version>1.1.0</version>
 		</dependency>
 		<!--  we have to register explicitaly the codenarc to have it in the dependency and copy it to the command -->
@@ -68,18 +68,23 @@
 		
 		<dependency>
 			<groupId>org.bonitasoft.custompage</groupId>
-			<artifactId>CustomPageWorker</artifactId>
-			<version>1.8.0</version>
+			<artifactId>bonita-worker</artifactId>
+			<version>1.9.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.bonitasoft.custompage</groupId>
-			<artifactId>CustomPageGrumman</artifactId>
-			<version>1.1.0</version>
+			<artifactId>bonita-grumman</artifactId>
+			<version>1.2.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.bonitasoft.custompage</groupId>
-			<artifactId>CustomPageLogAccess</artifactId>
-			<version>2.6.0</version>
+			<artifactId>bonita-log</artifactId>
+			<version>2.6.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.bonitasoft.custompage</groupId>
+			<artifactId>bonita-explorer</artifactId>
+			<version>1.0.0</version>
 		</dependency>
 		
 		
