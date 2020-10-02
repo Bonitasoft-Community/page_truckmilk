@@ -182,7 +182,7 @@
 			self.showUploadSuccess=false;
 
 			// console.log("loadinit inprogress<=true. Call now");
-			self.listevents='';
+			self.listeventsdeploy='';
 			
 			// console.log("loadinit Call HTTP");
 			$http.get('?page=custompage_truckmilk&action=startup&t='+Date.now())
@@ -199,7 +199,7 @@
 				self.listplugtour 	= jsonResult.listplugtour;
 				self.listplugin 	= jsonResult.listplugin;
 				self.scheduler 		= jsonResult.scheduler;
-				self.listevents 	= jsonResult.listevents;
+				self.listeventsdeploy 	= jsonResult.listevents;
 				self.deploimentsuc  = jsonResult.deploimentsuc;
 				self.deploimenterr  = jsonResult.deploimenterr;
 				self.todaytagday  	= jsonResult.todaytagday;

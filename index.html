@@ -152,8 +152,10 @@
 			<div ng-if="ctrl.deploimentsuc.length >0 " class="alert alert-success">
 				{{ctrl.deploimentsuc}}
 			</div>
+
 			<div ng-if="ctrl.deploimenterr.length >0 " class="alert alert-danger">
 				{{ctrl.deploimenterr}}
+				<div ng-bind-html="ctrl.getHtml(ctrl.listeventsdeploy, 'deployError')"></div>
 			</div>
 		
 			<div class="alert alert-danger" role="alert" ng-if="ctrl.timererror.length > 0">{{ctrl.timererror}}</div>
@@ -1352,6 +1354,7 @@
 			</div>
 			<div ng-if="ctrl.deploimenterr.length >0 " class="alert alert-danger">
 				{{ctrl.deploimenterr}}
+				<div ng-bind-html="ctrl.getHtml(ctrl.listeventsdeploy, 'deployError')"></div>
 			</div>
 				<!--  Panel SHOW REPORT -->
 					<input ng-model="ctrl.reports.showhost" type="checkbox" title="Show host column">Show Host&nbsp;&nbsp;&nbsp;
@@ -1435,6 +1438,7 @@
 			</div>
 			<div ng-if="ctrl.deploimenterr.length >0 " class="alert alert-danger">
 				{{ctrl.deploimenterr}}
+				<div ng-bind-html="ctrl.getHtml(ctrl.listeventsdeploy, 'deployError')"></div>
 			</div>
 			
 			
@@ -1637,8 +1641,8 @@
 						</div>
 						<div ng-if="ctrl.commandredeploy.deploimenterr.length >0 " class="alert alert-danger">
 							{{ctrl.commandredeploy.deploimenterr}}
+							<div ng-bind-html="ctrl.getHtml(ctrl.listeventsdeploy, 'deployError')"></div>
 						</div>
-						<div ng-bind-html="ctrl.getHtml( ctrl.commandredeploy.listevents, 'cmdRedeploy' )"></div>
 
 
 						<h3>Uninstall</h3>

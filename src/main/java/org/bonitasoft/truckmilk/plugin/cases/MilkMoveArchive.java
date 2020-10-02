@@ -133,7 +133,7 @@ public class MilkMoveArchive extends MilkPlugIn {
 
     private final static PlugInParameter cstParamDeleteCase = PlugInParameter.createInstance("deletecase", "Delera Archived Case", TypeParameter.BOOLEAN, Boolean.FALSE, "After move, delete the archived case");
 
-    private final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+    
 
     public MilkMoveArchive() {
         super(TYPE_PLUGIN.EMBEDED);
@@ -248,7 +248,6 @@ public class MilkMoveArchive extends MilkPlugIn {
         // get Input 
         SearchOptionsBuilder searchBuilderCase = new SearchOptionsBuilder(0, milkJobExecution.getJobStopAfterMaxItems() + 1);
 
-        DatabaseTables databaseTable = new DatabaseTables();
         String datasource = milkJobExecution.getInputStringParameter(cstParamDatasource);
 
         MoveParameters moveParameters = new MoveParameters();
@@ -381,17 +380,10 @@ public class MilkMoveArchive extends MilkPlugIn {
         caseHistoryParameter.loadProcessVariables = moveParameters.moveProcessData == POLICY_DATA.ARCHIVE ;
         caseHistoryParameter.loadBdmVariables = moveParameters.moveProcessData == POLICY_DATA.ARCHIVE;
         caseHistoryParameter.loadContentBdmVariables = false;
-
-         
-        
         caseHistoryParameter.loadArchivedHistoryProcessVariable = moveParameters.saveHistoryProcessData;
-        
-        
         caseHistoryParameter.loadActivities = moveParameters.moveActivity;
         caseHistoryParameter.loadEvents = false;
         caseHistoryParameter.loadTimers = false;
-        
-        
         caseHistoryParameter.loadDocuments = moveParameters.moveDocument;
 
         List<BEvent> listEvents = new ArrayList<>();
@@ -496,14 +488,14 @@ public class MilkMoveArchive extends MilkPlugIn {
         record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STARTEDBYNAME, getUserName(processInstance.archProcessInstance.getStartedBy(), apiAccessor.getIdentityAPI(), cacheUsers));
         
         record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STARTEDBYSUBSTITUTE, processInstance.archProcessInstance.getStartedBySubstitute());
-        record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STARTEDBYSUBSTITUTE, getUserName(processInstance.archProcessInstance.getStartedBySubstitute(),  apiAccessor.getIdentityAPI(), cacheUsers));
+        record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STARTEDBYSUBSTITUTENAME, getUserName(processInstance.archProcessInstance.getStartedBySubstitute(),  apiAccessor.getIdentityAPI(), cacheUsers));
 
         record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_ARCHIVEDATE, dateToLong(processInstance.archProcessInstance.getArchiveDate()));
         record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STRINGINDEX1, processInstance.archProcessInstance.getStringIndexValue(1));
         record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STRINGINDEX2, processInstance.archProcessInstance.getStringIndexValue(2));
         record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STRINGINDEX3, processInstance.archProcessInstance.getStringIndexValue(3));
         record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STRINGINDEX4, processInstance.archProcessInstance.getStringIndexValue(4));
-        record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STRINGINDEX5, processInstance.archProcessInstance.getStringIndexValue(4));
+        record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STRINGINDEX5, processInstance.archProcessInstance.getStringIndexValue(5));
         String informationContext = "ProcessInstance[" + processInstance.processInstanceId + "]";
         DatabaseTables databaseTables = new DatabaseTables();
         resultMove.listEvents.addAll(databaseTables.insert(DatabaseDefinition.BDE_TABLE_PROCESSINSTANCE, record, informationContext, con));
@@ -820,7 +812,7 @@ public class MilkMoveArchive extends MilkPlugIn {
                 new DataColumn(DatabaseDefinition.BDE_PROCESSINSTANCE_STARTEDBY, COLTYPE.LONG),
                 new DataColumn(DatabaseDefinition.BDE_PROCESSINSTANCE_STARTEDBYNAME, COLTYPE.STRING, 255),
                 new DataColumn(DatabaseDefinition.BDE_PROCESSINSTANCE_STARTEDBYSUBSTITUTE, COLTYPE.LONG),
-                new DataColumn(DatabaseDefinition.BDE_PROCESSINSTANCE_STARTEDBYSUBSTITUTE, COLTYPE.STRING, 255),
+                new DataColumn(DatabaseDefinition.BDE_PROCESSINSTANCE_STARTEDBYSUBSTITUTENAME, COLTYPE.STRING, 255),
                 new DataColumn(DatabaseDefinition.BDE_PROCESSINSTANCE_ARCHIVEDATE, COLTYPE.LONG),
                 new DataColumn(DatabaseDefinition.BDE_PROCESSINSTANCE_STRINGINDEX1, COLTYPE.STRING, 255),
                 new DataColumn(DatabaseDefinition.BDE_PROCESSINSTANCE_STRINGINDEX2, COLTYPE.STRING, 255),
