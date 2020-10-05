@@ -266,7 +266,7 @@ public class MilkMoveArchive extends MilkPlugIn {
         
         moveParameters.moveActivity = CSTOPERATION_ARCHIVE.equals(milkJobExecution.getInputStringParameter(cstParamMoveActivity)) || CSTOPERATION_ARCHIVELIGHT.equals(milkJobExecution.getInputStringParameter(cstParamMoveActivity));
         moveParameters.moveSynthesisActivity = CSTOPERATION_ARCHIVELIGHT.equals(milkJobExecution.getInputStringParameter(cstParamMoveActivity));
-        moveParameters.moveDocument = CSTOPERATION_ARCHIVELIGHT.equals(milkJobExecution.getInputStringParameter(cstParamMoveDocument));
+        moveParameters.moveDocument = CSTOPERATION_ARCHIVE.equals(milkJobExecution.getInputStringParameter(cstParamMoveDocument));
 
         DatabaseConnection.ConnectionResult connectionResult = null;
         try {
@@ -712,6 +712,7 @@ public class MilkMoveArchive extends MilkPlugIn {
                 record.put(DatabaseDefinition.BDE_DOCUMENTINSTANCE_ARCHIVEDATE, null);
 
                 record.put(DatabaseDefinition.BDE_DOCUMENTINSTANCE_INDEX, documentVariable.document.getIndex());
+                record.put(DatabaseDefinition.BDE_DOCUMENTINSTANCE_ISMULTIPLE, documentVariable.document.getIndex()>=0);
                 record.put(DatabaseDefinition.BDE_DOCUMENTINSTANCE_AUTHOR, documentVariable.document.getAuthor());
                 record.put(DatabaseDefinition.BDE_DOCUMENTINSTANCE_FILENAME, documentVariable.document.getContentFileName());
                 record.put(DatabaseDefinition.BDE_DOCUMENTINSTANCE_MIMETYPE, documentVariable.document.getContentMimeType());
@@ -724,7 +725,7 @@ public class MilkMoveArchive extends MilkPlugIn {
                 for (Map<String, Object> recordInList : listRecords) {
                     String informationContext = "ProcessInstance[" + processInstance.processInstanceId + "], Document[" + record.get(DatabaseDefinition.BDE_DOCUMENTINSTANCE_NAME);
 
-                    resultMove.listEvents.addAll(databaseTables.insert(DatabaseDefinition.BDE_TABLE_DOCUMENT, recordInList, informationContext, con));
+                    resultMove.listEvents.addAll(databaseTables.insert(DatabaseDefinition.BDE_TABLE_DOCUMENTINSTANCE, recordInList, informationContext, con));
                     if (BEventFactory.isError(resultMove.listEvents))
                         return;
                 }
@@ -863,7 +864,7 @@ public class MilkMoveArchive extends MilkPlugIn {
         listTables.add(dataTable);
 
         // Case
-        DataDefinition docTable = new DataDefinition(DatabaseDefinition.BDE_TABLE_DOCUMENT);
+        DataDefinition docTable = new DataDefinition(DatabaseDefinition.BDE_TABLE_DOCUMENTINSTANCE);
 
         docTable.listColumns = Arrays.asList(new DataColumn(DatabaseDefinition.BDE_DOCUMENTINSTANCE_TENANTID, COLTYPE.LONG),
                 new DataColumn(DatabaseDefinition.BDE_DOCUMENTINSTANCE_ID, COLTYPE.LONG),
@@ -874,6 +875,7 @@ public class MilkMoveArchive extends MilkPlugIn {
                 new DataColumn(DatabaseDefinition.BDE_DOCUMENTINSTANCE_ARCHIVEDATE, COLTYPE.LONG),
 
                 new DataColumn(DatabaseDefinition.BDE_DOCUMENTINSTANCE_INDEX, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_DOCUMENTINSTANCE_ISMULTIPLE, COLTYPE.BOOLEAN),
                 new DataColumn(DatabaseDefinition.BDE_DOCUMENTINSTANCE_AUTHOR, COLTYPE.LONG),
                 new DataColumn(DatabaseDefinition.BDE_DOCUMENTINSTANCE_FILENAME, COLTYPE.STRING, 255),
                 new DataColumn(DatabaseDefinition.BDE_DOCUMENTINSTANCE_MIMETYPE, COLTYPE.STRING, 255),
