@@ -28,8 +28,7 @@ import javax.naming.NamingException;
 
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
-
-
+import org.bonitasoft.log.event.BEventFactory;
 
 /**
  * Create table on a database
@@ -82,6 +81,25 @@ public class DatabaseTables {
 
     }
 
+    public static class DataForeignKey {
+
+        public String columnName;
+        public String foreignTable;
+        public List<String> listForeignColumns;
+
+        public String getForeignName() {
+            return "FK_" + columnName;
+        }
+
+        public static DataForeignKey getInstance(String columnName, String foreignTable, List<String> listForeignColumns) {
+            DataForeignKey dataForeignKey = new DataForeignKey();
+            dataForeignKey.columnName = columnName;
+            dataForeignKey.foreignTable = foreignTable;
+            dataForeignKey.listForeignColumns = listForeignColumns;
+            return dataForeignKey;
+        }
+    }
+
     public static class DataDefinition {
 
         public String tableName;
@@ -90,6 +108,8 @@ public class DatabaseTables {
 
         public Map<String, List<String>> mapConstraints = new HashMap<>();
 
+        public Map<String, DataForeignKey> mapForeignConstraints = new HashMap<>();
+
         public DataDefinition(String tableName) {
             this.tableName = tableName;
         }
@@ -97,6 +117,7 @@ public class DatabaseTables {
         public String getSqlTableName() {
             return tableName.toLowerCase();
         }
+
         public DataColumn getColumn(String colName) {
             for (DataColumn col : listColumns) {
                 if (colName.equalsIgnoreCase(col.colName))
@@ -142,22 +163,32 @@ public class DatabaseTables {
             createIndexes(table, mapIndexes, logAnalysis, con);
             createConstraints(table, mapIndexes, logAnalysis, con);
 
+        } catch (final SqlExceptionRequest e) {
+            final StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            final String exceptionDetails = sw.toString();
+
+            logAnalysis.append(" ERROR during checkCreateDatase table[" + table.getSqlTableName()
+                    + "] sqlRequest[" + e.sqlRequest
+                    + "] " + e.sqlException.toString() + " : " + exceptionDetails);
+            listEvents.add(new BEvent(eventCreationDatabase, e, "table[" + table.tableName + "] sqlRequest[" + e.sqlRequest + "] " + e.sqlException.toString()));
+
         } catch (final SQLException e) {
             final StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
             final String exceptionDetails = sw.toString();
 
-            logAnalysis.append(" ERROR during checkCreateDatase table[" + table.getSqlTableName() + "] : "
-                    + e.toString() + " : " + exceptionDetails);
-            listEvents.add(new BEvent(eventCreationDatabase, e, "table[" + table.tableName + "]"));
+            logAnalysis.append(" ERROR during checkCreateDatase table[" + table.getSqlTableName()
+                    + "] " + e.toString() + " : " + exceptionDetails);
+            listEvents.add(new BEvent(eventCreationDatabase, e, "table[" + table.tableName + "] " + e.toString()));
 
         }
-
-        logger.info(loggerLabel + logAnalysis.toString());
+        if (BEventFactory.isError(listEvents))
+            logger.severe(loggerLabel + logAnalysis.toString());
+        else
+            logger.info(loggerLabel + logAnalysis.toString());
         return listEvents;
     }
-
-   
 
     /* ******************************************************************************** */
     /*                                                                                  */
@@ -193,13 +224,13 @@ public class DatabaseTables {
             pstmt = con.prepareStatement(sqlRequest.toString());
             for (int i = 0; i < pObject.size(); i++) {
                 if (pObject.get(i) instanceof InputStream)
-                    pstmt.setBinaryStream(i+1, (InputStream) pObject.get(i));
+                    pstmt.setBinaryStream(i + 1, (InputStream) pObject.get(i));
                 else
                     pstmt.setObject(i + 1, pObject.get(i));
             }
             pstmt.execute();
         } catch (Exception e) {
-            listEvents.add(new BEvent(eventInsertError, e, "Table [" + tableName + "] "+informationContext));
+            listEvents.add(new BEvent(eventInsertError, e, "Table [" + tableName + "] " + informationContext));
         } finally {
             if (pstmt != null)
                 try {
@@ -217,7 +248,6 @@ public class DatabaseTables {
     /*                                                                                  */
     /* ******************************************************************************** */
 
-
     /**
      * Update the table
      * 
@@ -225,7 +255,7 @@ public class DatabaseTables {
      * @param con
      * @throws SQLException
      */
-    private void updateTable(DataDefinition table, StringBuffer logAnalysis, final Connection con) throws SQLException {
+    private void updateTable(DataDefinition table, StringBuffer logAnalysis, final Connection con) throws SqlExceptionRequest, SQLException {
         final DatabaseMetaData dbm = con.getMetaData();
         final String databaseProductName = dbm.getDatabaseProductName();
 
@@ -253,7 +283,7 @@ public class DatabaseTables {
             DataColumn column = table.getColumn(colName);
             if (column == null) {
                 logAnalysis.append("Colum[" + colName.toLowerCase() + "] is not expected, keep it;");
-                
+
             } else if (column.length != 0 && length < column.length) {
                 logAnalysis.append("Colum[" + colName.toLowerCase() + "] length[" + length + "] expected["
                         + column.length + "];");
@@ -294,12 +324,13 @@ public class DatabaseTables {
 
     /**
      * Create a table
+     * 
      * @param table
      * @param logAnalysis
      * @param con
      * @throws SQLException
      */
-    private void createTable(DataDefinition table, StringBuffer logAnalysis, final Connection con) throws SQLException {
+    private void createTable(DataDefinition table, StringBuffer logAnalysis, final Connection con) throws SqlExceptionRequest, SQLException {
         // create the table
         final DatabaseMetaData dbm = con.getMetaData();
         final String databaseProductName = dbm.getDatabaseProductName();
@@ -313,7 +344,7 @@ public class DatabaseTables {
         }
         createTableString.append(")");
         logAnalysis.append("NOT EXIST : create it with script[" + createTableString.toString() + "]");
-        executeAlterSql(con, Arrays.asList( createTableString.toString() ));
+        executeAlterSql(con, Arrays.asList(createTableString.toString()));
 
     }
 
@@ -339,11 +370,11 @@ public class DatabaseTables {
         try {
             DatabaseMetaData dbm = con.getMetaData();
             /** unique=false to get all informations */
-            rs = dbm.getIndexInfo(null , null , table.getSqlTableName(), false, false);
+            rs = dbm.getIndexInfo(null, null, table.getSqlTableName(), false, false);
 
             while (rs.next()) {
                 String indexName = rs.getString("INDEX_NAME");
-                if (indexName==null)
+                if (indexName == null)
                     continue;
                 indexName = indexName.toLowerCase();
                 IndexDescription indexDescription = mapIndexes.get(indexName);
@@ -362,15 +393,15 @@ public class DatabaseTables {
                 indexDescription.columns.add(columnName.toLowerCase());
             }
             rs.close();
-            rs=null;
+            rs = null;
             // same with unique
-            rs = dbm.getIndexInfo(null , null , table.getSqlTableName(), true, false);
+            rs = dbm.getIndexInfo(null, null, table.getSqlTableName(), true, false);
 
             while (rs.next()) {
                 String indexName = rs.getString("INDEX_NAME");
-                if (indexName==null)
+                if (indexName == null)
                     continue;
-           
+
                 indexName = indexName.toLowerCase();
                 IndexDescription indexDescription = mapIndexes.get(indexName);
                 if (indexDescription == null) {
@@ -389,7 +420,7 @@ public class DatabaseTables {
             }
         } catch (SQLException e) {
             // do nothing here
-            logger.severe("Error during getIndexInfo "+e.getMessage());
+            logger.severe("Error during getIndexInfo " + e.getMessage());
             throw e;
         } finally {
             if (rs != null)
@@ -408,7 +439,6 @@ public class DatabaseTables {
     }
 
     /**
-     * 
      * @param tableName
      * @param indexName
      * @param isUniq
@@ -444,7 +474,7 @@ public class DatabaseTables {
      * @param con
      * @throws SQLException
      */
-    private void createConstraints(DataDefinition table, Map<String, IndexDescription> mapIndexes, StringBuffer logAnalysis, Connection con) throws SQLException {
+    private void createConstraints(DataDefinition table, Map<String, IndexDescription> mapIndexes, StringBuffer logAnalysis, Connection con) throws SqlExceptionRequest {
         for (Entry<String, List<String>> constraint : table.mapConstraints.entrySet()) {
             List<String> listSqlOrder = new ArrayList<>();
             // is this constraints exist?
@@ -468,15 +498,41 @@ public class DatabaseTables {
 
             executeAlterSql(con, listSqlOrder);
         }
+
+        for (Entry<String, DataForeignKey> foreignConstraint : table.mapForeignConstraints.entrySet()) {
+            List<String> listSqlOrder = new ArrayList<>();
+            // is this constraints exist?
+            STATUSINDEX status = checkExistIndexes(table.getSqlTableName(), foreignConstraint.getValue().getForeignName(), true, foreignConstraint.getValue().listForeignColumns, mapIndexes);
+            if (status == STATUSINDEX.EXIST)
+                continue;
+            if (status == STATUSINDEX.DIFFERENT) {
+                // drop it before
+                listSqlOrder.add("DROP FOREIGN KEY " + foreignConstraint.getValue().getForeignName() + " ON " + table.getSqlTableName());
+            }
+
+            StringBuffer listOfFields = new StringBuffer();
+            for (int i = 0; i < foreignConstraint.getValue().listForeignColumns.size(); i++) {
+                if (i > 0)
+                    listOfFields.append(", ");
+                listOfFields.append(foreignConstraint.getValue().listForeignColumns.get(i));
+            }
+            //  ALTER TABLE Orders ADD CONSTRAINT FK_PersonOrder FOREIGN KEY (PersonID) REFERENCES Persons(PersonID);           
+            //  String createIndex = "ALTER TABLE " + table.tableName + " ADD UNIQUE INDEX " + constraint.getKey() + " ON " + "(" + listOfFields.toString() + ")";
+            listSqlOrder.add("ALTER TABLE " + table.tableName + " ADD CONSTRAINT " + foreignConstraint.getValue().getForeignName()
+                    + " REFERENCES " + foreignConstraint.getValue().foreignTable + "(" + listOfFields.toString() + ")");
+
+            executeAlterSql(con, listSqlOrder);
+        }
+
     }
 
     /**
      * @param table
      * @param logAnalysis
      * @param con
-     * @throws SQLException 
+     * @throws SQLException
      */
-    private void createIndexes(DataDefinition table, Map<String, IndexDescription> mapIndexes, StringBuffer logAnalysis, Connection con) throws SQLException {
+    private void createIndexes(DataDefinition table, Map<String, IndexDescription> mapIndexes, StringBuffer logAnalysis, Connection con) throws SqlExceptionRequest {
 
         for (Entry<String, List<String>> index : table.mapIndexes.entrySet()) {
             List<String> listSqlOrder = new ArrayList<>();
@@ -496,23 +552,35 @@ public class DatabaseTables {
                 listOfFields.append(index.getValue().get(i));
             }
 
-            listSqlOrder.add( "CREATE INDEX " + index.getKey() + " ON " + table.getSqlTableName() + "(" + listOfFields.toString() + ")");
+            listSqlOrder.add("CREATE INDEX " + index.getKey() + " ON " + table.getSqlTableName() + "(" + listOfFields.toString() + ")");
             executeAlterSql(con, listSqlOrder);
         }
     }
-   
+
     /* ******************************************************************************** */
     /*                                                                                  */
     /* Basic operation */
     /*                                                                                  */
     /*                                                                                  */
     /* ******************************************************************************** */
+    public static class SqlExceptionRequest extends Exception {
+
+        private static final long serialVersionUID = 1L;
+        public final SQLException sqlException;
+        public final String sqlRequest;
+
+        public SqlExceptionRequest(SQLException sqlException, String sqlRequest) {
+            this.sqlException = sqlException;
+            this.sqlRequest = sqlRequest;
+        }
+    }
+
     /**
      * @param con
      * @param sqlRequest
      * @throws SQLException
      */
-    private void executeAlterSql(final Connection con, final List<String> listSqlRequests) throws SQLException {
+    private void executeAlterSql(final Connection con, final List<String> listSqlRequests) throws SqlExceptionRequest {
         for (String sqlRequest : listSqlRequests) {
             logger.fine(loggerLabel + "executeAlterSql : Execute [" + sqlRequest + "]");
 
@@ -522,8 +590,8 @@ public class DatabaseTables {
                 if (!con.getAutoCommit()) {
                     con.commit();
                 }
-            } catch (Exception e) {
-                throw e;
+            } catch (SQLException e) {
+                throw new SqlExceptionRequest(e, sqlRequest);
             }
         }
 

@@ -1,9 +1,12 @@
 package org.bonitasoft.truckmilk.plugin.cases;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -19,6 +22,7 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 import org.bonitasoft.casedetails.CaseDetails;
+import org.bonitasoft.casedetails.CaseDetails.CaseDetailComment;
 import org.bonitasoft.casedetails.CaseDetails.CaseDetailDocument;
 import org.bonitasoft.casedetails.CaseDetails.CaseDetailFlowNode;
 import org.bonitasoft.casedetails.CaseDetails.CaseDetailVariable;
@@ -26,6 +30,7 @@ import org.bonitasoft.casedetails.CaseDetails.ProcessInstanceDescription;
 import org.bonitasoft.casedetails.CaseDetails.ScopeVariable;
 import org.bonitasoft.casedetails.CaseDetailsAPI;
 import org.bonitasoft.casedetails.CaseDetailsAPI.CaseHistoryParameter;
+import org.bonitasoft.casedetails.CaseDetailsAPI.LOADCOMMENTS;
 import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.IdentityAPI;
 import org.bonitasoft.engine.api.ProcessAPI;
@@ -63,10 +68,10 @@ import org.bonitasoft.truckmilk.toolbox.DatabaseTables;
 import org.bonitasoft.truckmilk.toolbox.DatabaseTables.COLTYPE;
 import org.bonitasoft.truckmilk.toolbox.DatabaseTables.DataColumn;
 import org.bonitasoft.truckmilk.toolbox.DatabaseTables.DataDefinition;
+import org.bonitasoft.truckmilk.toolbox.DatabaseTables.DataForeignKey;
 
 public class MilkMoveArchive extends MilkPlugIn {
 
-   
     private final static String LOGGER_LABEL = "MilkMoveArchive";
     private final static Logger logger = Logger.getLogger(MilkMoveArchive.class.getName());
 
@@ -90,15 +95,25 @@ public class MilkMoveArchive extends MilkPlugIn {
 
     private final static BEvent eventCantAccessDocument = new BEvent(MilkMoveArchive.class.getName(), 6, Level.ERROR,
             "Can't access Document", "Can't access a document, move will be incomplete", "Case is not moved", "Check the exception");
+    
+    private final static BEvent eventCantExecuteExistProcessInstance = new BEvent(MilkMoveArchive.class.getName(), 7, Level.ERROR,
+            "Can't count number of process Instance", "A count is executed to verify if the process instance was already copied, and it failed", "ProcessInstance are considered as already copied", "Check the exception");
 
     private final static String CSTOPERATION_HISTORYARCHIVE = "Archive all History";
     private final static String CSTOPERATION_NOHISTORYARCHIVE = "No history (only last value)";
     private final static String CSTOPERATION_ARCHIVE = "Archive";
 
+    
+    private final static String CSTOPERATION_COPY = "Copy";
+    private final static String CSTOPERATION_MOVE = "Move";
+    
     private final static String CSTOPERATION_IGNORE = "Ignore";
     private final static String CSTOPERATION_ARCHIVELIGHT = "Archive light";
-    
-    public enum POLICY_DATA { ARCHIVE, IGNORE }
+
+    public enum POLICY_DATA {
+        ARCHIVE, IGNORE
+    }
+
     /**
      * Parameters
      */
@@ -116,24 +131,27 @@ public class MilkMoveArchive extends MilkPlugIn {
 
     private static PlugInParameter cstParamMoveLocalData = PlugInParameter.createInstanceListValues("ArchiveLocalData",
             "Policy on Local Data",
-            new String[] {  CSTOPERATION_ARCHIVE, CSTOPERATION_IGNORE }, CSTOPERATION_ARCHIVE, "Local Data are copied to the Archive database, with the history or not");
+            new String[] { CSTOPERATION_ARCHIVE, CSTOPERATION_IGNORE }, CSTOPERATION_ARCHIVE, "Local Data are copied to the Archive database, with the history or not");
 
     private static PlugInParameter cstParamHistoryProcessData = PlugInParameter.createInstanceListValues("HistoryProcessData",
             "History on process data",
-            new String[] {  CSTOPERATION_HISTORYARCHIVE, CSTOPERATION_NOHISTORYARCHIVE }, CSTOPERATION_NOHISTORYARCHIVE, "A process variable value may change in the process. Archive all value (or only the last value)");
+            new String[] { CSTOPERATION_HISTORYARCHIVE, CSTOPERATION_NOHISTORYARCHIVE }, CSTOPERATION_NOHISTORYARCHIVE, "A process variable value may change in the process. Archive all value (or only the last value)");
 
-    
     private static PlugInParameter cstParamMoveActivity = PlugInParameter.createInstanceListValues("ArchiveActivity",
             "Policy on Process Data",
             new String[] { CSTOPERATION_ARCHIVE, CSTOPERATION_ARCHIVELIGHT, CSTOPERATION_IGNORE }, CSTOPERATION_ARCHIVE, "Activities are copied to the Archive database. Light copied only one record per activity (else 3 to multiple records)");
 
     private static PlugInParameter cstParamMoveDocument = PlugInParameter.createInstanceListValues("ArchiveDocument",
             "Policy on Document",
-            new String[] { CSTOPERATION_ARCHIVE, CSTOPERATION_IGNORE }, CSTOPERATION_ARCHIVE, "Document are copied to the Archive database");
+            new String[] { CSTOPERATION_ARCHIVE, CSTOPERATION_IGNORE }, CSTOPERATION_ARCHIVE, "Documents are copied to the Archive database");
 
-    private final static PlugInParameter cstParamDeleteCase = PlugInParameter.createInstance("deletecase", "Delera Archived Case", TypeParameter.BOOLEAN, Boolean.FALSE, "After move, delete the archived case");
+    private static PlugInParameter cstParamMoveComment = PlugInParameter.createInstanceListValues("ArchiveComment",
+            "Policy on Comment",
+            new String[] { CSTOPERATION_ARCHIVE, CSTOPERATION_IGNORE }, CSTOPERATION_ARCHIVE, "Comments are copied to the Archive database");
 
-    
+    private final static PlugInParameter cstParamOperationCase = PlugInParameter.createInstanceListValues("operationCase", "Operation on case", 
+            new String[] { CSTOPERATION_COPY, CSTOPERATION_MOVE }, CSTOPERATION_MOVE, "Case are move (archived case will be detelete) or copy to the Archive database");
+
 
     public MilkMoveArchive() {
         super(TYPE_PLUGIN.EMBEDED);
@@ -220,10 +238,12 @@ public class MilkMoveArchive extends MilkPlugIn {
         plugInDescription.addParameter(cstParamMoveProcessData);
         plugInDescription.addParameter(cstParamMoveLocalData);
         plugInDescription.addParameter(cstParamHistoryProcessData);
-        
+
         plugInDescription.addParameter(cstParamMoveActivity);
         plugInDescription.addParameter(cstParamMoveDocument);
+        plugInDescription.addParameter(cstParamMoveComment);
 
+        plugInDescription.addParameter(cstParamOperationCase);
         return plugInDescription;
     }
 
@@ -232,9 +252,10 @@ public class MilkMoveArchive extends MilkPlugIn {
         public POLICY_DATA moveProcessData;
         public POLICY_DATA moveLocalData;
         public boolean saveHistoryProcessData;
-        public boolean moveActivity;
+        public boolean moveActivities;
         public boolean moveSynthesisActivity;
-        public boolean moveDocument;
+        public boolean moveDocuments;
+        public LOADCOMMENTS moveComments;
     }
 
     /**
@@ -251,23 +272,26 @@ public class MilkMoveArchive extends MilkPlugIn {
         String datasource = milkJobExecution.getInputStringParameter(cstParamDatasource);
 
         MoveParameters moveParameters = new MoveParameters();
-        moveParameters.moveProcessData =POLICY_DATA.IGNORE;
+        moveParameters.moveProcessData = POLICY_DATA.IGNORE;
         if (CSTOPERATION_ARCHIVE.equals(milkJobExecution.getInputStringParameter(cstParamMoveProcessData)))
-            moveParameters.moveProcessData =POLICY_DATA.ARCHIVE;
-        
+            moveParameters.moveProcessData = POLICY_DATA.ARCHIVE;
+
         moveParameters.moveLocalData = POLICY_DATA.IGNORE;
         if (CSTOPERATION_ARCHIVE.equals(milkJobExecution.getInputStringParameter(cstParamMoveLocalData)))
-            moveParameters.moveLocalData =POLICY_DATA.ARCHIVE;
+            moveParameters.moveLocalData = POLICY_DATA.ARCHIVE;
 
         moveParameters.saveHistoryProcessData = false;
         if (CSTOPERATION_HISTORYARCHIVE.equals(milkJobExecution.getInputStringParameter(cstParamHistoryProcessData)))
-            moveParameters.saveHistoryProcessData =true;
+            moveParameters.saveHistoryProcessData = true;
 
-        
-        moveParameters.moveActivity = CSTOPERATION_ARCHIVE.equals(milkJobExecution.getInputStringParameter(cstParamMoveActivity)) || CSTOPERATION_ARCHIVELIGHT.equals(milkJobExecution.getInputStringParameter(cstParamMoveActivity));
+        moveParameters.moveActivities = CSTOPERATION_ARCHIVE.equals(milkJobExecution.getInputStringParameter(cstParamMoveActivity)) || CSTOPERATION_ARCHIVELIGHT.equals(milkJobExecution.getInputStringParameter(cstParamMoveActivity));
         moveParameters.moveSynthesisActivity = CSTOPERATION_ARCHIVELIGHT.equals(milkJobExecution.getInputStringParameter(cstParamMoveActivity));
-        moveParameters.moveDocument = CSTOPERATION_ARCHIVE.equals(milkJobExecution.getInputStringParameter(cstParamMoveDocument));
+        moveParameters.moveDocuments = CSTOPERATION_ARCHIVE.equals(milkJobExecution.getInputStringParameter(cstParamMoveDocument));
+        moveParameters.moveComments = CSTOPERATION_ARCHIVE.equals(milkJobExecution.getInputStringParameter(cstParamMoveComment))? LOADCOMMENTS.ONLYUSERS : LOADCOMMENTS.NONE;
 
+        String operationCase = milkJobExecution.getInputStringParameter(cstParamOperationCase );
+        
+        
         DatabaseConnection.ConnectionResult connectionResult = null;
         try {
             connectionResult = DatabaseConnection.getConnection(Arrays.asList(datasource));
@@ -275,7 +299,7 @@ public class MilkMoveArchive extends MilkPlugIn {
             connectionResult.con.setAutoCommit(false);
 
             // Parameters
-            ListProcessesResult listProcessResult =  milkJobExecution.getInputArrayProcess( cstParamProcessFilter, false, searchBuilderCase, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
+            ListProcessesResult listProcessResult = milkJobExecution.getInputArrayProcess(cstParamProcessFilter, false, searchBuilderCase, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
 
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
@@ -283,14 +307,13 @@ public class MilkMoveArchive extends MilkPlugIn {
                 milkJobOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
                 return milkJobOutput;
             }
-            DelayResult delayResult = milkJobExecution.getInputDelayParameter( cstParamDelay, new Date(), false);
+            DelayResult delayResult = milkJobExecution.getInputDelayParameter(cstParamDelay, new Date(), false);
             if (BEventFactory.isError(delayResult.listEvents)) {
                 milkJobOutput.addEvents(delayResult.listEvents);
                 milkJobOutput.executionStatus = ExecutionStatus.ERROR;
                 return milkJobOutput;
             }
 
-            boolean deleteCase = milkJobExecution.getInputBooleanParameter(cstParamDeleteCase);
 
             // search
             StringBuffer buildTheSQLRequest = new StringBuffer();
@@ -305,18 +328,30 @@ public class MilkMoveArchive extends MilkPlugIn {
             milkJobExecution.setAvancement(10);
 
             //---------------- operation
-            milkJobOutput.addReportTableBegin(new String[] { "CaseId", "SubProcess", "Activity", "Datas", "Documents", "Status" });
-            Map<Long,User> cacheUsers = new HashMap<>();
-            
+            milkJobOutput.addReportTableBegin(new String[] { "CaseId", "SubProcess", "Activity", "Datas", "Documents", "Comments", "Status" });
+            Map<Long, User> cacheUsers = new HashMap<>();
+
             List<Long> listArchivedProcessInstances = new ArrayList<>();
             for (ArchivedProcessInstance archivedProcessInstance : searchProcessInstance.getResult()) {
                 if (milkJobExecution.isStopRequired())
                     break;
+                
+                // operation copy? Maybe the case is already copied
+                if (CSTOPERATION_COPY.equals(operationCase ) )
+                {
+                    ResultMove resultMove = existProcessInstanceInArchive( archivedProcessInstance.getSourceObjectId(),milkJobExecution.getTenantId(),connectionResult.con);
+                    milkJobOutput.addEvents(resultMove.listEvents);
+                    // already exist
+                    if (resultMove.nbProcessInstances>0)
+                        continue;
+           
+                }
+                
                 // move the data to the another database
-                List<BEvent> listEvents = moveDatabase(moveParameters, archivedProcessInstance, milkJobExecution.getApiAccessor(), milkJobExecution.getTenantId(), milkJobOutput, connectionResult.con, cacheUsers );
+                List<BEvent> listEvents = moveDatabase(moveParameters, archivedProcessInstance, milkJobExecution.getApiAccessor(), milkJobExecution.getTenantId(), milkJobOutput, connectionResult.con, cacheUsers);
                 milkJobOutput.addEvents(listEvents);
 
-                if (deleteCase) {
+                if (CSTOPERATION_MOVE.equals(operationCase ) ) {
                     if (!BEventFactory.isError(listEvents)) {
                         // delete the case Id
                         listArchivedProcessInstances.add(archivedProcessInstance.getSourceObjectId());
@@ -324,11 +359,13 @@ public class MilkMoveArchive extends MilkPlugIn {
                     if (listArchivedProcessInstances.size() >= 50) {
                         try {
                             Chronometer processInstanceMarker = milkJobOutput.beginChronometer("deleteProcessInstance");
-                            // Security : do not do that processAPI.deleteArchivedProcessInstancesInAllStates(listArchivedProcessInstances);
+                            processAPI.deleteArchivedProcessInstancesInAllStates(listArchivedProcessInstances);
+                            listArchivedProcessInstances.clear();
                             milkJobOutput.endChronometer(processInstanceMarker, listArchivedProcessInstances.size());
                         } catch (Exception e) {
                             milkJobOutput.addEvent(new BEvent(eventDeletionFailed, e, "ListArchiveId: " + listArchivedProcessInstances.toString() + " " + e.getMessage()));
                             milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                            listArchivedProcessInstances.clear(); // do not try to purge them twice at output
                             break;
                         }
                     }
@@ -337,6 +374,18 @@ public class MilkMoveArchive extends MilkPlugIn {
             }
             milkJobOutput.addReportTableEnd();
 
+            // purge the last list
+            if (! listArchivedProcessInstances.isEmpty()) {
+                try {
+                    Chronometer processInstanceMarker = milkJobOutput.beginChronometer("deleteProcessInstance");
+                    processAPI.deleteArchivedProcessInstancesInAllStates(listArchivedProcessInstances);
+                    milkJobOutput.endChronometer(processInstanceMarker, listArchivedProcessInstances.size());
+                } catch (Exception e) {
+                    milkJobOutput.addEvent(new BEvent(eventDeletionFailed, e, "ListArchiveId: " + listArchivedProcessInstances.toString() + " " + e.getMessage()));
+                    milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                }
+            }
+            
             milkJobOutput.addChronometersInReport(true, true);
 
             if (BEventFactory.isError(milkJobOutput.getListEvents())) {
@@ -368,7 +417,7 @@ public class MilkMoveArchive extends MilkPlugIn {
     /*                                                                                  */
     /* ******************************************************************************** */
 
-    private List<BEvent> moveDatabase(MoveParameters moveParameters, ArchivedProcessInstance archivedProcessInstance, APIAccessor apiAccessor, long tenantId, MilkJobOutput milkJobOutput, Connection con, Map<Long,User> cacheUsers) {
+    private List<BEvent> moveDatabase(MoveParameters moveParameters, ArchivedProcessInstance archivedProcessInstance, APIAccessor apiAccessor, long tenantId, MilkJobOutput milkJobOutput, Connection con, Map<Long, User> cacheUsers) {
 
         CaseDetailsAPI caseDetailsAPI = new CaseDetailsAPI();
         CaseHistoryParameter caseHistoryParameter = new CaseHistoryParameter();
@@ -376,15 +425,16 @@ public class MilkMoveArchive extends MilkPlugIn {
         caseHistoryParameter.tenantId = tenantId;
         caseHistoryParameter.loadSubProcess = true;
         caseHistoryParameter.loadContract = false;
-        
-        caseHistoryParameter.loadProcessVariables = moveParameters.moveProcessData == POLICY_DATA.ARCHIVE ;
+
+        caseHistoryParameter.loadProcessVariables = moveParameters.moveProcessData == POLICY_DATA.ARCHIVE;
         caseHistoryParameter.loadBdmVariables = moveParameters.moveProcessData == POLICY_DATA.ARCHIVE;
         caseHistoryParameter.loadContentBdmVariables = false;
         caseHistoryParameter.loadArchivedHistoryProcessVariable = moveParameters.saveHistoryProcessData;
-        caseHistoryParameter.loadActivities = moveParameters.moveActivity;
+        caseHistoryParameter.loadActivities = moveParameters.moveActivities;
         caseHistoryParameter.loadEvents = false;
         caseHistoryParameter.loadTimers = false;
-        caseHistoryParameter.loadDocuments = moveParameters.moveDocument;
+        caseHistoryParameter.loadDocuments = moveParameters.moveDocuments;
+        caseHistoryParameter.loadComments = moveParameters.moveComments;
 
         List<BEvent> listEvents = new ArrayList<>();
         CaseDetails caseDetails = null;
@@ -392,25 +442,34 @@ public class MilkMoveArchive extends MilkPlugIn {
         try {
             // caseHistoryParameter.caseId = 3009L;
             // caseDetails = caseDetailsAPI.getCaseDetails(caseHistoryParameter, apiAccessor.getProcessAPI(), apiAccessor.getIdentityAPI(), apiAccessor.getBusinessDataAPI(), null);
-
+            String statusCase = "";
             caseHistoryParameter.caseId = archivedProcessInstance.getSourceObjectId();
+            Chronometer loadCaseChronometer = milkJobOutput.beginChronometer("loadcase");
             caseDetails = caseDetailsAPI.getCaseDetails(caseHistoryParameter, apiAccessor.getProcessAPI(), apiAccessor.getIdentityAPI(), apiAccessor.getBusinessDataAPI(), null);
-
+            milkJobOutput.endChronometer(loadCaseChronometer, 1);
+            if (BEventFactory.isError(caseDetails.listEvents))
+            {
+                listEvents.addAll(caseDetails.listEvents);
+                statusCase = "Error" + BEventFactory.getSyntheticLog(listEvents);
+                milkJobOutput.addReportTableLine(new Object[] { caseHistoryParameter.caseId, caseDetails.listProcessInstances.size(), 0, 0, 0, 0, statusCase });
+                return listEvents;
+            }
             int nbActivities = 0;
             int nbDatas = 0;
             int nbDocuments = 0;
+            int nbComments = 0;
 
-            
             for (ProcessInstanceDescription processInstance : caseDetails.listProcessInstances) {
                 ResultMove resultMove = moveDatabaseProcessInstance(moveParameters, processInstance, caseDetails, apiAccessor, tenantId, con, cacheUsers);
                 listEvents.addAll(resultMove.listEvents);
                 nbActivities += resultMove.nbActivities;
                 nbDatas += resultMove.nbDatas;
                 nbDocuments += resultMove.nbDocuments;
+                nbComments += resultMove.nbComments;
                 if (BEventFactory.isError(listEvents))
                     break;
             }
-            String statusCase = "";
+            
             if (BEventFactory.isError(listEvents)) {
                 statusCase = "Error";
                 con.rollback();
@@ -419,7 +478,7 @@ public class MilkMoveArchive extends MilkPlugIn {
                 con.commit();
             }
 
-            milkJobOutput.addReportTableLine(new Object[] { caseHistoryParameter.caseId, caseDetails.listProcessInstances.size(), nbActivities, nbDatas, nbDocuments, statusCase });
+            milkJobOutput.addReportTableLine(new Object[] { caseHistoryParameter.caseId, caseDetails.listProcessInstances.size(), nbActivities, nbDatas, nbDocuments, nbComments, statusCase });
         } catch (SQLException e) {
             listEvents.add(new BEvent(eventSaveRecordFailed, e, "CaseId[" + (caseDetails == null ? "null" : caseDetails.rootCaseId)));
             if (BEventFactory.isError(listEvents)) {
@@ -451,9 +510,38 @@ public class MilkMoveArchive extends MilkPlugIn {
         public int nbActivities = 0;
         public int nbDatas = 0;
         public int nbDocuments = 0;
+        public int nbComments = 0;
+        public int nbProcessInstances=0;
 
     }
 
+    /* -------------------------------------------------------------------- */
+    /*                                                                      */
+    /* Private */
+    /*                                                                      */
+    /* -------------------------------------------------------------------- */
+
+
+    private ResultMove existProcessInstanceInArchive(long processInstance, long tenantId, Connection con) {
+        ResultMove resultMove = new ResultMove();
+        String sqlRequest = "select count(*) as numberofcases from "
+                + DatabaseDefinition.BDE_TABLE_PROCESSINSTANCE
+                +" where "+DatabaseDefinition.BDE_PROCESSINSTANCE_TENANTID+"=?"
+                +" and "+DatabaseDefinition.BDE_PROCESSINSTANCE_PROCESSINSTANCEID+" = ?";
+        try (PreparedStatement pstmt = con.prepareStatement(sqlRequest.toString())) {
+                pstmt.setObject(1, tenantId);
+                pstmt.setObject(2, processInstance);
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    resultMove.nbProcessInstances = rs.getInt("numberofcases");
+                }
+                return resultMove; // something strange : a count should have an answer
+        } catch(Exception e) {
+            logger.severe("Error when executing "+sqlRequest+" "+e.getMessage());
+            resultMove.listEvents.add( new BEvent(eventCantExecuteExistProcessInstance, e, "SqlRequest ["+sqlRequest+"] "+e.getMessage()));
+            return null;
+        }
+    }
     /**
      * @param processInstance
      * @param caseDetails
@@ -462,7 +550,7 @@ public class MilkMoveArchive extends MilkPlugIn {
      * @param con
      * @return
      */
-    private ResultMove moveDatabaseProcessInstance(MoveParameters moveParameters, ProcessInstanceDescription processInstance, CaseDetails caseDetails, APIAccessor apiAccessor, long tenantId, Connection con, Map<Long,User> cacheUsers) {
+    private ResultMove moveDatabaseProcessInstance(MoveParameters moveParameters, ProcessInstanceDescription processInstance, CaseDetails caseDetails, APIAccessor apiAccessor, long tenantId, Connection con, Map<Long, User> cacheUsers) {
         ResultMove resultMove = new ResultMove();
 
         // move first the CaseId
@@ -486,9 +574,9 @@ public class MilkMoveArchive extends MilkPlugIn {
         record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_END_DATE, dateToLong(processInstance.endDate));
         record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STARTEDBY, processInstance.archProcessInstance.getStartedBy());
         record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STARTEDBYNAME, getUserName(processInstance.archProcessInstance.getStartedBy(), apiAccessor.getIdentityAPI(), cacheUsers));
-        
+
         record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STARTEDBYSUBSTITUTE, processInstance.archProcessInstance.getStartedBySubstitute());
-        record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STARTEDBYSUBSTITUTENAME, getUserName(processInstance.archProcessInstance.getStartedBySubstitute(),  apiAccessor.getIdentityAPI(), cacheUsers));
+        record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STARTEDBYSUBSTITUTENAME, getUserName(processInstance.archProcessInstance.getStartedBySubstitute(), apiAccessor.getIdentityAPI(), cacheUsers));
 
         record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_ARCHIVEDATE, dateToLong(processInstance.archProcessInstance.getArchiveDate()));
         record.put(DatabaseDefinition.BDE_PROCESSINSTANCE_STRINGINDEX1, processInstance.archProcessInstance.getStringIndexValue(1));
@@ -502,81 +590,95 @@ public class MilkMoveArchive extends MilkPlugIn {
         if (BEventFactory.isError(resultMove.listEvents))
             return resultMove;
 
-        if (moveParameters.moveActivity)
-            moveDatabaseFlownodeInstance(moveParameters, processInstance, caseDetails, resultMove, apiAccessor, tenantId, con);
+        if (moveParameters.moveActivities)
+            moveDatabaseFlownodeInstance(moveParameters, processInstance, caseDetails, resultMove, apiAccessor, tenantId, con, cacheUsers);
 
         if (moveParameters.moveProcessData.equals(POLICY_DATA.ARCHIVE) || moveParameters.moveLocalData.equals(POLICY_DATA.ARCHIVE))
             moveDatabaseDataInstance(moveParameters, processInstance, caseDetails, resultMove, apiAccessor, tenantId, con);
 
-        if (moveParameters.moveDocument)
+        if (moveParameters.moveDocuments)
             moveDatabaseDocumentInstance(moveParameters, processInstance, caseDetails, resultMove, apiAccessor, tenantId, con);
+        if (moveParameters.moveComments != LOADCOMMENTS.NONE)
+            moveDatabaseCommentsInstance(moveParameters, processInstance, caseDetails, resultMove, apiAccessor, tenantId, con, cacheUsers);
+
         return resultMove;
     }
 
-    private void moveDatabaseFlownodeInstance(MoveParameters moveParameters, ProcessInstanceDescription processInstance, CaseDetails caseDetails, ResultMove resultMove, APIAccessor apiAccessor, long tenantId, Connection con) {
+    /**
+     * @param moveParameters
+     * @param processInstance
+     * @param caseDetails
+     * @param resultMove
+     * @param apiAccessor
+     * @param tenantId
+     * @param con
+     */
+    private void moveDatabaseFlownodeInstance(MoveParameters moveParameters, ProcessInstanceDescription processInstance, 
+            CaseDetails caseDetails, ResultMove resultMove, APIAccessor apiAccessor, long tenantId, Connection con, Map<Long, User> cacheUsers) {
         DatabaseTables databaseTables = new DatabaseTables();
         // StringBuilder logAnalysis= new StringBuilder();
         /**
          * if we want to get only one item per flownode, then we have to 1/ order it by the date, 2/ keep the last item for each sourceObjectid
          * Example
-         * ParentId  SourceId Type   ArchiveDate     Name             State
-         * 3001    60002   auto    1600975938212   ServiceTasks    executing
-         * 3001    60002   auto    1600975940900   ServiceTasks    completed        <==== 
-         * 3001    60003   user    1600975940949   User task        initializing
-         * 3001    60003   user    1600977696921   User task        ready           <====
-         * 60004   60008   auto    1600977697064   Instanciate 5   executing
-         * 60004   60008   auto    1600977697067   Instanciate 5   completed        <====
+         * ParentId SourceId Type ArchiveDate Name State
+         * 3001 60002 auto 1600975938212 ServiceTasks executing
+         * 3001 60002 auto 1600975940900 ServiceTasks completed <====
+         * 3001 60003 user 1600975940949 User task initializing
+         * 3001 60003 user 1600977696921 User task ready <====
+         * 60004 60008 auto 1600977697064 Instanciate 5 executing
+         * 60004 60008 auto 1600977697067 Instanciate 5 completed <====
          */
         // logAnalysis.append("Nb line"+caseDetails.listCaseDetailFlowNodes+";");
         // INVERSE the order 
-        Collections.sort(caseDetails.listCaseDetailFlowNodes, new Comparator<CaseDetailFlowNode>()
-           {
-             public int compare(CaseDetailFlowNode s1,
-                     CaseDetailFlowNode s2)
-             {
-               return s2.getDate().compareTo(s1.getDate());
-             }
-           });
+        Collections.sort(caseDetails.listCaseDetailFlowNodes, new Comparator<CaseDetailFlowNode>() {
+
+            public int compare(CaseDetailFlowNode s1,
+                    CaseDetailFlowNode s2) {
+                return s2.getDate().compareTo(s1.getDate());
+            }
+        });
 
         // so now we keep only the FIRST one
         Set<Long> registerSourceObjectId = new HashSet<>();
-        
+
         for (CaseDetailFlowNode flowNode : caseDetails.listCaseDetailFlowNodes) {
             if (processInstance.processInstanceId != flowNode.getProcessInstanceId()) {
                 continue;
             }
             // logAnalysis.append("Source="+flowNode.getSourceObjectId()+";");
             // we works only with ARCHIVE case they have all a sourceObjectId()
-            if (moveParameters.moveSynthesisActivity && registerSourceObjectId.contains( flowNode.getSourceObjectId()))
+            if (moveParameters.moveSynthesisActivity && registerSourceObjectId.contains(flowNode.getSourceObjectId()))
                 continue;
-            registerSourceObjectId.add( flowNode.getSourceObjectId() );
+            registerSourceObjectId.add(flowNode.getSourceObjectId());
             // logAnalysis.append("KEEP;PID="+flowNode.getProcessInstanceId()+"/Par="+flowNode.getParentContainerId()+"/Sour="+flowNode.getSourceObjectId()+";");;
-            
+
             resultMove.nbActivities++;
             List<Map<String, Object>> listRecords = new ArrayList<>();
             Map<String, Object> record = new HashMap<>();
             listRecords.add(record);
-            
-            
+
             record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_TENANTID, caseDetails.tenantId);
             record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_ID, flowNode.getId());
             record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_FLOWNODEDEFINITIONID, flowNode.getFlownodeDefinitionId());
             record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_KIND, flowNode.getType().toString());
-            record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_ARCHIVEDATE, dateToLong( flowNode.getDate()));
+            record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_ARCHIVEDATE, dateToLong(flowNode.getDate()));
             record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_PROCESSINSTANCEID, flowNode.getProcessInstanceId());
             record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_PARENTCONTAINERID, flowNode.getParentContainerId());
             record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_SOURCEOBJECTID, flowNode.getSourceObjectId());
             record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_NAME, flowNode.getName());
             record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_DISPLAYNAME, flowNode.getDisplayName());
+            record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_DISPLAYDESCRIPTION, flowNode.getDisplayDescription());
             record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_STATENAME, flowNode.getState());
-            record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_REACHEDSTATEDATE, dateToLong( flowNode.getReachedStateDate()));
+            record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_REACHEDSTATEDATE, dateToLong(flowNode.getReachedStateDate()));
             record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_GATEWAYTYPE, flowNode.getFlowNodeType().toString());
             record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_LOOP_COUNTER, flowNode.getLoopCounter());
             record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_NUMBEROFINSTANCES, flowNode.getNumberOfInstances());
             record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_EXECUTEDBY, flowNode.getExecutedBy());
+            record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_EXECUTEDBYNAME, getUserName(flowNode.getExecutedBy(), apiAccessor.getIdentityAPI(), cacheUsers));
             record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_EXECUTEDBYSUBSTITUTE, flowNode.getExecutedBySubstitute());
-            String informationContext = "ProcessInstance[" + processInstance.processInstanceId + "] ActivityId ["+flowNode.getId()+"]";
-            
+            record.put(DatabaseDefinition.BDE_FLOWNODEINSTANCE_EXECUTEDBYSUBSTITUTENAME, getUserName(flowNode.getExecutedBySubstitute(), apiAccessor.getIdentityAPI(), cacheUsers));
+            String informationContext = "ProcessInstance[" + processInstance.processInstanceId + "] ActivityId [" + flowNode.getId() + "]";
+
             resultMove.listEvents.addAll(databaseTables.insert(DatabaseDefinition.BDE_TABLE_FLOWNODEINSTANCE, record, informationContext, con));
             if (BEventFactory.isError(resultMove.listEvents))
                 return;
@@ -601,14 +703,14 @@ public class MilkMoveArchive extends MilkPlugIn {
             if (processInstance.processInstanceId != processVariable.processInstanceId) {
                 continue;
             }
-            
+
             if (processVariable.scopeVariable == ScopeVariable.LOCAL && moveParameters.moveLocalData.equals(POLICY_DATA.IGNORE))
                 continue;
             if (processVariable.scopeVariable == ScopeVariable.PROCESS && moveParameters.moveProcessData.equals(POLICY_DATA.IGNORE))
                 continue;
             if (processVariable.scopeVariable == ScopeVariable.BDM && moveParameters.moveProcessData.equals(POLICY_DATA.IGNORE))
                 continue;
-            
+
             // save it now
             resultMove.nbDatas++;
             List<Map<String, Object>> listRecords = new ArrayList<>();
@@ -712,7 +814,7 @@ public class MilkMoveArchive extends MilkPlugIn {
                 record.put(DatabaseDefinition.BDE_DOCUMENTINSTANCE_ARCHIVEDATE, null);
 
                 record.put(DatabaseDefinition.BDE_DOCUMENTINSTANCE_INDEX, documentVariable.document.getIndex());
-                record.put(DatabaseDefinition.BDE_DOCUMENTINSTANCE_ISMULTIPLE, documentVariable.document.getIndex()>=0);
+                record.put(DatabaseDefinition.BDE_DOCUMENTINSTANCE_ISMULTIPLE, documentVariable.document.getIndex() >= 0);
                 record.put(DatabaseDefinition.BDE_DOCUMENTINSTANCE_AUTHOR, documentVariable.document.getAuthor());
                 record.put(DatabaseDefinition.BDE_DOCUMENTINSTANCE_FILENAME, documentVariable.document.getContentFileName());
                 record.put(DatabaseDefinition.BDE_DOCUMENTINSTANCE_MIMETYPE, documentVariable.document.getContentMimeType());
@@ -735,6 +837,56 @@ public class MilkMoveArchive extends MilkPlugIn {
 
         }
 
+    }
+
+    /**
+     * @param moveParameters
+     * @param processInstance
+     * @param caseDetails
+     * @param resultMove
+     * @param apiAccessor
+     * @param tenantId
+     * @param con
+     */
+    private void moveDatabaseCommentsInstance(MoveParameters moveParameters, ProcessInstanceDescription processInstance, CaseDetails caseDetails, ResultMove resultMove, APIAccessor apiAccessor, long tenantId, Connection con,
+            Map<Long, User> cacheUsers) {
+        ProcessAPI processAPI = apiAccessor.getProcessAPI();
+        DatabaseTables databaseTables = new DatabaseTables();
+
+        for (CaseDetailComment commentVariable : caseDetails.listComments) {
+            try {
+                if (processInstance.processInstanceId != commentVariable.processInstanceId) {
+                    continue;
+                }
+                resultMove.nbComments++;
+                List<Map<String, Object>> listRecords = new ArrayList<>();
+                Map<String, Object> record = new HashMap<>();
+                record.put(DatabaseDefinition.BDE_COMMENTINSTANCE_TENANTID, caseDetails.tenantId);
+                if (commentVariable.comment != null) {
+                    record.put(DatabaseDefinition.BDE_COMMENTINSTANCE_ID, commentVariable.comment.getId());
+                    record.put(DatabaseDefinition.BDE_COMMENTINSTANCE_USERID, commentVariable.comment.getUserId());
+                    record.put(DatabaseDefinition.BDE_COMMENTINSTANCE_USERNAME, getUserName(commentVariable.comment.getUserId(), apiAccessor.getIdentityAPI(), cacheUsers));
+                    record.put(DatabaseDefinition.BDE_COMMENTINSTANCE_CONTENT, commentVariable.comment.getContent());
+                    record.put(DatabaseDefinition.BDE_COMMENTINSTANCE_POSTDATE, commentVariable.comment.getPostDate());
+                    record.put(DatabaseDefinition.BDE_COMMENTINSTANCE_PROCESSINSTANCEID, commentVariable.comment.getProcessInstanceId());
+                } else {
+                    record.put(DatabaseDefinition.BDE_COMMENTINSTANCE_ID, commentVariable.archivedComment.getId());
+                    record.put(DatabaseDefinition.BDE_COMMENTINSTANCE_USERID, commentVariable.archivedComment.getUserId());
+                    record.put(DatabaseDefinition.BDE_COMMENTINSTANCE_USERNAME, getUserName(commentVariable.archivedComment.getUserId(), apiAccessor.getIdentityAPI(), cacheUsers));
+                    record.put(DatabaseDefinition.BDE_COMMENTINSTANCE_CONTENT, commentVariable.archivedComment.getContent());
+                    record.put(DatabaseDefinition.BDE_COMMENTINSTANCE_POSTDATE, dateToLong(commentVariable.archivedComment.getPostDate() ));
+                    record.put(DatabaseDefinition.BDE_COMMENTINSTANCE_PROCESSINSTANCEID, commentVariable.archivedComment.getProcessInstanceId());
+                }
+                String informationContext = "ProcessInstance[" + processInstance.processInstanceId + "], Comment[" + record.get(DatabaseDefinition.BDE_COMMENTINSTANCE_ID);
+
+                resultMove.listEvents.addAll(databaseTables.insert(DatabaseDefinition.BDE_TABLE_COMMENTINSTANCE, record, informationContext, con));
+                if (BEventFactory.isError(resultMove.listEvents))
+                    return;
+
+            } catch (Exception e) {
+                resultMove.listEvents.add(new BEvent(eventCantAccessDocument, e, "ProcessId[" + commentVariable.processInstanceId + "] Comment[" + commentVariable.comment.getId() + "]"));
+            }
+        }
     }
 
     /**
@@ -860,7 +1012,14 @@ public class MilkMoveArchive extends MilkPlugIn {
                 new DataColumn(DatabaseDefinition.BDE_DATAINSTANCE_BDMINDEX, COLTYPE.LONG),
                 new DataColumn(DatabaseDefinition.BDE_DATAINSTANCE_BDMPERSISTENCEID, COLTYPE.LONG),
                 new DataColumn(DatabaseDefinition.BDE_DATAINSTANCE_ARCHIVEDATE, COLTYPE.LONG));
-        dataTable.mapIndexes.put("DI_PID_IDX", Arrays.asList(DatabaseDefinition.BDE_DATAINSTANCE_TENANTID, DatabaseDefinition.BDE_DATAINSTANCE_PROCESSINSTANCEID, DatabaseDefinition.BDE_DATAINSTANCE_ACTIVITYID));
+        dataTable.mapConstraints.put("DI_DAT_CONST", Arrays.asList(DatabaseDefinition.BDE_DATAINSTANCE_TENANTID,
+                DatabaseDefinition.BDE_DATAINSTANCE_PROCESSINSTANCEID,
+                DatabaseDefinition.BDE_DATAINSTANCE_ACTIVITYID,
+                DatabaseDefinition.BDE_DATAINSTANCE_NAME,
+                DatabaseDefinition.BDE_DATAINSTANCE_BDMINDEX));
+        // it's not possible to create a foreignkey  : the key is processinstance+tenantid and no way to create a foreignkey like this
+        
+        dataTable.mapIndexes.put("DI_DAT_IDX", Arrays.asList(DatabaseDefinition.BDE_DATAINSTANCE_TENANTID, DatabaseDefinition.BDE_DATAINSTANCE_PROCESSINSTANCEID, DatabaseDefinition.BDE_DATAINSTANCE_ACTIVITYID));
         listTables.add(dataTable);
 
         // Case
@@ -888,25 +1047,41 @@ public class MilkMoveArchive extends MilkPlugIn {
         // Activity
         DataDefinition flowNodeTable = new DataDefinition(DatabaseDefinition.BDE_TABLE_FLOWNODEINSTANCE);
 
-        flowNodeTable.listColumns = Arrays.asList(new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_TENANTID, COLTYPE.LONG),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_ID, COLTYPE.LONG),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_FLOWNODEDEFINITIONID, COLTYPE.LONG),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_KIND, COLTYPE.STRING, 25),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_ARCHIVEDATE, COLTYPE.LONG),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_PROCESSINSTANCEID, COLTYPE.LONG),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_PARENTCONTAINERID, COLTYPE.LONG),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_SOURCEOBJECTID, COLTYPE.LONG),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_NAME, COLTYPE.STRING, 255),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_DISPLAYNAME, COLTYPE.STRING, 255),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_STATENAME, COLTYPE.STRING, 50),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_REACHEDSTATEDATE, COLTYPE.LONG),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_GATEWAYTYPE, COLTYPE.STRING, 50),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_LOOP_COUNTER, COLTYPE.LONG),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_NUMBEROFINSTANCES, COLTYPE.LONG),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_EXECUTEDBY, COLTYPE.LONG),
-                new DataColumn( DatabaseDefinition.BDE_FLOWNODEINSTANCE_EXECUTEDBYSUBSTITUTE, COLTYPE.LONG));
-        flowNodeTable.mapIndexes.put("FL_PID_IDX", Arrays.asList( DatabaseDefinition.BDE_FLOWNODEINSTANCE_TENANTID, DatabaseDefinition.BDE_FLOWNODEINSTANCE_ID, DatabaseDefinition.BDE_FLOWNODEINSTANCE_PROCESSINSTANCEID, DatabaseDefinition.BDE_FLOWNODEINSTANCE_PARENTCONTAINERID));
+        flowNodeTable.listColumns = Arrays.asList(new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_TENANTID, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_ID, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_FLOWNODEDEFINITIONID, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_KIND, COLTYPE.STRING, 25),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_ARCHIVEDATE, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_PROCESSINSTANCEID, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_PARENTCONTAINERID, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_SOURCEOBJECTID, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_NAME, COLTYPE.STRING, 255),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_DISPLAYNAME, COLTYPE.STRING, 255),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_DISPLAYDESCRIPTION, COLTYPE.STRING, 255),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_STATENAME, COLTYPE.STRING, 50),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_REACHEDSTATEDATE, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_GATEWAYTYPE, COLTYPE.STRING, 50),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_LOOP_COUNTER, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_NUMBEROFINSTANCES, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_EXECUTEDBY, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_EXECUTEDBYNAME, COLTYPE.STRING,255),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_EXECUTEDBYSUBSTITUTE, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_FLOWNODEINSTANCE_EXECUTEDBYSUBSTITUTENAME, COLTYPE.STRING,255));
+        flowNodeTable.mapIndexes.put("FL_PID_IDX", Arrays.asList(DatabaseDefinition.BDE_FLOWNODEINSTANCE_TENANTID, DatabaseDefinition.BDE_FLOWNODEINSTANCE_ID, DatabaseDefinition.BDE_FLOWNODEINSTANCE_PROCESSINSTANCEID, DatabaseDefinition.BDE_FLOWNODEINSTANCE_PARENTCONTAINERID));
         listTables.add(flowNodeTable);
+
+        // Activity
+        DataDefinition commentsTable = new DataDefinition(DatabaseDefinition.BDE_TABLE_COMMENTINSTANCE);
+
+        commentsTable.listColumns = Arrays.asList(new DataColumn(DatabaseDefinition.BDE_COMMENTINSTANCE_TENANTID, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_COMMENTINSTANCE_ID, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_COMMENTINSTANCE_USERID, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_COMMENTINSTANCE_USERNAME, COLTYPE.STRING, 255),
+                new DataColumn(DatabaseDefinition.BDE_COMMENTINSTANCE_CONTENT, COLTYPE.STRING, 512),
+                new DataColumn(DatabaseDefinition.BDE_COMMENTINSTANCE_POSTDATE, COLTYPE.LONG),
+                new DataColumn(DatabaseDefinition.BDE_COMMENTINSTANCE_PROCESSINSTANCEID, COLTYPE.LONG));
+        commentsTable.mapIndexes.put("CO_IDX", Arrays.asList(DatabaseDefinition.BDE_COMMENTINSTANCE_TENANTID, DatabaseDefinition.BDE_COMMENTINSTANCE_ID, DatabaseDefinition.BDE_COMMENTINSTANCE_PROCESSINSTANCEID));
+        listTables.add(commentsTable);
 
         return listTables;
     }
@@ -916,21 +1091,21 @@ public class MilkMoveArchive extends MilkPlugIn {
             return null;
         return date.getTime();
     }
-    
-    private String getUserName(Long userId, IdentityAPI identityAPI, Map<Long,User>cacheUsers ) {
-        if (userId==null || userId < 0)
+
+    private String getUserName(Long userId, IdentityAPI identityAPI, Map<Long, User> cacheUsers) {
+        if (userId == null || userId < 0)
             return null;
-        User user = cacheUsers.get( userId );
-        if (user!=null)
+        User user = cacheUsers.get(userId);
+        if (user != null)
             return user.getUserName();
         try {
             user = identityAPI.getUser(userId);
         } catch (UserNotFoundException e) {
             // user does not exist? strange, because the user come from the ProcessInstance
-            logger.severe(LOGGER_LABEL+" UserId not found["+userId+"]");
-          return null;
+            logger.severe(LOGGER_LABEL + " UserId not found[" + userId + "]");
+            return null;
         }
-        cacheUsers.put( userId, user);
+        cacheUsers.put(userId, user);
         return user.getUserName();
     }
 }
