@@ -42,6 +42,24 @@
 	<!--  for the autocomplete -->
 	<link rel="stylesheet" href="css/angular-material.min.css"> 
 
+
+<script>
+function onLoadIFrame() {
+	console.log("OnLoadIframeScript");
+	// Adjusting the iframe height onload event
+    var iframes = document.querySelectorAll("iframe");
+    for( var i = 0; i < iframes.length; i++) {
+    	var height=iframes[ i ].contentWindow.document.body.scrollHeight;
+    	height+= 20;
+    	console.log("OnLoadIframeScript: Found a Iframe, size="+iframes[ i ].contentWindow.document.body.scrollHeight+" set heigh="+height);
+        iframes[ i ].style.height = height + 'px';
+
+
+    }
+
+}
+</script>
+
 	
 	 	
 	
@@ -91,7 +109,7 @@
 					<div style="font-style: italic;">
 					The <span style="color: red;font-weight: bold;">B</span>onita <span style="color: red;font-weight: bold;">SC</span>heduler&nbsp;
 					</div>
-					<a href="" >V2.7.0 (Oct 7, 2020)</a>
+					<a href="" >V2.7.0 (Oct 27, 2020)</a>
 				</center>
 			</td></tr>
 			<tr><td>
@@ -119,6 +137,11 @@
 					class="{{ctrl.getNavClass('Installation')}}" 
 					style="{{ctrl.getNavStyle('Installation')}}">
 				  <a  ng-click="ctrl.navbaractiv='Installation'" class="ng-binding">Installation</a>
+			</li>
+			<li ng-class="{active: active, disabled: false}" id="form-tab" heading="Documentation guide" active="true" title="Documentation" select="ctrl.navbaractiv == 'Documentation'" 
+					class="{{ctrl.getNavClass('Documentation')}}" 
+					style="{{ctrl.getNavStyle('Documentation')}}">
+				  <a  ng-click="ctrl.navbaractiv='Documentation'" class="ng-binding">Documentation</a>
 			</li>
 
 		</ul>
@@ -512,8 +535,11 @@
 											<span class="Loading">.</span>Please wait, work in progress
 										</div>
 									
-										<input ng-model="plugtour.show.parametersexpl" type="checkbox" style="padding: 15px" />Detailed explanation
-										
+											<a href="" title="Click to show or hide explanation" 
+												ng-click="plugtour.show.parametersexpl = ! plugtour.show.parametersexpl">
+												<span class="glyphicon glyphicon-info-sign"></span>
+											</a>
+		
 										<table width="100%">
 											<tr style="vertical-align: top; border-top: 1px solid #ddd;">
 												<td style="padding: 15px" >Name</td>
@@ -658,9 +684,14 @@
 											<tr ng-if="ctrl.isVisibleParameter( plugtour, parameterdef )">
 												<td style="vertical-align: top; border-top: 1px solid #ddd;" title="{{parameterdef.name}}">
 													<div ng-if="parameterdef.type !=='SEPARATOR'">{{parameterdef.label}}
-														<span ng-if="parameterdef.isMandatory" style="color: red" title="This parameter is mandatory">*</span>													
+														<span ng-if="parameterdef.isMandatory" style="color: red" title="This parameter is mandatory">*</span>	
+														<a href="" title="Click to show or hide explanation" 
+															ng-click="plugtour.show.parametersexpl = ! plugtour.show.parametersexpl">
+														<span class="glyphicon glyphicon-info-sign"></span>
+													</a>												
 													</div>
 													
+		
 												</td>
 												<td style="vertical-align: top; border-top: 1px solid #ddd;">
 			
@@ -737,7 +768,7 @@
 													<div ng-if="parameterdef.type ==='STRING'">
 														<input ng-model="plugtour.parametersvalue[ parameterdef.name ]" maxlength="100" size="80" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" >
 													</div>
-													<div ng-if="parameterdef.type ==='TEXT'">
+													<div ng-if="parameterdef.type ==='TEXT' || parameterdef.type ==='JSON' ">
 														<textarea ng-model="plugtour.parametersvalue[ parameterdef.name ]" rows="4" cols="50" style="padding: 0px 5px;margin: 8px 0;box-sizing: border-box;" ></textarea>
 													</div>
 													<div ng-if="parameterdef.type ==='LONG'">
@@ -1165,7 +1196,7 @@
 													<label class="{{ctrl.getClassExecution( savedExec.status )}}" >
 														{{savedExec.status}}
 													</label>
-												</td> <!--  bob -->
+												</td> 
 												<td><a ng-click="ctrl.showreportdetail( plugtour, savedExec, false)"><span class="glyphicon glyphicon-cloud-download" title="Download the execution report"></span></a>
 													<div ng-if="ctrl.inprogress">
 														<span class="Loading">.</span>
@@ -1441,6 +1472,10 @@
 				<div ng-bind-html="ctrl.getHtml(ctrl.listeventsdeploy, 'deployError')"></div>
 			</div>
 			
+			<a href="" title="Click to show or hide explanation" 
+				ng-click="ctrl.showplugininfo = ! ctrl.showplugininfo">
+				<span class="glyphicon glyphicon-info-sign"></span>
+			</a>
 			
 			<table>
 			<tr><td style="width:500px;padding: 10px; vertical-align:top">
@@ -1452,7 +1487,12 @@
 				<div class="list-group">
 					<div ng-repeat="item in ctrl.getListPlugIn()">
 						<div ng-if="ctrl.displayPlugIn( item )">
-							<button  type="button" class="list-group-item" ng-click="ctrl.registerPlugin=item">{{item.displayname}} <div class="label label-default">{{item.category}}</div></button>
+							<button  type="button" class="list-group-item" ng-click="ctrl.registerPlugin=item;ctrl.getDocumentation(ctrl.registerPlugin)">{{item.displayname}} <div class="label label-default">{{item.category}}</div></button>
+							<div ng-if="ctrl.showplugininfo">
+								<div class="helpexplanation">
+									<div ng-bind-html="ctrl.getHtml(item.pluginexplanation, 'addJobPlugInExplanation' + plugtour.id)"></div>
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -1469,9 +1509,15 @@
 				</center>
 				<div ng-bind-html="ctrl.getHtml(ctrl.addlistevents, 'addListEvents' )"></div>
 				
+				<h4>Documentation</h4>
+				<div ng-bind-html="ctrl.getHtml(ctrl.registerPlugin.fulldocumentation, 'documentationplugin' )"></div>
+				
 			</td></tr>
-		</table>
+			</table>
+			
+			
 		
+						
 		</div> <!--  end listJobs -->
 
 	
@@ -1703,25 +1749,52 @@
 
 		</div> <!--  end Installation -->
 
-		<!-- Register a new plug in 
-		<div class="col-lg-12">	
-			<legend class="text-primary"><span class="glyphicon glyphicon-th"></span>Plug In</legend>	
-			<div ng-if="ctrl.inprogress">
-				<span class="Loading">.</span>Please wait, work in progress
-			</div>
+		<!--  ************************************************************  -->	
+		<!--  Tab Documentation		 										-->
+		<!--  ************************************************************  -->			
+		<div  class="col-lg-12" ng-if="ctrl.navbaractiv == 'Documentation'">
+		<!--  FULL documentation  -->
+			<button type="button" class="btn btn-primary" ng-click="ctrl.getAllDocumentation()">Get</button></td></tr>
+			<div ng-repeat="plugdoc in ctrl.documentation">
+				<div class="panel panel-info">
+					<div class="panel-heading">
+						<h3 style="color: rgb(51, 122, 183);">{{plugdoc.label}} </h3>
+					</div>
+					<div style="padding: 10px;">
+						
+						
+						<h4>Identification</h4>
+						<table class="table table-striped table-hover table-condensed" >
+						<tr><td>Name</td><td>{{plugdoc.label}}</td></tr>
+						<tr><td>Category</td><td>{{plugdoc.category}}</td></tr>
+						<tr><td>Job stopper</td><td>{{plugdoc.jobstopper}}</td></tr>
+						<tr><td colspan="2"><div ng-bind-html="ctrl.getHtml(plugdoc.explanation, 'explanation')"></div></td></tr>
+						</table>
+												
+						<h4>Documentation</h4>
+						<div ng-bind-html="ctrl.getHtml(plugdoc.fulldocumentation, 'fulldocumentation' )"></div>
+						
+
+						<h4>Parameters</h4>
+						<div ng-bind-html="ctrl.getHtml(plugdoc.parameters, 'docparameters' )"></div>
+						
+						<h4>Measure</h4>
+						<div ng-bind-html="ctrl.getHtml(plugdoc.measures, 'docparameters' )"></div>
 					
-			<button class="btn btn-info" ng-disabled="ctrl.inprogress">Register a new PlugIn</button>
-		</div>
-		 -->
+					</div>
+				</div>
+				<p>
+			</div> <!--  end repeat -->
+		</div> <!--  end documentation -->
+	
 	</div> <!-- end class component-->
 </div>
 </div>
 
 
-
 <!-- Third party dependencies -->
 <script src="3rd-party/jquery.min.js"></script>
-<script src="3rd-party/angular_155/angular.min.js"></script>
+<script src="3rd-party/angular.min.js"></script>
 	
 	<!-- <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular.min.js"></script> 
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-animate.min.js"></script>
@@ -1729,9 +1802,10 @@
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-messages.min.js"></script> -->
 		<!--  Material -->  
 
-<script src="3rd-party/angular_155/angular-animate.min.js"></script>  
-<script src="3rd-party/angular_155/angular-aria.min.js"></script>  
-<script src="3rd-party/angular_155/angular-messages.min.js"></script> 
+<!--  Material -->  
+<script src="3rd-party/angular-animate.min.js"></script>  
+<script src="3rd-party/angular-aria.min.js"></script>  
+<script src="3rd-party/angular-messages.min.js"></script> 
 <script src="3rd-party/angular-material.min.js"></script>  
 
 <script src="3rd-party/angular-resource.min.js"></script>
@@ -1739,6 +1813,7 @@
 
 <script src="3rd-party/bootstrap-3.3.7/js/bootstrap.min.js"></script>
 <script src="3rd-party/angular-bootstrap-tpls.min.js"></script>
+
 
 <!--  to allow the drop box -->
 <script src="3rd-party/angular-file-upload.js"></script>  

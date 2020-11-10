@@ -56,9 +56,9 @@ import org.bonitasoft.truckmilk.toolbox.TypesCast;
 
 import lombok.Data;
 
-public class MilkPurgeArchive extends MilkPlugIn {
+public class MilkPurgeArchivedCases extends MilkPlugIn {
 
-    static Logger logger = Logger.getLogger(MilkPurgeArchive.class.getName());
+    static Logger logger = Logger.getLogger(MilkPurgeArchivedCases.class.getName());
     private final static String LOGGER_LABEL = "MilkPurgeArchive ";
 
     public final static String CST_PLUGIN_NAME = "PurgeArchivedCase";
@@ -71,27 +71,27 @@ public class MilkPurgeArchive extends MilkPlugIn {
     private final static String CSTSCOPE_TRANSIENTONLY = "Transient process information (sub process)";
     private final static String CSTSCOPE_BOTH = "Both";
 
-    private static BEvent eventDeletionSuccess = new BEvent(MilkPurgeArchive.class.getName(), 1, Level.SUCCESS,
+    private static BEvent eventDeletionSuccess = new BEvent(MilkPurgeArchivedCases.class.getName(), 1, Level.SUCCESS,
             "Deletion done with success", "Archived Cases are deleted with success");
 
-    private static BEvent eventDeletionFailed = new BEvent(MilkPurgeArchive.class.getName(), 2, Level.ERROR,
+    private static BEvent eventDeletionFailed = new BEvent(MilkPurgeArchivedCases.class.getName(), 2, Level.ERROR,
             "Error during deletion", "An error arrived during the deletion of archived cases", "Cases are not deleted", "Check the exception");
 
-    private static BEvent eventSearchFailed = new BEvent(MilkPurgeArchive.class.getName(), 3, Level.ERROR,
+    private static BEvent eventSearchFailed = new BEvent(MilkPurgeArchivedCases.class.getName(), 3, Level.ERROR,
             "Search failed", "Search failed task return an error", "No retry can be performed", "Check the error");
 
-    private static BEvent eventWriteReportError = new BEvent(MilkPurgeArchive.class.getName(), 4, Level.ERROR,
+    private static BEvent eventWriteReportError = new BEvent(MilkPurgeArchivedCases.class.getName(), 4, Level.ERROR,
             "Report generation error", "Error arrived during the generation of the report", "No report is available", "Check the error");
 
-    private static BEvent eventSynthesisReport = new BEvent(MilkPurgeArchive.class.getName(), 5, Level.INFO,
+    private static BEvent eventSynthesisReport = new BEvent(MilkPurgeArchivedCases.class.getName(), 5, Level.INFO,
             "Report Synthesis", "Result of search", "", "");
-    private static BEvent eventUnknowOperation = new BEvent(MilkPurgeArchive.class.getName(), 6, Level.APPLICATIONERROR,
+    private static BEvent eventUnknowOperation = new BEvent(MilkPurgeArchivedCases.class.getName(), 6, Level.APPLICATIONERROR,
             "Operation unknown", "The operation is unknow, only [" + CSTOPERATION_GETLIST + "], [" + CSTOPERATION_DIRECT + "], [" + CSTOPERATION_FROMLIST + "] are known", "No operation is executed", "Check operation");
 
-    private static BEvent eventReportError = new BEvent(MilkPurgeArchive.class.getName(), 7, Level.APPLICATIONERROR,
+    private static BEvent eventReportError = new BEvent(MilkPurgeArchivedCases.class.getName(), 7, Level.APPLICATIONERROR,
             "Error in source file", "The source file is not correct", "Check the source file, caseid is expected inside", "Check the error");
 
-    private final static BEvent eventErrorExecutionQuery = new BEvent(MilkPurgeArchive.class.getName(), 8,
+    private final static BEvent eventErrorExecutionQuery = new BEvent(MilkPurgeArchivedCases.class.getName(), 8,
             Level.ERROR,
             "Error during the SqlQuery", "The SQL Query to detect a stuck flow node failed", "No stick flow nodes can be detected",
             "Check exception");
@@ -124,7 +124,7 @@ public class MilkPurgeArchive extends MilkPlugIn {
     private final static PlugInMeasurement cstMesureCasePurged = PlugInMeasurement.createInstance("CasePurged", "cases purged", "Number of case purged in this execution");
     private final static PlugInMeasurement cstMesureCaseDetected = PlugInMeasurement.createInstance("CaseDetected", "cases detected", "Number of case detected in the scope");
 
-    public MilkPurgeArchive() {
+    public MilkPurgeArchivedCases() {
         super(TYPE_PLUGIN.EMBEDED);
     }
 

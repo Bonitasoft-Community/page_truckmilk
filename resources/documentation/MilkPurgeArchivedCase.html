@@ -1,0 +1,26 @@
+
+This Plugin has different usage.
+<h3>Calculated a list of cases to purge</h3>
+This option does not purge them, just calculate the list.<br>
+ The list is a CSV file, containing the caseid, the process name. A status column is ready to be fulfilled. 
+A delay can be set in parameter, and a list of processes.<p>
+Example of CSV:<br>
+<div class="alert alert alert-info">
+caseid;processname;processversion;archiveddate;status
+5149;ExpenseNote;1.0;18/10/2019 15:02;
+5150; ExpenseNote;1.0;18/10/2019 15:02;
+5151;VacationRequest;1.0;18/10/2019 15:02;
+</div>
+
+<h3>Purge from List</h3>>
+
+Then, you can delete case from a CSV list. This option works in partnership with the “Purge Archived Case/Get List” Plug-in.<br>
+It accepts the same list and check the status of each line. If the status is DELETE, then the case is removed.<p>
+Example of CSV to upload:<br>
+
+<div class="alert alert alert-info">
+caseid;processname;processversion;archiveddate;status
+5149;ExpenseNote;1.0;18/10/2019 15:02;DELETE
+5150; ExpenseNote;1.0;18/10/2019 15:02;
+5151;VacationRequest;1.0;18/10/2019 15:02;DELETE
+</div>

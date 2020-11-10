@@ -12,9 +12,9 @@ import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.SendMailEnvironment;
 
-public class MilkMail extends MilkPlugIn {
+public class MilkMonitorMail extends MilkPlugIn {
 
-    public MilkMail() {
+    public MilkMonitorMail() {
         super(TYPE_PLUGIN.EMBEDED);
     }
 

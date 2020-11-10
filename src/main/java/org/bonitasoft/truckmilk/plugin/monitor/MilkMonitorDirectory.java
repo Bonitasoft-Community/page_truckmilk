@@ -25,25 +25,26 @@ import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.job.MilkJobExecution.ListProcessesResult;
+import org.bonitasoft.truckmilk.mapper.Mapper;
+import org.bonitasoft.truckmilk.mapper.Mapper.MAPPER_POLICY;
+import org.bonitasoft.truckmilk.mapper.Mapper.MapperResult;
 
-public class MilkDirectory extends MilkPlugIn {
+public class MilkMonitorDirectory extends MilkPlugIn {
 
 
     private static PlugInParameter cstParamDirectory = PlugInParameter.createInstance("directory", "Directory", TypeParameter.STRING, "", "This directory is monitor. Each file detected in this directory which match the filter trigger an action (create a case)")
             .withMandatory(true);
 
-    private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Filter on process", TypeParameter.ARRAYPROCESSNAME, null, "Job manage only process which mach the filter. If no filter is given, all processes are inspected")
-            .withFilterProcess(FilterProcess.ONLYENABLED);
-
     private static PlugInParameter cstParamFileFilter = PlugInParameter.createInstance("fileFilter", "File Filter", TypeParameter.STRING, "[0-z|\\s]*.doc", "File filter, to load only file who match the filter. * and ? may be used.Visit https://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html#sum");
 
-    private static BEvent eventDirectoryNotExist = new BEvent(MilkDirectory.class.getName(), 1, Level.APPLICATIONERROR,
+    private static BEvent eventDirectoryNotExist = new BEvent(MilkMonitorDirectory.class.getName(), 1, Level.APPLICATIONERROR,
             "Directory not exist", "The directory given as parameters does not exist", "Jobs can't run", "Check parameters");
 
+ 
     /**
      * 
      */
-    public MilkDirectory() {
+    public MilkMonitorDirectory() {
         super(TYPE_PLUGIN.EMBEDED);
     }
 
@@ -76,9 +77,12 @@ public class MilkDirectory extends MilkPlugIn {
         plugInDescription.setCategory(CATEGORY.MONITOR);
         plugInDescription.addParameter(cstParamDirectory);
         plugInDescription.addParameter(cstParamFileFilter);
-        plugInDescription.addParameter(cstParamProcessFilter);
         plugInDescription.setStopJob(JOBSTOPPER.BOTH);
 
+        Mapper mapper = new Mapper(MAPPER_POLICY.BOTH);
+        mapper.addPlugInParameter(plugInDescription, 
+                "Additionnal placeholder: {{FILESOURCE}}: content of the source, {{FILENAME}} FileName (not the directory), {{FILEDATEINMS}} date in millisecond.<br> Example, \"{ \"invoiceInput\": \"{{FILESOURCE}}\" }"); 
+        
         return plugInDescription;
     }
 
@@ -87,26 +91,23 @@ public class MilkDirectory extends MilkPlugIn {
         MilkJobOutput milkJobOutput = milkJobExecution.getMilkJobOutput();
         int numberOfCasesCreated=0;
         int numberOfCasesInError=0;
-
+        
         try {
-            ProcessAPI processAPI = milkJobExecution.getApiAccessor().getProcessAPI();
-
-            // ---- get parameters
-            ListProcessesResult listProcessResult = milkJobExecution.getInputArrayProcess(cstParamProcessFilter, false, null, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
-
-            if (BEventFactory.isError(listProcessResult.listEvents)) {
-                // filter given, no process found : stop now
-                milkJobOutput.addEvents(listProcessResult.listEvents);
-                milkJobOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
+            Mapper mapper = new Mapper(MAPPER_POLICY.BOTH);
+            milkJobOutput.addEvents( mapper.initialisation(milkJobExecution) );
+            if (BEventFactory.isError( milkJobOutput.getListEvents())) {
+                milkJobOutput.executionStatus = ExecutionStatus.ERROR;
                 return milkJobOutput;
             }
+
+            // ---- get parameters
             String fileFilter = milkJobExecution.getInputStringParameter(cstParamFileFilter);
             Pattern patternFileFilter = null;
             if (fileFilter != null && ! fileFilter.trim().isEmpty())
                 patternFileFilter = Pattern.compile(fileFilter);
             
             File fileDirectoy = new File(milkJobExecution.getInputStringParameter(cstParamDirectory));
-            milkJobOutput.addReportTableBegin(new String[] { "File", "CaseId" });
+            milkJobOutput.addReportTableBegin(new String[] { "File", "CaseId", "Status" });
             
             // ------------ loop now
             File[] listFiles = fileDirectoy.listFiles();
@@ -114,8 +115,6 @@ public class MilkDirectory extends MilkPlugIn {
 
             for (File fileInDirectory : listFiles) {
                 milkJobExecution.setAvancementStep(1);
-                
-                Thread.sleep( 10000 );
                 
                 if (milkJobExecution.isStopRequired())
                     break;
@@ -127,28 +126,39 @@ public class MilkDirectory extends MilkPlugIn {
                     if (!m.matches())
                         continue;
                 }
-
                 
                 // Ok, get it ! Create something 
                 Map<String, Object> parameters = new HashMap<>();
+                parameters.put("FILESOURCE_FILE", fileInDirectory);
+                // attention use / else JSONParse will translate the \ in something else
+                String completeFileName = fileInDirectory.getAbsolutePath();
+                completeFileName = completeFileName.replace('\\', '/');
+                parameters.put("FILESOURCE", "file("+completeFileName+")");                
                 parameters.put("FILENAME", fileInDirectory.getName());
                 parameters.put("FILEDATEINMS", fileInDirectory.lastModified());
                 List<File> fileAttachement = new ArrayList<>();
                 fileAttachement.add(fileInDirectory);
-
-                for (ProcessDeploymentInfo processDeployment : listProcessResult.listProcessDeploymentInfo) {
+                boolean deleteFile=false;
                     try {
-                        ProcessInstance processInstance = processAPI.startProcess(processDeployment.getProcessId());
-                        milkJobOutput.addReportTableLine(new Object[] { fileInDirectory.getName(), processInstance.getId() });
-                        numberOfCasesCreated++;
+                        MapperResult mapperResult = mapper.performOperation(milkJobExecution, parameters, fileAttachement);
+                        
+                        milkJobOutput.addReportTableLine(new Object[] { fileInDirectory.getName(),
+                                (mapperResult.processInstance!=null ? mapperResult.processInstance.getId():""),
+                                 BEventFactory.getHtml(mapperResult.listEvents) });
+                        if (BEventFactory.isError(mapperResult.listEvents))
+                            numberOfCasesInError++;
+                        else {
+                            numberOfCasesCreated++;
+                            deleteFile=true;
+                        }
                     } catch (Exception e) {
                         milkJobOutput.addReportTableLine(new Object[] { fileInDirectory.getName(), e.getMessage() });
                         numberOfCasesInError++;
                     }
-                }
 
                 // Delete the file
-                fileInDirectory.delete();
+                    if (deleteFile)
+                        fileInDirectory.delete();
 
             }
             milkJobOutput.addReportTableEnd();

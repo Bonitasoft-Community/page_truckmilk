@@ -60,18 +60,18 @@ import org.bonitasoft.truckmilk.toolbox.SendMailParameters;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 import org.json.simple.JSONValue;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
-import org.bonitasoft.truckmilk.plugin.cases.MilkPurgeArchive;
+import org.bonitasoft.truckmilk.plugin.cases.MilkPurgeArchivedCases;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 public class MilkSLA extends MilkPlugIn {
 
     static MilkLog logger = MilkLog.getLogger(MilkSLA.class.getName());
 
-    private static BEvent eventNoProcessFilter = new BEvent(MilkPurgeArchive.class.getName(), 1,
+    private static BEvent eventNoProcessFilter = new BEvent(MilkPurgeArchivedCases.class.getName(), 1,
             Level.APPLICATIONERROR,
             "No process filter", "The process filter is empty", "SLA can't run.",
             "Give a process name");
 
-    private static BEvent eventNoProcessMatchFilter = new BEvent(MilkPurgeArchive.class.getName(), 2,
+    private static BEvent eventNoProcessMatchFilter = new BEvent(MilkPurgeArchivedCases.class.getName(), 2,
             Level.APPLICATIONERROR,
             "No process found", "No process is found with the given filter", "This filter does not apply.",
             "Check the process name (you must give as minimum one process)");

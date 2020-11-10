@@ -14,20 +14,21 @@ import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.plugin.cases.MilkCancelCases;
 import org.bonitasoft.truckmilk.plugin.cases.MilkCleanArchivedDross;
 import org.bonitasoft.truckmilk.plugin.cases.MilkDeleteCases;
-import org.bonitasoft.truckmilk.plugin.cases.MilkMoveArchive;
-import org.bonitasoft.truckmilk.plugin.cases.MilkPurgeArchive;
-import org.bonitasoft.truckmilk.plugin.monitor.MilkDirectory;
+import org.bonitasoft.truckmilk.plugin.cases.MilkMoveArchiveCases;
+import org.bonitasoft.truckmilk.plugin.cases.MilkPurgeArchivedCases;
+import org.bonitasoft.truckmilk.plugin.monitor.MilkMonitorDirectory;
 import org.bonitasoft.truckmilk.plugin.monitor.MilkGrumman;
-import org.bonitasoft.truckmilk.plugin.monitor.MilkLogObserver;
+import org.bonitasoft.truckmilk.plugin.monitor.MilkMonitorLog;
 import org.bonitasoft.truckmilk.plugin.monitor.MilkRadarBonitaEngine;
 import org.bonitasoft.truckmilk.plugin.other.MilkMeteor;
 import org.bonitasoft.truckmilk.plugin.other.MilkPing;
+import org.bonitasoft.truckmilk.plugin.other.MilkRGPD;
 import org.bonitasoft.truckmilk.plugin.processes.MilkDeleteProcesses;
 import org.bonitasoft.truckmilk.plugin.processes.MilkSonar;
 import org.bonitasoft.truckmilk.plugin.tasks.MilkDeleteDuplicateTasks;
 import org.bonitasoft.truckmilk.plugin.tasks.MilkEmailUsersTasks;
-import org.bonitasoft.truckmilk.plugin.tasks.MilkReplayFailedTask;
-import org.bonitasoft.truckmilk.plugin.tasks.MilkRestartFlowNodes;
+import org.bonitasoft.truckmilk.plugin.tasks.MilkReplayFailedTasks;
+import org.bonitasoft.truckmilk.plugin.tasks.MilkReplayFlowNodes;
 import org.bonitasoft.truckmilk.plugin.tasks.MilkSLA;
 import org.bonitasoft.truckmilk.plugin.tasks.MilkUnassignTasks;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
@@ -86,25 +87,26 @@ public class MilkPlugInFactory {
     private void collectListPlugIn(MilkJobContext milkJobContext) {
         listPlugIns = new ArrayList<>(); // clean it
         listPlugIns.add(new MilkDeleteCases());
-        listPlugIns.add(new MilkDirectory());
+        listPlugIns.add(new MilkMonitorDirectory());
         listPlugIns.add(new MilkEmailUsersTasks());
         // listPlugIns.add(new MilkMail());
         listPlugIns.add(new MilkPing());
-        listPlugIns.add(new MilkPurgeArchive());
+        listPlugIns.add(new MilkPurgeArchivedCases());
         listPlugIns.add(new MilkCleanArchivedDross() );
-        listPlugIns.add(new MilkReplayFailedTask());
+        listPlugIns.add(new MilkReplayFailedTasks());
         listPlugIns.add(new MilkSLA());
         listPlugIns.add(new MilkUnassignTasks() );
         listPlugIns.add(new MilkMeteor() );
-        listPlugIns.add(new MilkRestartFlowNodes() );
+        listPlugIns.add(new MilkReplayFlowNodes() );
         listPlugIns.add(new MilkGrumman() );
         listPlugIns.add(new MilkCancelCases() );
         listPlugIns.add(new MilkRadarBonitaEngine() );
         listPlugIns.add(new MilkDeleteDuplicateTasks() );
-        listPlugIns.add(new MilkLogObserver() );
+        listPlugIns.add(new MilkMonitorLog() );
         listPlugIns.add(new MilkDeleteProcesses() );
         listPlugIns.add(new MilkSonar() );
-        listPlugIns.add(new MilkMoveArchive() );
+        listPlugIns.add(new MilkMoveArchiveCases() );
+        listPlugIns.add(new MilkRGPD() );
     }
 
     /**

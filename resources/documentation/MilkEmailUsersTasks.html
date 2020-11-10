@@ -1,0 +1,16 @@
+This Plug in calculated, for a user, all visible tasks, i.e., all tasks visible in the portal, in &Prime;my tasks&Prime;.<br>
+
+Then, one (and only one) email is send to the user, with the list of all tasks.
+
+Plug in required a User Profile as parameters: all users registered in the profile will receive an email if they have active tasks.
+
+The content of email may be defined, using place holder:
+<li>Assignedtask list all tasks assigned to the user</li>
+<li>	Pendingtasks contains all tasks assigned (except the assigned tasks)</li>
+For example, the content may be:<br>
+
+<div class="alert alert-secondary">
+Your assigned task &lt;br&gt;{{assignedtasks}}&lt;p&gt;Your pending tasks&lt;br&gt;{{pendingtasks}}
+</div>
+
+Note: this plugin need the Email JAR file installed. Check tab Maintenance / Information to verify that the JAR is correctly installed.

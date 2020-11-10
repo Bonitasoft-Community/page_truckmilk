@@ -129,10 +129,10 @@ public class MilkCmdControlAPI {
         cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-event", "1.9.0", "bonita-event-1.9.0.jar");
         cmdDependency.setForceDeploy( true );
 
-        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.8.0", "bonita-properties-2.8.0.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.8.1", "bonita-properties-2.8.1.jar");
         cmdDependency.setForceDeploy( true );
 
-        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-casedetails", "1.1.0", "bonita-casedetails-1.1.0.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-casedetails", "1.1.1", "bonita-casedetails-1.1.1.jar");
         cmdDependency.setForceDeploy( true );
         
         cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-meteor", "3.3.0", "bonita-meteor-3.3.0.jar");

@@ -1,0 +1,10 @@
+
+The Plug-in delete cases, archived or not. <br>
+A list of processes can be set as parameters, else all processes. Use this plug in when its necessary to purge a lot of cases.<br>
+ 
+Deletion of the case may not work due to a transaction timeout: to delete a process, Bonita Engine open a transaction, then delete all cases. When there are too much case to remove, transaction may fail. Secondly, this operation may need a lot of time to be finished.<br>
+
+The parameter &Prime;Maximum cases deletion&Prime; is used to specify the maximum number of case to delete.
+ When the number is reach, the job finish, it will re-start at the next execution, so cases may be removed &Prime;page per page&Prime; to avoid any overloading on the server. 
+
+<div class="alert alert-danger">Attention, all deletion are definitive</div>

@@ -387,6 +387,11 @@ public class Actions {
                 actionAnswer.responseMap.put("nbUsers", searchResult.getCount());
 
 
+            } else if ("getdocumentation".equals(action)) {
+                
+                milkAccessAPI.getDocumentation(parameter, response );
+                actionAnswer.isResponseMap=false;
+                
             }
             logger.fine("#### TruckMilk:Actions END responseMap.size()="+actionAnswer.responseMap.size());
             return actionAnswer;

@@ -23,18 +23,18 @@ import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.job.MilkJobExecution.DelayResult;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
-public class MilkRestartFlowNodes  extends MilkPlugIn {
+public class MilkReplayFlowNodes  extends MilkPlugIn {
 
     private final static String RADAR_NAME_WORKER = "workers";
     
-    static MilkLog logger = MilkLog.getLogger(MilkRestartFlowNodes.class.getName());
+    static MilkLog logger = MilkLog.getLogger(MilkReplayFlowNodes.class.getName());
 
-    private final static BEvent eventErrorExecuteFlownode = new BEvent(MilkRestartFlowNodes.class.getName(), 1,
+    private final static BEvent eventErrorExecuteFlownode = new BEvent(MilkReplayFlowNodes.class.getName(), 1,
             Level.APPLICATIONERROR,
             "Error executed a flow node", "Executing a flow node failed", "Flow node is not restarted",
             "Check exception");
     
-    private final static BEvent eventErrorNoRadarWorker = new BEvent(MilkRestartFlowNodes.class.getName(), 2,
+    private final static BEvent eventErrorNoRadarWorker = new BEvent(MilkReplayFlowNodes.class.getName(), 2,
             Level.ERROR,
             "No radar Worker found", "A radar definition is missing", "Flow nodes to restart can't be detected",
             "Check exception");
@@ -49,7 +49,7 @@ public class MilkRestartFlowNodes  extends MilkPlugIn {
     private final static PlugInMeasurement cstMesureTasksError = PlugInMeasurement.createInstance("TasksError", "Task execution error", "Number of task in error when a re-execution was asked");
     
     
-    public MilkRestartFlowNodes() {
+    public MilkReplayFlowNodes() {
         super(TYPE_PLUGIN.EMBEDED);
     }
 

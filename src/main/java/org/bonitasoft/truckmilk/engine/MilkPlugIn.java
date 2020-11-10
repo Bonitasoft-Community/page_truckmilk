@@ -232,7 +232,28 @@ public abstract class MilkPlugIn {
 
         public List<ColDefinition> arrayMapDescription;
 
-        
+        public PlugInParameter clone() {
+            PlugInParameter cloned = new PlugInParameter();
+            cloned.name = name;
+            cloned.label= label;
+            cloned.defaultValue = defaultValue;
+            cloned.explanation = explanation;
+            cloned.information = information;
+            cloned.typeParameter = typeParameter;
+            cloned.isMandatory = isMandatory;
+            cloned.visibleCondition = visibleCondition;
+            cloned.filterProcess = filterProcess;
+            cloned.buttonDescription =  buttonDescription;
+            cloned.argsName = argsName;
+            cloned.argsValue = argsValue;
+            cloned.listValues = listValues;
+            cloned.fileName = fileName;
+            cloned.contentType = contentType;
+            cloned.arrayMapDescription = arrayMapDescription;
+     
+            return cloned;
+                    
+        }
         /**
          * default information : name, label, type and default value, explanation
          * @param name

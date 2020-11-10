@@ -1,0 +1,14 @@
+Tasks must have some due date to be executed (example, execute the task in 10 days). <br>Before the delay is reach, different actions may be necessary:
+<li>Send a reminder after 6 days (i.e. at 60% of the delay) to all users who can execute the task</li>
+<li>Send a second reminder after 9 days (90%)</li>
+<li>Send a alert reminder if the delay is over than 1 days (110%)</li>
+<li>Assign the task to a different person if the delay is over 13 days (130%)</li>
+A design in the process is possible to reach these operations, based on “non interruptible boundary event”. When process have a lot of human tasks, and rules are important, the design may become very complex. Secondly, if a rule change (add a new trigger, change the trigger at 90 to 80%), the process must be redeployed.<p>
+
+This Plugin does these operations and can be update at any time.<br>
+The SLA operation is based:
+ 
+<li>A task’s name. If this parameter is empty, the rule is applied on all tasks</li>
+<li>A Percent Threshold. This parameter is active only if the task has a Due Date. Then, the percentage is calculated between the Start Date and the Due Date. When the due date is reach, the percent is 100%. It’s possible then to apply a rule over 100% (due date expired)</li>
+<li>Action: multiple actions are possible. Click on detail Explanation to have a list of explanation. Main actions are EMAILUSER, EMAILACTOR, EMAILCANDIDATE,ASSIGNUSER, ASSIGNSUPERVISOR</li>
+

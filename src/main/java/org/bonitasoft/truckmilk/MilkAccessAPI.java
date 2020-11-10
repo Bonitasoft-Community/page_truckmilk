@@ -1,13 +1,22 @@
 package org.bonitasoft.truckmilk;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.file.Files;
+
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.servlet.http.HttpServletResponse;
+
 
 import org.bonitasoft.command.BonitaCommandDeployment.DeployStatus;
 import org.bonitasoft.engine.api.CommandAPI;
@@ -19,13 +28,17 @@ import org.bonitasoft.truckmilk.engine.MilkCmdControl;
 import org.bonitasoft.truckmilk.engine.MilkCmdControlAPI;
 import org.bonitasoft.truckmilk.engine.MilkConstantJson;
 import org.bonitasoft.truckmilk.engine.MilkJobFactory;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInFactory;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInMeasurement;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
 import org.bonitasoft.truckmilk.job.MilkJob;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 import org.bonitasoft.truckmilk.toolbox.TypesCast;
 import org.json.simple.JSONValue;
+
+
 
 /**
  * this is the main access to the TruckMilk operation.
@@ -381,4 +394,109 @@ public class MilkAccessAPI {
         return result;
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public void getDocumentation(Parameter parameter, HttpServletResponse response) {
+        Object result;
+        long tenantId = parameter.apiSession.getTenantId();
+        MilkJobContext milkJobContext = new MilkJobContext( tenantId );
+
+        MilkPlugInFactory milkPlugInFactory = MilkPlugInFactory.getInstance(milkJobContext);
+
+        if (parameter.information.get("pluginname") !=null) {
+            // return for one plugin
+            MilkPlugIn plugIn= milkPlugInFactory.getPluginFromName( (String) parameter.information.get("pluginname"));
+            result = getDocumentationForAPlugin(  plugIn,parameter.pageDirectory);
+        }
+        else {
+            // all plugin
+            result= new ArrayList<Map<String,Object>>();
+            for(MilkPlugIn milkPlugin : milkPlugInFactory.getListPlugIn()) {
+                ((List)result).add(getDocumentationForAPlugin( milkPlugin,parameter.pageDirectory));
+            }
+            // sort the result per name
+            Collections.sort( ((List)result), new Comparator<Map<String,Object>>()
+               {
+                 public int compare(Map<String,Object> s1,
+                         Map<String,Object> s2)
+                 {
+                   return ((String)s1.get("name")).compareTo( (String) (s2.get("name")));
+                 }
+               });
+
+        }
+        
+        response.addHeader("content-type", "text/html; charset=utf-8");
+        try (OutputStream output = response.getOutputStream(); ) {
+        
+        String resultSt = JSONValue.toJSONString( result);
+        output.write( resultSt.getBytes());
+        
+        output.flush();
+        } catch (IOException e1) {
+            logger.severe("Can't send documentation "+e1.getMessage());
+        }
+    }
+    
+    /**
+     * 
+     * @param plugIn
+     * @param pageDirectory
+     * @return
+     */
+    private Map<String,Object> getDocumentationForAPlugin(MilkPlugIn plugIn, File pageDirectory) {
+        
+        String fileNameSt = pageDirectory.getAbsolutePath()+"/resources/documentation/Milk"+plugIn.getName()+".html";
+        File fileDocumentation = new File( fileNameSt );
+        Map<String,Object> result = new HashMap<>();
+        result.put("name", plugIn.getName() );
+        result.put("label", plugIn.getDescription().getLabel() );
+        result.put("category", plugIn.getDescription().getCategory().toString() );
+        result.put("jobstopper", plugIn.getDescription().getJobCanBeStopped().toString() );
+        result.put("explanation", plugIn.getDescription().getExplanation() );
+        
+        result.put("fulldocumentation", "<div class=\"alert alert-info\">Missing documentation</div>");
+        if (fileDocumentation.exists()) { 
+            try (FileInputStream fileInput = new FileInputStream(fileDocumentation)) {
+                result.put("fulldocumentation", new String ( Files.readAllBytes( fileDocumentation.toPath() ) ));
+            }catch(Exception e) {
+                logger.severe("Can't read documentation ["+fileNameSt+"] "+e.getMessage());
+            }
+        }
+        // Parameter
+        StringBuffer parametersSt = new StringBuffer();
+        parametersSt.append("<table class=\"table table-striped table-hover table-condensed\" style=\"width:100%\">");
+        parametersSt.append("<tr><th>Name</th><th>Explanation</th></tr>");
+        for (PlugInParameter parameter : plugIn.getDescription().getInputParameters())
+        {
+            parametersSt.append("<tr>");
+            parametersSt.append("<td>"+parameter.label+"</td>");
+            parametersSt.append("<td>");
+            if (parameter.explanation!=null)
+                parametersSt.append( parameter.explanation);
+            if (parameter.explanation !=null && parameter.information !=null) 
+                parametersSt.append("<p>");
+            if (parameter.information !=null)
+                parametersSt.append("<p>"+parameter.information);
+            parametersSt.append("</td>");
+            parametersSt.append("</tr>");
+            
+        }
+        parametersSt.append("</table>");
+        result.put("parameters",parametersSt.toString());
+
+        StringBuffer measureSt = new StringBuffer();
+        measureSt.append("<table class=\"table table-striped table-hover table-condensed\" style=\"width:100%\">");
+        measureSt.append("<tr><th>Name</th><th>Explanation</th></tr>");
+        for (PlugInMeasurement measure : plugIn.getDescription().getMapMesures().values()) {
+            measureSt.append("<tr>");
+            measureSt.append("<td>"+measure.label+"</td>");
+            measureSt.append("<td>"+measure.explanation+"</td>");
+        
+        }
+        measureSt.append("</table>");
+        result.put("measures",measureSt.toString());
+
+        return result;
+  
+    }
 }

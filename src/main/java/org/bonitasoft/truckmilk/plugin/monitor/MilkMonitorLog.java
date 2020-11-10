@@ -20,9 +20,9 @@ import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
-public class MilkLogObserver extends MilkPlugIn {
+public class MilkMonitorLog extends MilkPlugIn {
 
-    static MilkLog logger = MilkLog.getLogger(MilkLogObserver.class.getName());
+    static MilkLog logger = MilkLog.getLogger(MilkMonitorLog.class.getName());
 
     private static String operationDetection = "Only detection";
     private static String operationPurge = "Purge";
@@ -38,15 +38,15 @@ public class MilkLogObserver extends MilkPlugIn {
     
     
 
-    public MilkLogObserver() {
+    public MilkMonitorLog() {
         super(TYPE_PLUGIN.EMBEDED);
     }
 
     @Override
     public MilkPlugInDescription getDefinitionDescription(MilkJobContext milkJobContext) {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
-        plugInDescription.setName("LogObserver");
-        plugInDescription.setLabel("Log Observer");
+        plugInDescription.setName("MonitorLog");
+        plugInDescription.setLabel("Monitor Log");
         plugInDescription.setExplanation("Analyze the log of the day before and checks errors");
         plugInDescription.setCategory(CATEGORY.MONITOR);
 

@@ -87,7 +87,7 @@ public class MilkUnassignTasks extends MilkPlugIn {
     public MilkPlugInDescription getDefinitionDescription(MilkJobContext milkJobContext) {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
 
-        plugInDescription.setName( "Unassign Tasks" );
+        plugInDescription.setName( "UnassignTasks" );
         plugInDescription.setCategory( CATEGORY.TASKS );
         plugInDescription.setExplanation( "Unassign tasks if not resolved after a specified time." );
         plugInDescription.setLabel( "Unassign Tasks" );

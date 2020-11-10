@@ -37,7 +37,8 @@
 		
 		
 		this.inprogress = false;
-
+		this.showplugininfo = false;
+		
 		// return the class used for the label
 		this.getClassExecution =  function( status ) {
 			if (! status)
@@ -1612,11 +1613,55 @@
 		};
 		
 		// -----------------------------------------------------------------------------------------
+		// Documentation
+		// -----------------------------------------------------------------------------------------		
+		this.getDocumentation = function ( plugin ) {
+			if (! plugin ) {
+				console.log("getDocumentation : no plug in");
+				return;
+			}
+			console.log("getDocumentation for:"+angular.toJson(plugin));
+
+			var param= { "pluginname": plugin.name }
+			var json = encodeURIComponent(angular.toJson(param, true));
+			var selfplugin = plugin;
+			// console.log("schedulerMaintenance call HTTP");
+			$http.get('?page=custompage_truckmilk&action=getdocumentation&paramjson=' + json+'&t='+Date.now())
+			.success(function(jsonResult, statusHttp, headers, config) {
+				// connection is lost ?
+				if (statusHttp==401 || typeof jsonResult === 'string') {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+				}
+				selfplugin.fulldocumentation = jsonResult.fulldocumentation;
+			});
+		}
+		
+		this.getAllDocumentation = function ( ) {
+			console.log("getAllDocumentation ");
+
+			var param= { "all": true }
+			var json = encodeURIComponent(angular.toJson(param, true));
+			var self = this;
+			// console.log("schedulerMaintenance call HTTP");
+			$http.get('?page=custompage_truckmilk&action=getdocumentation&paramjson=' + json+'&t='+Date.now())
+			.success(function(jsonResult, statusHttp, headers, config) {
+				// connection is lost ?
+				if (statusHttp==401 || typeof jsonResult === 'string') {
+					console.log("Redirected to the login page !");
+					window.location.reload();
+				}
+				self.documentation = jsonResult;
+			});
+		}
+		
+		// -----------------------------------------------------------------------------------------
 		// init
 		// -----------------------------------------------------------------------------------------
 
 		this.loadinit();
 
+		
 	
 	});
 

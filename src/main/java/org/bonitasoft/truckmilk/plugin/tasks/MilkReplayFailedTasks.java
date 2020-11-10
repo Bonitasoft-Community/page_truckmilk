@@ -32,9 +32,9 @@ import org.bonitasoft.truckmilk.job.MilkJobExecution.DelayResult;
 import org.bonitasoft.truckmilk.job.MilkJobExecution.ListProcessesResult;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
-public class MilkReplayFailedTask extends MilkPlugIn {
+public class MilkReplayFailedTasks extends MilkPlugIn {
 
-    static MilkLog logger = MilkLog.getLogger(MilkReplayFailedTask.class.getName());
+    static MilkLog logger = MilkLog.getLogger(MilkReplayFailedTasks.class.getName());
 
     private static BEvent eventRetryFailed = new BEvent(MilkCmdControl.class.getName(), 1, Level.APPLICATIONERROR,
             "Retry failed", "Some retry failed", "Some task retry failed", "Check the log");
@@ -66,7 +66,7 @@ public class MilkReplayFailedTask extends MilkPlugIn {
 
     private static PlugInParameter cstParamTasksInReport = PlugInParameter.createInstance("TasksInReport", "Task and case in report", TypeParameter.BOOLEAN, Boolean.FALSE, "In the report, the list of Task/Case processed is saved");
 
-    public MilkReplayFailedTask() {
+    public MilkReplayFailedTasks() {
         super(TYPE_PLUGIN.EMBEDED);
     }
 
@@ -196,8 +196,8 @@ public class MilkReplayFailedTask extends MilkPlugIn {
     @Override
     public MilkPlugInDescription getDefinitionDescription(MilkJobContext milkJobContext) {
         MilkPlugInDescription plugInDescription = new MilkPlugInDescription();
-        plugInDescription.setName("ReplayFailedTask");
-        plugInDescription.setLabel("Replay Failed Task");
+        plugInDescription.setName("ReplayFailedTasks");
+        plugInDescription.setLabel("Replay Failed Tasks");
         plugInDescription.setExplanation("Monitor all failed tasks. Then after a delay, replay them, if the number of tentative is not reach");
         plugInDescription.setCategory(CATEGORY.TASKS);
         plugInDescription.addParameter(cstParamDelay);

@@ -490,7 +490,7 @@ public class MilkJobExecution {
     /*                                                                                  */
     /* ******************************************************************************** */
     public long totalStep;
-
+    public long localStep=0;
     /**
      * Plug in can set an % of advancement if it want
      * 
@@ -507,8 +507,16 @@ public class MilkJobExecution {
      * @param advancementInPercent
      */
     public void setAvancementStep(long step) {
+        localStep=step;
         if (totalStep != 0)
             setAvancement((int) ((100 * step) / totalStep));
+        // register in the tour the % of advancement, and then calculated an estimated end date.
+    }
+   
+    public void setAvancementStepPlusOne() {
+        localStep++;
+        if (totalStep != 0)
+            setAvancement((int) ((100 * localStep) / totalStep));
         // register in the tour the % of advancement, and then calculated an estimated end date.
     }
 

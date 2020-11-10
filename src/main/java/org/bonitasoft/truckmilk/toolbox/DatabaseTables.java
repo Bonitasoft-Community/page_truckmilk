@@ -1,14 +1,22 @@
 package org.bonitasoft.truckmilk.toolbox;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.Types;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -20,6 +28,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
@@ -53,6 +62,9 @@ public class DatabaseTables {
     private static BEvent eventConnectDatabase = new BEvent(DatabaseTables.class.getName(), 3, Level.ERROR,
             "Can't connect", "Can't connect to the database",
             "The connection can't be establish", "Check Exception");
+    private static BEvent eventSqlError = new BEvent(DatabaseTables.class.getName(), 4, Level.ERROR,
+            "Sql Error ", "Sql execution error",
+            "Request will not work", "Check Exception");
 
     public enum COLTYPE {
         LONG, BLOB, STRING, BOOLEAN, DECIMAL, TEXT
@@ -196,6 +208,83 @@ public class DatabaseTables {
     /*                                                                                  */
     /*                                                                                  */
     /* ******************************************************************************** */
+    private class CLobData {
+        public String textContent;
+    }
+    public List<Map<String, Object>> executeSqlRequest(String sqlRequest, List<Object> parameters, int maximumResult, Connection con) throws Exception {
+        List<Map<String, Object>> listResult = new ArrayList<>();
+        try {
+            PreparedStatement pstmt = con.prepareStatement(sqlRequest);
+            ResultSet rs = null;
+            if (parameters!=null)
+                for (int i = 0; i < parameters.size(); i++)
+                    pstmt.setObject(i + 1, parameters.get(i));
+            rs = pstmt.executeQuery();
+
+            ResultSetMetaData rsMeta = pstmt.getMetaData();
+            while (rs.next()) {
+                Map<String, Object> record = new HashMap<>();
+                for (int columnIndex = 1; columnIndex <= rsMeta.getColumnCount(); columnIndex++) {
+                    Object databaseObject = rs.getObject(columnIndex);
+                    int columnType = rsMeta.getColumnType(columnIndex);
+                    if (databaseObject instanceof Clob) {
+                        Clob clob = (Clob) databaseObject;
+                        record.put(rsMeta.getColumnLabel(columnIndex).toUpperCase(), clob);
+                        /*
+                        CLobData cLobData = new CLobData();
+                        
+                        cLobData.textContent = new BufferedReader(new InputStreamReader(clob.getAsciiStream(), StandardCharsets.UTF_8) )
+                                  .lines()
+                                  .collect(Collectors.joining("\n"));
+                        
+                        record.put(rsMeta.getColumnLabel(columnIndex).toUpperCase(), cLobData);
+                        */
+                    }
+                    // simple type, no question
+                    else if (databaseObject instanceof Long 
+                            || databaseObject instanceof String
+                            || databaseObject instanceof Float
+                            || databaseObject instanceof Double
+                        || databaseObject instanceof Integer)
+                        record.put(rsMeta.getColumnLabel(columnIndex).toUpperCase(), databaseObject);
+                    // detect a Blog : get the InputStream then
+                    else if (columnType == Types.BINARY || columnType == Types.BLOB) {
+                        InputStream inputStream = rs.getBinaryStream(columnIndex);
+                        record.put(rsMeta.getColumnLabel(columnIndex).toUpperCase(), inputStream);
+                        /*
+                        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                        byte[] buf = new byte[8192];
+                        int length;
+                        while ((length = inputStream.read(buf)) > 0) {
+                            outputStream.write(buf, 0, length);
+                        }
+                        byte[] data = outputStream.toByteArray();
+
+                        ByteArrayInputStream byteInputStream = new ByteArrayInputStream(data);
+                        record.put(rsMeta.getColumnLabel(columnIndex).toUpperCase(), byteInputStream);
+                        inputStream.close();
+                        */
+                    } else
+                        record.put(rsMeta.getColumnLabel(columnIndex).toUpperCase(), databaseObject);
+                }
+                listResult.add(record);
+                if (listResult.size() >= maximumResult)
+                    return listResult;
+            }
+            return listResult;
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+
+    /**
+     * 
+     * @param tableName
+     * @param record
+     * @param informationContext
+     * @param con
+     * @return
+     */
     public List<BEvent> insert(String tableName, Map<String, Object> record, String informationContext, Connection con) {
         List<BEvent> listEvents = new ArrayList<>();
         PreparedStatement pstmt = null;
@@ -213,7 +302,17 @@ public class DatabaseTables {
                 count++;
                 sqlPartCol.append(entry.getKey());
                 sqlPartVal.append("? ");
-                pObject.add(entry.getValue());
+                if (entry.getValue() instanceof CLobData)
+                {
+                    Clob clob = con.createClob();
+                    clob.setString(1, ((CLobData) entry.getValue()).textContent );
+                    pObject.add(clob);
+                } // Document is read as a InputStream 
+                else if (entry.getValue() instanceof InputStream ) {
+                    pObject.add(entry.getValue());
+                    
+                } else
+                    pObject.add(entry.getValue());
             }
 
             StringBuilder sqlRequest = new StringBuilder();
@@ -223,14 +322,32 @@ public class DatabaseTables {
 
             pstmt = con.prepareStatement(sqlRequest.toString());
             for (int i = 0; i < pObject.size(); i++) {
-                if (pObject.get(i) instanceof InputStream)
-                    pstmt.setBinaryStream(i + 1, (InputStream) pObject.get(i));
+                if (pObject.get(i) instanceof InputStream) {
+                    InputStream in = (InputStream) pObject.get(i);
+                    // see the content now
+                    /*
+                    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                    byte[] buf = new byte[8192];
+                    int length;
+                    while ((length = ((InputStream) pObject.get(i)).read(buf)) > 0) {
+                        outputStream.write(buf, 0, length);
+                    }
+                    byte[] data = outputStream.toByteArray();
+                    logger.info("Size input "+data.length);
+                    
+                    ByteArrayInputStream byteInputStream = new ByteArrayInputStream(data);
+                    
+                    pstmt.setBinaryStream(i + 1, byteInputStream);
+                    
+                    */
+                    pstmt.setBinaryStream(i + 1, in);
+                }
                 else
                     pstmt.setObject(i + 1, pObject.get(i));
             }
             pstmt.execute();
         } catch (Exception e) {
-            listEvents.add(new BEvent(eventInsertError, e, "Table [" + tableName + "] " + informationContext));
+            listEvents.add(new BEvent(eventInsertError, e, "Table [" + tableName + "] " + informationContext+ " "+e.getMessage()));
         } finally {
             if (pstmt != null)
                 try {
@@ -238,6 +355,22 @@ public class DatabaseTables {
                 } catch (SQLException e) {
                     // no need to trace anything here
                 }
+        }
+        return listEvents;
+    }
+    
+    /**
+     * 
+     * @param sqlRequest
+     * @param con
+     * @return
+     */
+    public List<BEvent> executeSql(String sqlRequest, Connection con) {
+        List<BEvent> listEvents = new ArrayList<>();
+        try {
+            executeAlterSql(Arrays.asList(sqlRequest), con );
+        } catch (Exception e ) {
+            listEvents.add( new BEvent( eventSqlError, e, "SqlRequest["+sqlRequest+"]" ));
         }
         return listEvents;
     }
@@ -299,7 +432,7 @@ public class DatabaseTables {
             String sqlRequest = "alter table " + table.getSqlTableName() + " add  " + getSqlField(col, databaseProductName);
             logAnalysis.append(sqlRequest + ";");
 
-            executeAlterSql(con, Arrays.asList(sqlRequest));
+            executeAlterSql(Arrays.asList(sqlRequest), con);
         }
         // all change operation
         for (final DataColumn col : alterCols.values()) {
@@ -307,7 +440,7 @@ public class DatabaseTables {
                     + getSqlField(col, databaseProductName);
             logAnalysis.append(sqlRequest + ";");
 
-            executeAlterSql(con, Arrays.asList(sqlRequest));
+            executeAlterSql(Arrays.asList(sqlRequest), con);
         }
         logAnalysis.append("CheckCreateTable [" + table.getSqlTableName() + "] : Correct ");
         // add the constraint
@@ -344,7 +477,7 @@ public class DatabaseTables {
         }
         createTableString.append(")");
         logAnalysis.append("NOT EXIST : create it with script[" + createTableString.toString() + "]");
-        executeAlterSql(con, Arrays.asList(createTableString.toString()));
+        executeAlterSql(Arrays.asList(createTableString.toString()), con);
 
     }
 
@@ -496,7 +629,7 @@ public class DatabaseTables {
             //  String createIndex = "ALTER TABLE " + table.tableName + " ADD UNIQUE INDEX " + constraint.getKey() + " ON " + "(" + listOfFields.toString() + ")";
             listSqlOrder.add("CREATE UNIQUE INDEX " + constraint.getKey() + " ON " + table.getSqlTableName() + "(" + listOfFields.toString() + ")");
 
-            executeAlterSql(con, listSqlOrder);
+            executeAlterSql(listSqlOrder, con);
         }
 
         for (Entry<String, DataForeignKey> foreignConstraint : table.mapForeignConstraints.entrySet()) {
@@ -521,7 +654,7 @@ public class DatabaseTables {
             listSqlOrder.add("ALTER TABLE " + table.tableName + " ADD CONSTRAINT " + foreignConstraint.getValue().getForeignName()
                     + " REFERENCES " + foreignConstraint.getValue().foreignTable + "(" + listOfFields.toString() + ")");
 
-            executeAlterSql(con, listSqlOrder);
+            executeAlterSql(listSqlOrder, con);
         }
 
     }
@@ -553,7 +686,7 @@ public class DatabaseTables {
             }
 
             listSqlOrder.add("CREATE INDEX " + index.getKey() + " ON " + table.getSqlTableName() + "(" + listOfFields.toString() + ")");
-            executeAlterSql(con, listSqlOrder);
+            executeAlterSql(listSqlOrder, con);
         }
     }
 
@@ -580,7 +713,7 @@ public class DatabaseTables {
      * @param sqlRequest
      * @throws SQLException
      */
-    private void executeAlterSql(final Connection con, final List<String> listSqlRequests) throws SqlExceptionRequest {
+    private void executeAlterSql(final List<String> listSqlRequests, final Connection con) throws SqlExceptionRequest {
         for (String sqlRequest : listSqlRequests) {
             logger.fine(loggerLabel + "executeAlterSql : Execute [" + sqlRequest + "]");
 

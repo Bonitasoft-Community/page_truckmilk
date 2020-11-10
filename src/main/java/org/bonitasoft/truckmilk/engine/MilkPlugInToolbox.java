@@ -55,7 +55,7 @@ public class MilkPlugInToolbox {
             searchOption.filter(ProcessDeploymentInfoSearchDescriptor.VERSION, processVersionOnly.trim());
         }
         
-        if (filterProcess.equals(FilterProcess.ALL)) 
+        if (filterProcess == null || filterProcess.equals(FilterProcess.ALL)) 
         {} // no filter
         else if (filterProcess.equals(FilterProcess.ONLYENABLED))
                 searchOption.filter(ProcessDeploymentInfoSearchDescriptor.ACTIVATION_STATE, ActivationState.ENABLED.toString());
