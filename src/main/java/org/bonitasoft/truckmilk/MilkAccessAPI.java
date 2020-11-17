@@ -143,7 +143,7 @@ public class MilkAccessAPI {
         if (deployStatus.newDeployment)
             statusDeployment = "Command deployed with success;";
         else if (!deployStatus.alreadyDeployed)
-            statusDeployment = "Command not deployed;";
+            statusDeployment = "Command already deployed;";
 
         if (MilkConstantJson.cstEnvironmentStatus_V_ERROR.equals(result.get(MilkConstantJson.cstEnvironmentStatus))) {
             statusDeployment = "Bad environment;";

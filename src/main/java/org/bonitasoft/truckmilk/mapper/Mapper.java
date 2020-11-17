@@ -1,8 +1,6 @@
 package org.bonitasoft.truckmilk.mapper;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,28 +9,31 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
-import org.bonitasoft.engine.api.APIAccessor;
 import org.bonitasoft.engine.api.ProcessAPI;
 import org.bonitasoft.engine.bpm.contract.ContractViolationException;
 import org.bonitasoft.engine.bpm.contract.FileInputValue;
-import org.bonitasoft.engine.bpm.document.DocumentValue;
+import org.bonitasoft.engine.bpm.flownode.FlowNodeExecutionException;
+import org.bonitasoft.engine.bpm.flownode.HumanTaskInstance;
+import org.bonitasoft.engine.bpm.flownode.HumanTaskInstanceSearchDescriptor;
+import org.bonitasoft.engine.bpm.flownode.UserTaskNotFoundException;
 import org.bonitasoft.engine.bpm.process.ArchivedProcessInstancesSearchDescriptor;
 import org.bonitasoft.engine.bpm.process.ProcessActivationException;
 import org.bonitasoft.engine.bpm.process.ProcessDefinitionNotFoundException;
 import org.bonitasoft.engine.bpm.process.ProcessDeploymentInfo;
 import org.bonitasoft.engine.bpm.process.ProcessExecutionException;
 import org.bonitasoft.engine.bpm.process.ProcessInstance;
+import org.bonitasoft.engine.bpm.process.ProcessInstanceNotFoundException;
 import org.bonitasoft.engine.exception.SearchException;
+import org.bonitasoft.engine.exception.UpdateException;
 import org.bonitasoft.engine.search.SearchOptionsBuilder;
 import org.bonitasoft.engine.search.SearchResult;
 import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter.FilterProcess;
+import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInToolbox;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
@@ -111,8 +112,13 @@ public class Mapper {
     private static String processIndentificationStatic = "Static";
     private static String processIdentificationDynamique = "Dynamique";
 
+    private final static String CSTTASKIDENTIFICATION_CASEIDANDNAME = "Case ID and a Task Name";
+    private final static String CSTTASKIDENTIFICATION_TASKID ="Task ID";
+            private final static String CSTTASKIDENTIFICATION_TASKGROOVY= "Groovy code, which return a taskId";
+    
+
     private static PlugInParameter cstParamProcessIdentificationMode = PlugInParameter.createInstanceListValues("ProcessIdentification",
-            "Process Indentification",
+            "Process Identification",
             new String[] { processIndentificationStatic, processIdentificationDynamique },
             processIndentificationStatic,
             "How to detect the process to create the case ? " + processIndentificationStatic + ": process is specified. "
@@ -129,21 +135,33 @@ public class Mapper {
     private static PlugInParameter cstParamTaskSeparator = PlugInParameter.createInstance("Task Execution", "Parameters to specify which tasks will be execution", TypeParameter.SEPARATOR, null, null)
             .withVisibleCondition("milkJob.parametersvalue[ 'OperationPolicy' ] === 'Execute a task'");
 
-    private static PlugInParameter cstParamCaseId = PlugInParameter.createInstance("CaseId", "Case ID", TypeParameter.STRING, "", "Give the way to find the caseId. Use {{<dataName>}} to map to a data. Example: \"{{caseId}}\"")
+    private static PlugInParameter cstParamTaskIdentificationMode = PlugInParameter.createInstanceListValues("TaskIdentification",
+            "Task Identification",
+            new String[] { CSTTASKIDENTIFICATION_CASEIDANDNAME, CSTTASKIDENTIFICATION_TASKID, CSTTASKIDENTIFICATION_TASKGROOVY },
+            CSTTASKIDENTIFICATION_CASEIDANDNAME,
+            "How to identify task to execte? " + CSTTASKIDENTIFICATION_CASEIDANDNAME + ": Give a caseId and a TaskName. "
+                    + CSTTASKIDENTIFICATION_TASKID + ": give a taskId. "
+                    +CSTTASKIDENTIFICATION_TASKGROOVY+": Give a piece of Groovy, who should return a taskId")
+      
             .withVisibleCondition("milkJob.parametersvalue[ 'OperationPolicy' ] === 'Execute a task'");
+
+    
+    
+    private static PlugInParameter cstParamCaseId = PlugInParameter.createInstance("CaseId", "Case ID", TypeParameter.STRING, "", "Give the way to find the caseId. Use {{<dataName>}} to map to a data. Example: \"{{caseId}}\" or \"{{FILENAMEWITHOUTSUFFIX}}\"")
+            .withVisibleCondition("milkJob.parametersvalue[ 'OperationPolicy' ] === 'Execute a task' && milkJob.parametersvalue[ 'TaskIdentification' ] === '"+CSTTASKIDENTIFICATION_CASEIDANDNAME+"'");
 
     private static PlugInParameter cstParamTaskName = PlugInParameter.createInstance("TaskName", "Task Name", TypeParameter.STRING, "", "Give the way to identify the taskname in the process. Use {{<dataName>>}} to map a data. Example : \"Review\" or \"{{task_name}}\"")
-            .withVisibleCondition("milkJob.parametersvalue[ 'OperationPolicy' ] === 'Execute a task'");
+            .withVisibleCondition("milkJob.parametersvalue[ 'OperationPolicy' ] === 'Execute a task' && milkJob.parametersvalue[ 'TaskIdentification' ] === '"+CSTTASKIDENTIFICATION_CASEIDANDNAME+"'");
 
     private static PlugInParameter cstParamTaskId = PlugInParameter.createInstance("TaskId", "Task ID", TypeParameter.STRING, "", "Instead of a caseId + TaskName, you can specify the way to retrieve the taskId. Use {{<dataName>>}} to map a data.")
-            .withVisibleCondition("milkJob.parametersvalue[ 'OperationPolicy' ] === 'Execute a task'");
+            .withVisibleCondition("milkJob.parametersvalue[ 'OperationPolicy' ] === 'Execute a task'  && milkJob.parametersvalue[ 'TaskIdentification' ] === '"+CSTTASKIDENTIFICATION_TASKID+"'");
 
     private static PlugInParameter cstParamSearchTaskGroovy = PlugInParameter.createInstance("SearchTask", "Search Task by a Groovy code.", TypeParameter.TEXT, "", "Give a Groovy code to search the Case Id. Use {{<dataName>>}} to map a data, apiAccessor to access Bonita object.")
-            .withVisibleCondition("milkJob.parametersvalue[ 'OperationPolicy' ] === 'Execute a task'");
+            .withVisibleCondition("milkJob.parametersvalue[ 'OperationPolicy' ] === 'Execute a task' && milkJob.parametersvalue[ 'TaskIdentification' ] === '"+CSTTASKIDENTIFICATION_TASKGROOVY+"'");
 
     // data mapping
     private static PlugInParameter cstParamContract = PlugInParameter.createInstance("Contract", "Bonita Contract value (JSON)", TypeParameter.JSON, "",
-            "Give the contract, as JSON. {{}} may be used. ");
+            "Give the contract, as JSON. {{}} may be used. Function like INTEGER(), LONG() are allowed : example : INTEGER({{FILENAMENAME}} or INTEGER(12)");
             // + "Operation are Long(<attribut>), Integer(<attribut>), Double(<attribut>), Date(<attribut>,<format>), LocalDate(<attribut>,<format>), LocalDateTime(<attribut>,<format>), OffsetDateTime(<attribut>,<format>), Boolean(<attribut>), File(<attribut>) Example, {\"person\" : { \"age\": {{Integer(age)}}; \"birthday\": \"{{LocalDate('aniversary', 'dd/mm/yyyy')}}\"; \"filename\" : \"{{File(fileName)}}\" }.");
 
     private static BEvent eventProcessNotFound = new BEvent(Mapper.class.getName(), 1, Level.APPLICATIONERROR,
@@ -168,10 +186,21 @@ public class Mapper {
 
     private static BEvent eventInitalisationException = new BEvent(Mapper.class.getName(), 8, Level.APPLICATIONERROR,
             "Initialisation exception", "Exception during initialisation", "Jobs can't run", "Check mapper configuration");
-
+    
     private static BEvent eventLoadFileError = new BEvent(Mapper.class.getName(), 8, Level.APPLICATIONERROR,
             "Load File error", "A file can't be load in the contract", "File can't be processed to create case/Execute task", "Check exception");
-
+    
+    private static BEvent eventTaskSearchError = new BEvent(Mapper.class.getName(), 9, Level.APPLICATIONERROR,
+            "Task search error", "Way to find the task failed", "No tasks can be found", "Check parameters");
+    
+    private static BEvent eventTaskExecutionException = new BEvent(Mapper.class.getName(), 10, Level.APPLICATIONERROR,
+            "Task execution error", "An exception arrived during the execution of the task", "Task is not executed", "Check error");
+    
+    private static BEvent eventTaskNotFound = new BEvent(Mapper.class.getName(), 11, Level.APPLICATIONERROR,
+            "Task not found", "Task given can't be found", "Task is not executed", "Check error");
+    
+    
+    
     public enum MAPPER_POLICY {
         CASECREATION, TASKEXECUTION, BOTH
     }
@@ -196,6 +225,7 @@ public class Mapper {
         }
         if (policy == MAPPER_POLICY.TASKEXECUTION || policy == MAPPER_POLICY.BOTH) {
             plugInDescription.addParameter(cstParamTaskSeparator);
+            plugInDescription.addParameter(cstParamTaskIdentificationMode);
             plugInDescription.addParameter(cstParamCaseId);
             plugInDescription.addParameter(cstParamTaskName);
             plugInDescription.addParameter(cstParamTaskId);
@@ -239,14 +269,12 @@ public class Mapper {
         return listEvents;
     }
 
-    public void searchTask() {
-
-    }
-
+    
     public class MapperResult {
 
         public List<BEvent> listEvents = new ArrayList<>();
         public ProcessInstance processInstance;
+        public String typeOperation;
     }
 
     /* ******************************************************************************** */
@@ -347,7 +375,8 @@ public class Mapper {
             return mapperResult;
         }
 
-        Map<String, Object> contractJsonMap = (Map) contractJson;
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contractJsonMap = (Map<String, Object>) contractJson;
 
         /**
          * we have to create a map of SERIALISABLE, and then create the fileinputvalue when needed
@@ -373,6 +402,7 @@ public class Mapper {
 
         try {
             mapperResult.processInstance = processAPI.startProcessWithInputs(processDefinitionId, instantiationInputs);
+            mapperResult.typeOperation="Case created";
         } catch (ProcessDefinitionNotFoundException e) {
             mapperResult.listEvents.add(new BEvent(eventProcessNotFound, "processDefinitionId[" + processDefinitionId + "]"));
         } catch (ProcessActivationException e) {
@@ -386,8 +416,87 @@ public class Mapper {
         return mapperResult;
     }
 
+    /**
+     * 
+     * @param jobExecution
+     * @param parameters
+     * @param attachements
+     * @return
+     */
     public MapperResult executeTask(MilkJobExecution jobExecution, Map<String, Object> parameters, List<File> attachements) {
+        
         MapperResult mapperResult = new MapperResult();
+        String taskIdentification = jobExecution.getInputStringParameter(cstParamTaskIdentificationMode);
+        SearchOptionsBuilder sob = new SearchOptionsBuilder(0,10);
+
+        String contextSearchTask=" Policy["+taskIdentification+"]: ";
+        
+        if (CSTTASKIDENTIFICATION_CASEIDANDNAME.equals(taskIdentification)) {
+            String caseId   = PlaceHolder.replacePlaceHolder(parameters, jobExecution.getInputStringParameter(cstParamCaseId));
+            String taskName     = PlaceHolder.replacePlaceHolder(parameters, jobExecution.getInputStringParameter(cstParamTaskName));
+            contextSearchTask+=" CaseId :["+caseId+"] TaskName["+taskName+"]";
+            
+            sob.filter(HumanTaskInstanceSearchDescriptor.ROOT_PROCESS_INSTANCE_ID, caseId);
+            sob.filter(HumanTaskInstanceSearchDescriptor.NAME, taskName);
+        }
+        if (CSTTASKIDENTIFICATION_TASKID.equals(taskIdentification)) {
+            String taskId = PlaceHolder.replacePlaceHolder(parameters, jobExecution.getInputStringParameter(cstParamTaskId));
+            contextSearchTask+=" TaskId :["+taskId+"]";
+            
+            sob.filter(HumanTaskInstanceSearchDescriptor.PARENT_ACTIVITY_INSTANCE_ID, taskId);
+        }
+        if (CSTTASKIDENTIFICATION_TASKGROOVY.equals(taskIdentification)) {
+            // String taskByGroovy = jobExecution.getInputStringParameter(cstParamSearchTaskGroovy);
+            // not yet implemented
+            contextSearchTask+=" Not Yet Implemented";
+            
+            return mapperResult;
+        }
+        try {
+
+            ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
+            SearchResult<HumanTaskInstance> searchResult= processAPI.searchHumanTaskInstances(sob.done());
+        if (searchResult.getCount()>0) {
+            String contractDefinition = jobExecution.getInputStringParameter(cstParamContract);
+            String contract = PlaceHolder.replacePlaceHolder(parameters, contractDefinition);
+
+            /**
+             * Contract is something like { "inputData" : { "firstName" : "Walter", "lastName": "Bates", "age" : 25, "cv": "{{FILESOURCE}}"}
+             * this replacement does not replace the file
+             */
+            Object contractJson = JSONValue.parse(contract);
+            if (!(contractJson instanceof Map)) {
+                mapperResult.listEvents.add(eventMapExpected);
+                return mapperResult;
+            }
+            Map<String, Object> contractJsonMap = (Map<String,Object>) contractJson;
+            Map<String, Serializable> executionInputs = transformMapFile(contractJsonMap, parameters, mapperResult);
+
+            try {
+                // get the processInstance
+                mapperResult.processInstance = processAPI.getProcessInstance( searchResult.getResult().get( 0 ).getRootContainerId());
+                processAPI.assignUserTask(searchResult.getResult().get( 0 ).getId(), 1);
+                
+                processAPI.executeUserTask(searchResult.getResult().get( 0 ).getId(), executionInputs);
+                mapperResult.typeOperation="Task executed";
+            } catch (FlowNodeExecutionException | UpdateException | ProcessInstanceNotFoundException e ) {
+                mapperResult.listEvents.add(new BEvent(eventTaskExecutionException, e, "TaskId[" + searchResult.getResult().get( 0 ).getId() + "] contract[" + contract + "] "+e.getMessage()));
+            } catch (ContractViolationException e) {
+                mapperResult.listEvents.add(new BEvent(eventProcessContractException, e, "TaskId[" + searchResult.getResult().get( 0 ).getId() + "] contract[" + contract + "]"));
+            } catch (UserTaskNotFoundException e) {
+                mapperResult.listEvents.add(new BEvent(eventTaskNotFound, e, "TaskId[" + searchResult.getResult().get( 0 ).getId() + "] contract[" + contract + "]"));
+            }
+        }
+        else {
+            // not found, do nothing for the moment with the source
+            
+        }
+        } catch (SearchException e) {
+            mapperResult.listEvents.add( new BEvent(eventTaskSearchError, contextSearchTask));
+       
+        }
+
+        
         return mapperResult;
     }
 
@@ -420,10 +529,10 @@ public class Mapper {
         
         for (String key : listKeys) {
             if (instantiationInputs.get( key ) instanceof Map)
-                listEvents.addAll( resolveFonction( (Map) instantiationInputs.get( key ), parameters));
+                listEvents.addAll( resolveFonction( (Map<String,Serializable>) instantiationInputs.get( key ), parameters));
             else if (instantiationInputs.get( key ).toString().toUpperCase().startsWith("FILE(")) {
                 // replace the file by a documentEntry
-                String fileName=instantiationInputs.get( key ).toString().substring("File(".length());
+                String fileName=instantiationInputs.get( key ).toString().substring("FILE(".length());
                 fileName = fileName.substring(0,fileName.length()-1);
                 try {
                     File file = new File(fileName); 
@@ -438,6 +547,15 @@ public class Mapper {
                     listEvents.add( new BEvent(eventLoadFileError, e, "File ["+fileName+"]"));
                 }
                 
+            } else if (instantiationInputs.get( key ).toString().toUpperCase().startsWith("INTEGER(")) {
+                String value=instantiationInputs.get( key ).toString().substring("INTEGER(".length());
+                value = value.substring(0,value.length()-1);
+                try {
+                    Integer intValue = Integer.valueOf( value ); 
+                    instantiationInputs.put(key,intValue);
+                } catch(Exception e) {
+                    instantiationInputs.put(key,value);
+                }
             }
         }
         return listEvents;

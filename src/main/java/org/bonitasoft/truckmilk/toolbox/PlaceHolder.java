@@ -39,9 +39,9 @@ public class PlaceHolder {
         do {
             foundBegin = content.indexOf("{{");
             foundEnd = -1;
-            if (foundBegin > 0)
+            if (foundBegin >= 0)
                 foundEnd = content.indexOf("}}", foundBegin);
-            if (foundEnd > 0) {
+            if (foundEnd >= 0) {
                 // replace !
                 String index = content.substring(foundBegin + 2, foundEnd);
                 Object value = placeHolder.get(index);
@@ -49,7 +49,7 @@ public class PlaceHolder {
                     value = "";
                 content = content.substring(0, foundBegin) + value.toString() + content.substring(foundEnd + 2);
             }
-        } while (foundBegin > 0 && foundEnd > 0);
+        } while (foundBegin >= 0 && foundEnd >= 0);
         return content;
 
     }

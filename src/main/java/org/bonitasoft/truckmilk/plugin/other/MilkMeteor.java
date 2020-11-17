@@ -79,11 +79,11 @@ public class MilkMeteor extends MilkPlugIn {
         logger.info("~~~~~~~~~~ MilkMeteor.startFromName() : END " + resultCommand);
     
         // get the Simulation Id
-        String simulationId = (String) resultCommand.get( CmdMeteor.cstParamResultSimulationId);
+        String simulationId = (String) resultCommand.get( CmdMeteor.CSTPARAM_RESULTSIMULATIONID);
         if (simulationId == null)
         {
             // job can't start
-            plugTourOutput.addEvent(new BEvent( eventCantStartTest, "Scenario name["+scenarioName+"] : "+(String) resultCommand.get( CmdMeteor.cstParamResultListEventsSt)));
+            plugTourOutput.addEvent(new BEvent( eventCantStartTest, "Scenario name["+scenarioName+"] : "+(String) resultCommand.get( CmdMeteor.CSTPARAM_RESULTLISTEVENTSST)));
             plugTourOutput.executionStatus = ExecutionStatus.ERROR;
             return plugTourOutput;
         }

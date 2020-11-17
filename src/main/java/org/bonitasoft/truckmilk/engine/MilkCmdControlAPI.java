@@ -126,16 +126,16 @@ public class MilkCmdControlAPI {
         commandDescription.addJarDependencyLastVersion("mail", "1.5.0", "mail-1.5.0-b01.jar");
         commandDescription.addJarDependencyLastVersion("activation", "1.1.1", "activation-1.1.1.jar");
             
-        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-event", "1.9.0", "bonita-event-1.9.0.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-event", "1.10.0", "bonita-event-1.10.0.jar");
         cmdDependency.setForceDeploy( true );
 
-        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.8.1", "bonita-properties-2.8.1.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.8.2", "bonita-properties-2.8.2.jar");
         cmdDependency.setForceDeploy( true );
 
-        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-casedetails", "1.1.1", "bonita-casedetails-1.1.1.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-casedetails", "1.1.2", "bonita-casedetails-1.1.2.jar");
         cmdDependency.setForceDeploy( true );
         
-        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-meteor", "3.3.0", "bonita-meteor-3.3.0.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-meteor", "4.0.0", "bonita-meteor-4.0.0.jar");
         cmdDependency.setForceDeploy( true );
 
         cmdDependency=commandDescription.addJarDependencyLastVersion("custompage-sonar", "1.1.0", "bonita-sonar-1.1.0.jar");
