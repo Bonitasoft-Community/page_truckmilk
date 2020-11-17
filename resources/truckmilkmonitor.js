@@ -5,8 +5,9 @@
 
 (function() {
 
-	var appCommand = angular.module('truckmilk', [ 'googlechart', 'ui.bootstrap','ngMaterial', 'angularFileUpload' ]);
-
+	var appCommand = angular.module('truckmilk', ['googlechart', 'ui.bootstrap', 'ngMaterial', 'ngMessages', 'ngSanitize','ngModal','angularFileUpload','ngCookies']);
+	// 'ngMaterial', 'ngMessages' for autocomplete
+	
 	// --------------------------------------------------------------------------
 	//
 	// Controler TruckMilk
@@ -14,7 +15,7 @@
 	// --------------------------------------------------------------------------
 
 	// Ping the server
-	appCommand.controller('TruckMilkControler', function($http, $scope, $sce, $timeout, $upload, $filter) {
+	appCommand.controller('TruckMilkControler', function($http, $scope, $sce, $interval, $timeout, $upload, $filter, $cookies) {		 												 
 
 		this.showhistory = function(show) {
 			this.isshowhistory = show;
@@ -35,7 +36,17 @@
 			return 'background-color:#cbcbcb';
 		}
 		
-		
+		this.getHttpConfig = function () {
+			var additionalHeaders = {};
+			var csrfToken = $cookies.get('X-Bonita-API-Token');
+			if (csrfToken) {
+				additionalHeaders ['X-Bonita-API-Token'] = csrfToken;
+			}
+			var config= {"headers": additionalHeaders};
+			console.log("GetHttpConfig : "+angular.toJson( config));
+			return config;
+		}
+
 		this.inprogress = false;
 		this.showplugininfo = false;
 		
@@ -186,7 +197,7 @@
 			self.listeventsdeploy='';
 			
 			// console.log("loadinit Call HTTP");
-			$http.get('?page=custompage_truckmilk&action=startup&t='+Date.now())
+			$http.get('?page=custompage_truckmilk&action=startup&t='+Date.now(), this.getHttpConfig())
 			.success(function(jsonResult, statusHttp, headers, config) {
 				
 				// connection is lost ?
@@ -265,7 +276,7 @@
 			self.showUploadSuccess=false;
 
 			// console.log("action["+verb+"] inprogress<=true. Call now 2.2");
-			$http.get('?page=custompage_truckmilk&action='+verb+'&t='+Date.now())
+			$http.get('?page=custompage_truckmilk&action='+verb+'&t='+Date.now(), this.getHttpConfig())
 			.success(function(jsonResult, statusHttp, headers, config) {
 				self.inprogress = false;
 				console.log("success.then HTTP inprogress<=true, status="+statusHttp);
@@ -516,7 +527,7 @@
 			self.listevents='';
 			// console.log("operationJob Call HTTP");
 
-			$http.get('?page=custompage_truckmilk&action=' + action + '&paramjson=' + json+'&t='+Date.now())
+			$http.get('?page=custompage_truckmilk&action=' + action + '&paramjson=' + json+'&t='+Date.now(), this.getHttpConfig())
 			.success(function(jsonResult, statusHttp, headers, config) {
 				self.inprogress = false;
 				// console.log("operationJob.receiveData HTTP inprogress<=false");
@@ -712,7 +723,7 @@
 			var d = new Date();
 			
 			// console.log("query Call HTTP")
-			return $http.get( '?page=custompage_truckmilk&action='+queryName+'&paramjson='+json+'&t='+d.getTime() )
+			return $http.get( '?page=custompage_truckmilk&action='+queryName+'&paramjson='+json+'&t='+d.getTime(), this.getHttpConfig() )
 			.then( function ( jsonResult, statusHttp, headers, config ) {
 				
 				// connection is lost ?
@@ -766,7 +777,7 @@
 			var d = new Date();
 			
 			// console.log("query Call HTTP")
-			return $http.get( '?page=custompage_truckmilk&action=threadDumpJob&paramjson='+json+'&t='+d.getTime() )
+			return $http.get( '?page=custompage_truckmilk&action=threadDumpJob&paramjson='+json+'&t='+d.getTime(), this.getHttpConfig() )
 			.then( function ( jsonResult, statusHttp, headers, config ) {
 				
 				// connection is lost ?
@@ -815,7 +826,7 @@
 			var d = new Date();
 			
 			// console.log("query Call HTTP")
-			return $http.get( '?page=custompage_truckmilk&action=getParameters&paramjson='+json+'&t='+d.getTime() )
+			return $http.get( '?page=custompage_truckmilk&action=getParameters&paramjson='+json+'&t='+d.getTime(), this.getHttpConfig() )
 			.then( function ( jsonResult, statusHttp, headers, config ) {
 				
 				// connection is lost ?
@@ -860,7 +871,7 @@
 			var d = new Date();
 			
 			// console.log("query Call HTTP")
-			return $http.get( '?page=custompage_truckmilk&action=getSavedExecution&paramjson='+json+'&t='+d.getTime() )
+			return $http.get( '?page=custompage_truckmilk&action=getSavedExecution&paramjson='+json+'&t='+d.getTime(), this.getHttpConfig() )
 			.then( function ( jsonResult, statusHttp, headers, config ) {
 				
 				// connection is lost ?
@@ -907,7 +918,7 @@
 			var d = new Date();
 			
 			// console.log("query Call HTTP")
-			return $http.get( '?page=custompage_truckmilk&action=getSavedExecutionDetail&paramjson='+json+'&t='+d.getTime() )
+			return $http.get( '?page=custompage_truckmilk&action=getSavedExecutionDetail&paramjson='+json+'&t='+d.getTime(), this.getHttpConfig() )
 			.then( function ( jsonResult, statusHttp, headers, config ) {
 				
 				// connection is lost ?
@@ -951,7 +962,7 @@
 			var d = new Date();
 			
 			// console.log("query Call HTTP")
-			return $http.get( '?page=custompage_truckmilk&action=getMeasurement&paramjson='+json+'&t='+d.getTime() )
+			return $http.get( '?page=custompage_truckmilk&action=getMeasurement&paramjson='+json+'&t='+d.getTime(), this.getHttpConfig() )
 			.then( function ( jsonResult, statusHttp, headers, config ) {
 				
 				// connection is lost ?
@@ -1128,7 +1139,7 @@
 					var d = new Date();		
 					
 					// console.log("watch CALL HTTP");
-					$http.get( '?page=custompage_truckmilk&action=uploadParamFile&paramjson='+json+'&t='+d.getTime() )
+					$http.get( '?page=custompage_truckmilk&action=uploadParamFile&paramjson='+json+'&t='+d.getTime(), this.getHttpConfig() )
 					.success( function ( jsonResult, statusHttp, headers, config ) {
 						
 						// connection is lost ?
@@ -1173,7 +1184,7 @@
 			var json = angular.toJson( param, false);
 			
 			// console.log("uploadParameterFile call HTTP");
-			$http.get('?page=custompage_truckmilk&action=uploadParamFile&paramjson=' + json+'&t='+Date.now())
+			$http.get('?page=custompage_truckmilk&action=uploadParamFile&paramjson=' + json+'&t='+Date.now(), this.getHttpConfig())
 			.success( function ( jsonResult, statusHttp, headers, config ) {
 				// connection is lost ?
 				if (statusHttp==401 || typeof jsonResult === 'string') {
@@ -1239,7 +1250,7 @@
 			var json = encodeURIComponent(angular.toJson(param, true));
 			var result = confirm("Do you want to redeploy the command?");
 			if (result) {
-				$http.get('?page=custompage_truckmilk&action=commandredeploy&paramjson=' + json+'&t='+Date.now())
+				$http.get('?page=custompage_truckmilk&action=commandredeploy&paramjson=' + json+'&t='+Date.now(), this.getHttpConfig())
 				.success(function(jsonResult, statusHttp, headers, config) {
 					
 					// connection is lost ?
@@ -1275,7 +1286,7 @@
 				self.listevents="";
 			
 				console.log("Uninstall confirmed");
-				$http.get('?page=custompage_truckmilk&action=uninstall&t='+Date.now())
+				$http.get('?page=custompage_truckmilk&action=uninstall&t='+Date.now(), this.getHttpConfig())
 				.success(function(jsonResult, statusHttp, headers, config) {
 					
 					// connection is lost ?
@@ -1318,7 +1329,7 @@
 			self.scheduler.listevents='';
 			
 			// console.log("schedulerOperation call HTTP");
-			$http.get('?page=custompage_truckmilk&action=scheduler&paramjson=' + json+'&t='+Date.now())
+			$http.get('?page=custompage_truckmilk&action=scheduler&paramjson=' + json+'&t='+Date.now(), this.getHttpConfig())
 			.success(function(jsonResult, statusHttp, headers, config) {
 				// connection is lost ?
 				if (statusHttp==401 || typeof jsonResult === 'string') {
@@ -1365,7 +1376,7 @@
 			}
 			
 			// console.log("schedulerMaintenance call HTTP");
-			$http.get('?page=custompage_truckmilk&action=schedulermaintenance&paramjson=' + json+'&t='+Date.now())
+			$http.get('?page=custompage_truckmilk&action=schedulermaintenance&paramjson=' + json+'&t='+Date.now(), this.getHttpConfig())
 			.success(function(jsonResult, statusHttp, headers, config) {
 				// connection is lost ?
 				if (statusHttp==401 || typeof jsonResult === 'string') {
@@ -1377,6 +1388,9 @@
 				// console.log("schedulerMaintenance.receiveData (scheduler)"+ angular.toJson(jsonResult,false));
 
 				self.scheduler	= jsonResult.scheduler;
+				if (! self.scheduler) {
+					self.scheduler={};
+				}
 				self.scheduler.schedulerlistevents = jsonResult.listevents;
 				
 			}).error(function(jsonResult, statusHttp, headers, config) {
@@ -1550,7 +1564,7 @@
 			
 			// console.log("executeListUrl call HTTP");
 
-			$http.get( '?page=custompage_truckmilk&t='+Date.now()+'&'+self.postParams.listUrlCall[ self.postParams.listUrlIndex ] )
+			$http.get( '?page=custompage_truckmilk&t='+Date.now()+'&'+self.postParams.listUrlCall[ self.postParams.listUrlIndex ], this.getHttpConfig() )
 			.success( function ( jsonResult, statusHttp, headers, config ) {
 				// connection is lost ?
 				if (statusHttp==401 || typeof jsonResult === 'string') {
@@ -1626,7 +1640,7 @@
 			var json = encodeURIComponent(angular.toJson(param, true));
 			var selfplugin = plugin;
 			// console.log("schedulerMaintenance call HTTP");
-			$http.get('?page=custompage_truckmilk&action=getdocumentation&paramjson=' + json+'&t='+Date.now())
+			$http.get('?page=custompage_truckmilk&action=getdocumentation&paramjson=' + json+'&t='+Date.now(), this.getHttpConfig())
 			.success(function(jsonResult, statusHttp, headers, config) {
 				// connection is lost ?
 				if (statusHttp==401 || typeof jsonResult === 'string') {
@@ -1644,7 +1658,7 @@
 			var json = encodeURIComponent(angular.toJson(param, true));
 			var self = this;
 			// console.log("schedulerMaintenance call HTTP");
-			$http.get('?page=custompage_truckmilk&action=getdocumentation&paramjson=' + json+'&t='+Date.now())
+			$http.get('?page=custompage_truckmilk&action=getdocumentation&paramjson=' + json+'&t='+Date.now(), this.getHttpConfig())
 			.success(function(jsonResult, statusHttp, headers, config) {
 				// connection is lost ?
 				if (statusHttp==401 || typeof jsonResult === 'string') {

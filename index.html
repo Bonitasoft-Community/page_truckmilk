@@ -12,18 +12,9 @@
     <title>Truck Milk</title>
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width">
-    <!-- 
-    <link rel="stylesheet" href="pageResource?page=custompage_truckmilk&location=css/animate.css" />
-    
-	<link rel="stylesheet" href="pageResource?page=custompage_truckmilk&location=css/main.css">
-	<link rel="stylesheet" href="pageResource?page=custompage_truckmilk&location=css/style.css">
-	<link rel="stylesheet" href="pageResource?page=custompage_truckmilk&location=css/customPage.css">
- 
-  -->
-  
   
   <link rel="stylesheet" href="css/animate.css" />
-  <link rel="stylesheet" href="3rd-party/bootstrap-3.3.7/css/bootstrap.min.css">
+  <link rel="stylesheet" href="3rd-party/bootstrap/css/bootstrap.min.css">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/style.css">
 
@@ -31,8 +22,8 @@
   <link rel="stylesheet" href="css/dropbox.css">
  
  
-	<script type="text/javascript" src="https://www.google.com/jsapi"></script>
-	<!-- <script type="text/javascript" src="https://www.google.com/uds/?file=visualization&amp;v=1&amp;hl=fr&amp;packages=corechart&amp;async=2"></script>  
+	<!-- <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+	<script type="text/javascript" src="https://www.google.com/uds/?file=visualization&amp;v=1&amp;hl=fr&amp;packages=corechart&amp;async=2"></script>  
 	<link type="text/css" href="https://www.google.com/uds/api/visualization/1.0/ff67c3772da186a412ae3231c32409e9/ui+fr.css" rel="stylesheet">
 	<script type="text/javascript" src="https://www.google.com/uds/api/visualization/1.0/ff67c3772da186a412ae3231c32409e9/format+fr,default+fr,ui+fr,corechart+fr.I.js"></script>
 	
@@ -1793,16 +1784,33 @@ function onLoadIFrame() {
 
 
 <!-- Third party dependencies -->
-<script src="3rd-party/jquery.min.js"></script>
-<script src="3rd-party/angular.min.js"></script>
-	
-	<!-- <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular.min.js"></script> 
-  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-animate.min.js"></script>
-  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-aria.min.js"></script>
-  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-messages.min.js"></script> -->
-		<!--  Material -->  
+	<!-- Third party dependencies -->
+
+	<script src="3rd-party/jquery.min.js"></script>
+
+	<script src="3rd-party/angular.min.js"></script>
+
+	<script src="3rd-party/angular-resource.min.js"></script>
+	<script src="3rd-party/angular-cookies.min.js"></script>
+
+	<script src="3rd-party/bootstrap/js/bootstrap.min.js"></script>
+	<script src="3rd-party/angular-bootstrap-tpls.min.js"></script>
+	<script src="3rd-party/ng-google-chart.js"></script>
+	<script src="3rd-party/angular-sanitize.min.js"></script>
+	<script src="3rd-party/ng-modal.min.js"></script> 
+	<script	src="3rd-party/angular-file-upload-shim.min.js"></script>
+	<script	src="3rd-party/angular-file-upload.min.js"></script>
+
+	<!--  for autocomplete -->
+	<!--  visit  https://github.com/angular/bower-material/#installing-angularjs-material-->
+	<script src="3rd-party/angular-aria.min.js"></script>  
+	<script src="3rd-party/angular-animate.min.js"></script>
+	<script src="3rd-party/angular-messages.min.js"></script> 
+	<script src="3rd-party/angular-material.min.js"></script>  
+
 
 <!--  Material -->  
+<!--
 <script src="3rd-party/angular-animate.min.js"></script>  
 <script src="3rd-party/angular-aria.min.js"></script>  
 <script src="3rd-party/angular-messages.min.js"></script> 
@@ -1811,11 +1819,12 @@ function onLoadIFrame() {
 <script src="3rd-party/angular-resource.min.js"></script>
 <script src="3rd-party/angular-cookies.min.js"></script>
 
-<script src="3rd-party/bootstrap-3.3.7/js/bootstrap.min.js"></script>
+<script src="3rd-party/bootstrap/js/bootstrap.min.js"></script>
 <script src="3rd-party/angular-bootstrap-tpls.min.js"></script>
-
+-->
 
 <!--  to allow the drop box -->
+<!-- 
 <script src="3rd-party/angular-file-upload.js"></script>  
 <script	src="3rd-party/angular-file-upload-shim.min.js"></script>
 <script	src="3rd-party/angular-file-upload.min.js"></script>
@@ -1824,11 +1833,11 @@ function onLoadIFrame() {
 <script src="3rd-party/ng-google-chart.js"></script> 
 
 <script src="3rd-party/angular-sanitize.min.js"></script>
-
+-->
 
 <!-- Application dependencies -->
 <script src="pageResource?page=custompage_truckmilk&location=truckmilkmonitor.js&v=@_CURRENTTIMEMILIS_@"></script>
-<!-- <script src="truckmilkmonitor.js?v=@_CURRENTTIMEMILIS_@"></script> -->
+
 
 </body>
 </html>		

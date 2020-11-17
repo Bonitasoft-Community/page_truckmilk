@@ -134,75 +134,165 @@ public class Actions {
             // logger.fine("#### log:Actions_2 ["+action+"]");
             if ("startup".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 actionAnswer.responseMap = milkAccessAPI.startup( parameter);
             }
             else if ("refresh".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 actionAnswer.responseMap = milkAccessAPI.getRefreshInformation( parameter);
             }
             else if ("getstatus".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 actionAnswer.responseMap = milkAccessAPI.getStatusInformation( parameter);
             }
             else if ("addJob".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 parameter.information.put("userId", apiSession.getUserId());
                 actionAnswer.responseMap = milkAccessAPI.addJob( parameter);
             }
             else if ("removeJob".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 parameter.information.put("userId", apiSession.getUserId());
                 actionAnswer.responseMap = milkAccessAPI.removeJob( parameter);
             }
             else if ("activateJob".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 parameter.information.put("userId", apiSession.getUserId());
                 actionAnswer.responseMap = milkAccessAPI.activateJob( parameter);
             }
             else if ("deactivateJob".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 parameter.information.put("userId", apiSession.getUserId());
                 actionAnswer.responseMap = milkAccessAPI.deactivateJob( parameter);
             }
             else if ("abortJob".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 parameter.information.put("userId", apiSession.getUserId());
                 actionAnswer.responseMap = milkAccessAPI.abortJob( parameter);
             }
             else if ("resetJob".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 parameter.information.put("userId", apiSession.getUserId());
                 actionAnswer.responseMap = milkAccessAPI.resetJob( parameter);
             }
 
             else if ("getParameters".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 parameter.information.put("userId", apiSession.getUserId());
                 actionAnswer.responseMap = milkAccessAPI.getParameters( parameter);
             }
             else if ("getSavedExecution".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 parameter.information.put("userId", apiSession.getUserId());
                 actionAnswer.responseMap = milkAccessAPI.getSavedExecution( parameter);
             }
             else if ("getSavedExecutionDetail".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 parameter.information.put("userId", apiSession.getUserId());
                 actionAnswer.responseMap = milkAccessAPI.getSavedExecutionDetail( parameter);
             }
             else if ("getMeasurement".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 parameter.information.put("userId", apiSession.getUserId());
                 actionAnswer.responseMap = milkAccessAPI.getMeasurement( parameter);
             }
 
             else if ("threadDumpJob".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 parameter.information.put("userId", apiSession.getUserId());
                 actionAnswer.responseMap = milkAccessAPI.threadDumpJob( parameter);
             }
             else if ("collect_reset".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 String paramJsonPartial = request.getParameter("paramjsonpartial");
                 if (paramJsonPartial==null)
                     paramJsonPartial="";
@@ -212,6 +302,12 @@ public class Actions {
             }
             else if ("collect_add".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 String paramJsonPartial = request.getParameter("paramjsonpartial");
                 // logger.fine("collect_add paramJsonPartial=["+paramJsonPartial+"] json=["+paramJsonSt+"]");
 
@@ -222,6 +318,12 @@ public class Actions {
             }
             else if ("updateJob".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 String accumulateJson = (String) httpSession.getAttribute("accumulate" );
                 // logger.fine("update Job accumulateJson=["+accumulateJson+"]");
                 if (accumulateJson !=null && accumulateJson.length() >0)
@@ -236,6 +338,12 @@ public class Actions {
             }
             else if ("testButton".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 String accumulateJson = (String) httpSession.getAttribute("accumulate" );
                 // logger.fine("update Job accumulateJson=["+accumulateJson+"]");
                 if (accumulateJson !=null && accumulateJson.length() >0)
@@ -249,12 +357,23 @@ public class Actions {
             }
             else if ("immediateExecution".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 parameter.information.put("userId", apiSession.getUserId());
                 actionAnswer.responseMap = milkAccessAPI.immediateExecution( parameter);
                 // logger.fine("#### TruckMilk:Actions call immediateExecution : YES");
             }
             else if ("downloadParamFile".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
 
                 actionAnswer.isManaged=true;
                 actionAnswer.isResponseMap=false;
@@ -292,23 +411,48 @@ public class Actions {
             }
             else  if ("scheduler".equals(action))
             {
+           //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer; 
+                }
                 actionAnswer.responseMap = milkAccessAPI.scheduler( parameter);
             }
 
             else  if ("commandredeploy".equals(action))
             {
+           //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer; 
+                }
                 actionAnswer.responseMap = milkAccessAPI.commandReploy( parameter);
             }
             else  if ("uninstall".equals(action))
             {
+           //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer; 
+                }
                 actionAnswer.responseMap = milkAccessAPI.uninstall( parameter);
             }
             else  if ("schedulermaintenance".equals(action))
             {
+           //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer; 
+                }
                 actionAnswer.responseMap = milkAccessAPI.schedulerMaintenance( parameter);
             }
             else if ("queryprocess".equals(action))
             {
+           //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer; 
+                }
                 List listProcesses = new ArrayList();
                 Object jsonParam = (paramJsonSt==null ? null : JSONValue.parse(paramJsonSt));
                 String processFilter = (jsonParam == null ? "" : jsonParam.get("userfilter"));
@@ -364,6 +508,11 @@ public class Actions {
             }
             else if ("queryusers".equals(action))
             {
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
 
                 List listUsers = new ArrayList();
                 final SearchOptionsBuilder searchOptionBuilder = new SearchOptionsBuilder(0, 20);
@@ -388,7 +537,12 @@ public class Actions {
 
 
             } else if ("getdocumentation".equals(action)) {
-                
+                //Make sure no action is executed if the CSRF protection is active and the request header is invalid
+                if (! TokenValidator.checkCSRFToken(request, response)) {
+                    actionAnswer.isResponseMap=false;
+                    return actionAnswer;
+                }
+
                 milkAccessAPI.getDocumentation(parameter, response );
                 actionAnswer.isResponseMap=false;
                 
