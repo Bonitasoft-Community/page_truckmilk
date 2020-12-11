@@ -10,16 +10,16 @@ import org.bonitasoft.log.event.BEvent;
 import org.bonitasoft.log.event.BEvent.Level;
 import org.bonitasoft.meteor.MeteorAPI.StatusParameters;
 import org.bonitasoft.meteor.MeteorClientAPI;
-import org.bonitasoft.meteor.MeteorSimulation;
+import org.bonitasoft.meteor.MeteorConst;
 import org.bonitasoft.meteor.cmd.CmdMeteor;
+import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
-import org.bonitasoft.truckmilk.engine.MilkJobOutput;
-import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
+import org.bonitasoft.truckmilk.job.MilkJobExecution;
 
 public class MilkMeteor extends MilkPlugIn {
 
@@ -96,12 +96,12 @@ public class MilkMeteor extends MilkPlugIn {
             statusParameters.simulationId = Long.valueOf(simulationId);
             
             Map<String, Object> resultStatus = meteorClientAPI.getStatus(statusParameters, jobExecution.getApiAccessor().getProcessAPI(),  jobExecution.getApiAccessor().getCommandAPI(), jobExecution.getTenantId());
-            String statusSimulation = (String) resultStatus.get( MeteorSimulation.CSTJSON_STATUS);
-            Integer percentAdvance = (Integer) resultStatus.get( MeteorSimulation.CSTJSON_PERCENTADVANCE );
+            String statusSimulation = (String) resultStatus.get( MeteorConst.CSTJSON_STATUS);
+            Integer percentAdvance = (Integer) resultStatus.get( MeteorConst.CSTJSON_PERCENTADVANCE );
             if (percentAdvance!=null)
                 jobExecution.setAvancement( percentAdvance);
             
-            if (MeteorSimulation.STATUS.DONE.toString().equals( statusSimulation )) {
+            if (MeteorConst.SIMULATIONSTATUS.DONE.toString().equals( statusSimulation )) {
                 stillWait=false;
                 String total = (String) resultStatus.get( "total");
 
@@ -110,7 +110,8 @@ public class MilkMeteor extends MilkPlugIn {
                 plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
             
             }
-            if (MeteorSimulation.STATUS.NOROBOT.toString().equals( statusSimulation ) || MeteorSimulation.STATUS.NOSIMULATION.toString().equals( statusSimulation )) {
+            if (MeteorConst.SIMULATIONSTATUS.NOROBOT.toString().equals( statusSimulation ) 
+                    || MeteorConst.SIMULATIONSTATUS.NOSIMULATION.toString().equals( statusSimulation )) {
                 stillWait=false;
                 plugTourOutput.addEvent(new BEvent( eventExecutionNoRobot, "Scenario does not have any robot to execute: SimulationId["+simulationId+"] ScenarioName["+scenarioName+"]" ));
                 plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
