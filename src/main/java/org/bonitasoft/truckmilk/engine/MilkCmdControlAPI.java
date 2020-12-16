@@ -132,6 +132,9 @@ public class MilkCmdControlAPI {
         cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.8.2", "bonita-properties-2.8.2.jar");
         cmdDependency.setForceDeploy( true );
 
+        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-store", "2.8.0", "bonita-store-2.8.0.jar");
+        cmdDependency.setForceDeploy( true );
+
         cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-casedetails", "1.1.2", "bonita-casedetails-1.1.2.jar");
         cmdDependency.setForceDeploy( true );
         

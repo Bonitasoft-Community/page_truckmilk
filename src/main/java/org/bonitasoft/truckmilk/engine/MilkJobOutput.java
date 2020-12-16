@@ -86,6 +86,9 @@ public class MilkJobOutput {
         this.nbItemsProcessed = nbItemsProcessed;
     }
 
+    public void addItemsProcessed(int nbItemsProcessed) {
+        this.nbItemsProcessed += nbItemsProcessed;
+    }
     /**
      * Set a parameterStream ==> WRITE
      * @param param

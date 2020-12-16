@@ -1,0 +1,12 @@
+A process define a Process Manager mapping, and can be referenced in Category<br>
+
+Theses information can't be defined in the studio, so are not be part of the BAR file when a process is deployed. 
+This plug in uses the same strategy as the ForkLift page to creates theses information.
+
+<h3>Process Manager Mapping</h3>
+The plug in search in the process an actor named "ProcessManager" is retrieved in the process. If this actor exist, its definition is used to create the process manager mapping.
+
+<h3>Category</h3>
+The description of the process is check. If a line started by CATEGORY: is detected, then the list after is supposed to be a list of category.
+Example, CATEGORY: quality,production,sale
+Then, the process is registered in all theses category. if the policy is "create missing category", then missing category are created.

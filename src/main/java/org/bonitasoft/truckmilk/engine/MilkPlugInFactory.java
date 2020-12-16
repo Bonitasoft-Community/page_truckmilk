@@ -24,6 +24,7 @@ import org.bonitasoft.truckmilk.plugin.other.MilkMeteor;
 import org.bonitasoft.truckmilk.plugin.other.MilkPing;
 import org.bonitasoft.truckmilk.plugin.other.MilkRGPD;
 import org.bonitasoft.truckmilk.plugin.processes.MilkDeleteProcesses;
+import org.bonitasoft.truckmilk.plugin.processes.MilkProcessManagerCategory;
 import org.bonitasoft.truckmilk.plugin.processes.MilkSonar;
 import org.bonitasoft.truckmilk.plugin.tasks.MilkDeleteDuplicateTasks;
 import org.bonitasoft.truckmilk.plugin.tasks.MilkEmailUsersTasks;
@@ -107,6 +108,7 @@ public class MilkPlugInFactory {
         listPlugIns.add(new MilkSonar() );
         listPlugIns.add(new MilkMoveArchiveCases() );
         listPlugIns.add(new MilkRGPD() );
+        listPlugIns.add(new MilkProcessManagerCategory() );
     }
 
     /**
