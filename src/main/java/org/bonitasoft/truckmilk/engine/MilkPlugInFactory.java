@@ -20,6 +20,7 @@ import org.bonitasoft.truckmilk.plugin.monitor.MilkMonitorDirectory;
 import org.bonitasoft.truckmilk.plugin.monitor.MilkGrumman;
 import org.bonitasoft.truckmilk.plugin.monitor.MilkMonitorLog;
 import org.bonitasoft.truckmilk.plugin.monitor.MilkRadarBonitaEngine;
+import org.bonitasoft.truckmilk.plugin.other.MilkDuplicateBase;
 import org.bonitasoft.truckmilk.plugin.other.MilkMeteor;
 import org.bonitasoft.truckmilk.plugin.other.MilkPing;
 import org.bonitasoft.truckmilk.plugin.other.MilkRGPD;
@@ -109,6 +110,7 @@ public class MilkPlugInFactory {
         listPlugIns.add(new MilkMoveArchiveCases() );
         listPlugIns.add(new MilkRGPD() );
         listPlugIns.add(new MilkProcessManagerCategory() );
+        listPlugIns.add(new MilkDuplicateBase() );
     }
 
     /**

@@ -344,7 +344,7 @@ public class MilkSLA extends MilkPlugIn {
     public MilkJobOutput executeJob(MilkJobExecution milkJobExecution) {
 
         MilkJobOutput plugTourOutput = executeSLA(milkJobExecution, null, milkJobExecution.getApiAccessor());
-        plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
+        plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
         return plugTourOutput;
     }
 
@@ -589,13 +589,13 @@ public class MilkSLA extends MilkPlugIn {
             }
             if (!collectAnalysisExecution.isActive) {
                 if (numberOfExecution == 0) {
-                    plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+                    plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
                     plugTourOutput.addEvent(new BEvent(eventSLAExecutionDone, "Analysis:" + numberOfAnalysis+" tasks"));
                 } else
                     plugTourOutput.addEvent(new BEvent(eventSLAExecutionDone, "On cases:" + detailsExecution.toString() + " Analysis:" + numberOfAnalysis+" tasks"));
 
                 if (plugTourOutput.getListEvents() != null && BEventFactory.isError(plugTourOutput.getListEvents()))
-                    plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+                    plugTourOutput.setExecutionStatus( ExecutionStatus.ERROR );
             }
         } catch (Exception e1) {
             StringWriter sw = new StringWriter();
@@ -604,7 +604,7 @@ public class MilkSLA extends MilkPlugIn {
             logger.severe("MilkSLA: ~~~~~~~~~~  : ERROR " + e1 + " at " + exceptionDetails);
             plugTourOutput.addEvent(new BEvent(eventSLAError, e1, ""));
 
-            plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+            plugTourOutput.setExecutionStatus( ExecutionStatus.ERROR );
         }
 
         if (analysisCaseId != null) {

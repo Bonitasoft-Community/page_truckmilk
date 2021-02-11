@@ -125,12 +125,12 @@ public class MilkGrumman extends MilkPlugIn {
              plugTourOutput.addEvent( new BEvent(eventReconcilationMessage, resultSynthesisSt.toString()));
              plugTourOutput.addEvents( resultMessageOperation.getListEvents());
              if (BEventFactory.isError(resultMessageOperation.getListEvents())) {
-                 plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+                 plugTourOutput.setExecutionStatus( ExecutionStatus.ERROR );
              }
 
              if (onlyDetection)
              {
-                 plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
+                 plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
                  return plugTourOutput;
              }
              // lauch the correction then
@@ -152,27 +152,27 @@ public class MilkGrumman extends MilkPlugIn {
              plugTourOutput.addEvents( resultExecution.getListEvents());
              
              if (BEventFactory.isError(resultExecution.getListEvents()) || resultExecution.getNbMessagesErrors()>0) {
-                 plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+                 plugTourOutput.setExecutionStatus( ExecutionStatus.ERROR );
              }
              else if (resultExecution.getNbMessagesCorrects()>0 ){
-                 plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
+                 plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
              } else {
-                 plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+                 plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
              }
             
         }
         catch(Exception e) {
-            plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+            plugTourOutput.setExecutionStatus( ExecutionStatus.ERROR );
             plugTourOutput.addEvent(new BEvent(eventExecutionError, e.getMessage()));
             return plugTourOutput;
         }
         
         
         logger.fine("Finished checking tasks to unassign");
-        plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
+        plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
         
         if (jobExecution.isStopRequired())
-            plugTourOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
+            plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESSPARTIAL );
 
         return plugTourOutput;
     }

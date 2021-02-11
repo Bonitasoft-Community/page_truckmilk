@@ -113,7 +113,7 @@ public class MilkCmdControlAPI {
         BonitaCommandDescription commandDescription = new BonitaCommandDescription(MilkCmdControl.cstCommandName, pageDirectory);
         commandDescription.forceDeploy = false;
         commandDescription.mainCommandClassName = MilkCmdControl.class.getName();
-        commandDescription.mainJarFile = "bonita-truckmilk-2.7.0-Page.jar";
+        commandDescription.mainJarFile = "bonita-truckmilk-2.8.0-Page.jar";
         commandDescription.commandDescription = MilkCmdControl.cstCommandDescription;
 
 
@@ -129,7 +129,7 @@ public class MilkCmdControlAPI {
         cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-event", "1.10.0", "bonita-event-1.10.0.jar");
         cmdDependency.setForceDeploy( true );
 
-        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.8.2", "bonita-properties-2.8.2.jar");
+        cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-properties", "2.8.3", "bonita-properties-2.8.3.jar");
         cmdDependency.setForceDeploy( true );
 
         cmdDependency=commandDescription.addJarDependencyLastVersion("bonita-store", "2.8.0", "bonita-store-2.8.0.jar");

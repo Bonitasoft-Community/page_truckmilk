@@ -109,7 +109,7 @@ public class MilkMonitorDirectory extends MilkPlugIn {
             Mapper mapper = new Mapper(MAPPER_POLICY.BOTH);
             milkJobOutput.addEvents( mapper.initialisation(milkJobExecution) );
             if (BEventFactory.isError( milkJobOutput.getListEvents())) {
-                milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
                 return milkJobOutput;
             }
 
@@ -231,13 +231,13 @@ public class MilkMonitorDirectory extends MilkPlugIn {
         
         // calculate the result now
         if (numberOfCasesInError>0)
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
         else if (milkJobExecution.isStopRequired())
-            milkJobOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSPARTIAL );
         else if (numberOfCasesCreated + numberOfCasesInError==0)
-            milkJobOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
         else
-            milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
         return milkJobOutput;
     }
 

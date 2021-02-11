@@ -92,7 +92,7 @@ public class MilkReplayFlowNodes  extends MilkPlugIn {
         DelayResult delayResult = jobExecution.getInputDelayParameter( cstParamDelay, new Date(), false);
         if (BEventFactory.isError(delayResult.listEvents)) {
             milkJobOutput.addEvents(delayResult.listEvents);
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
             return milkJobOutput;
         }
         String policy = jobExecution.getInputStringParameter(cstParamPolicy);
@@ -108,7 +108,7 @@ public class MilkReplayFlowNodes  extends MilkPlugIn {
         if (radarWorkers==null)
         {
             milkJobOutput.addEvent(new BEvent(eventErrorNoRadarWorker, "Radar Worker["+RadarWorkers.CLASS_RADAR_NAME+"] not found"));
-            milkJobOutput.executionStatus =ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
             return milkJobOutput;
             
         }
@@ -126,7 +126,7 @@ ORDER BY id;
         
         if (stuckFlowNodes.listStuckFlowNode.isEmpty() || CSTOPERATION_GETINFORMATION.equals(policy))
         {
-            milkJobOutput.executionStatus =ExecutionStatus.SUCCESSNOTHING;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
             milkJobOutput.setMeasure(cstMesureTasksExecuted, 0);
             milkJobOutput.setMeasure(cstMesureTasksError, 0);
             milkJobOutput.addReportTableBegin( new String[] {"Indicator", "Value"});
@@ -187,11 +187,11 @@ ORDER BY id;
         milkJobOutput.setNbItemsProcessed(countCorrects);
         
         if (oneErrorDetected)
-            milkJobOutput.executionStatus =ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
         else if (stuckFlowNodes.listStuckFlowNode.size() > jobExecution.getJobStopAfterMaxItems())
-            milkJobOutput.executionStatus =ExecutionStatus.SUCCESSPARTIAL;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSPARTIAL );
         else
-            milkJobOutput.executionStatus =ExecutionStatus.SUCCESS;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
         return milkJobOutput;
     }
 

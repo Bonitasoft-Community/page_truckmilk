@@ -175,7 +175,7 @@ public class MilkCancelCases extends MilkPlugIn {
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
                 milkJobOutput.addEvents(listProcessResult.listEvents);
-                milkJobOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.BADCONFIGURATION );
                 return milkJobOutput;
             }
 
@@ -183,7 +183,7 @@ public class MilkCancelCases extends MilkPlugIn {
             DelayResult delayResult = milkJobExecution.getInputDelayParameter( cstParamDelayInDay, new Date(), false);
             if (BEventFactory.isError(delayResult.listEvents)) {
                 milkJobOutput.addEvents(delayResult.listEvents);
-                milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
                 return milkJobOutput;
             }
 
@@ -210,7 +210,7 @@ public class MilkCancelCases extends MilkPlugIn {
                     ((SourceDataCSV) sourceData).initialize(milkJobExecution, cstParamInputDocument, separatorCSV, processAPI);
                 } catch (Exception e) {
                     milkJobOutput.addEvent(new BEvent(eventLoadCsvFailed, e, ""));
-                    milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                    milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
                     return milkJobOutput;
                 }
 
@@ -221,12 +221,12 @@ public class MilkCancelCases extends MilkPlugIn {
             }
 
             if (BEventFactory.isError(milkJobOutput.getListEvents())) {
-                milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
                 return milkJobOutput;
             }
 
             if (sourceData.getCount() == 0) {
-                milkJobOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
                 return milkJobOutput;
             }
             //---------------------------------- operation
@@ -329,15 +329,15 @@ public class MilkCancelCases extends MilkPlugIn {
             milkJobOutput.setParameterStream(cstParamReport, new ByteArrayInputStream(arrayOutputStream.toByteArray()));
             milkJobOutput.nbItemsProcessed = totalNumberCase;
             if (totalNumberCase == 0)
-                milkJobOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
             else if (totalNumberCase < sourceData.getCount())
-                milkJobOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSPARTIAL );
             else
-                milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
 
         } catch (Exception e1) {
             milkJobOutput.addEvent(new BEvent(eventDeletionFailed, e1, ""));
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
         }
 
         return milkJobOutput;

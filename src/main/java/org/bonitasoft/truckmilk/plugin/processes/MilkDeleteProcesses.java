@@ -301,7 +301,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             ListProcessesResult listProcess =  milkJobExecution.getInputArrayProcess( cstParamScopeProcessFilter, false, searchBuilderCase, ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
             if (BEventFactory.isError(listProcess.listEvents)) {
                 milkJobOutput.addEvents(listProcess.listEvents);
-                milkJobOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.BADCONFIGURATION );
                 return milkJobOutput;
             }
             if (listProcess.listProcessDeploymentInfo.isEmpty()) {
@@ -353,7 +353,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
 
         } catch (Exception e) {
             milkJobOutput.addEvent(new BEvent(eventSearchFailed, e, ""));
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();
@@ -410,7 +410,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
         DelayResult delayResult = milkJobExecution.getInputDelayParameter( cstParamDisableDelay, new Date(), false);
         if (BEventFactory.isError(delayResult.listEvents)) {
             milkJobOutput.addEvents(delayResult.listEvents);
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
             return statsResult;
         }
         Boolean keepLastVersion = milkJobExecution.getInputBooleanParameter(cstParamDisabledKeepLastVersion);
@@ -487,7 +487,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
         DelayResult delayResult = milkJobExecution.getInputDelayParameter( cstParamNotUsedDelay, new Date(), false);
         if (BEventFactory.isError(delayResult.listEvents)) {
             milkJobOutput.addEvents(delayResult.listEvents);
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
             return statsResult;
         }
         Boolean keepLastVersion = milkJobExecution.getInputBooleanParameter(cstParamNotUsedKeepLastVersion);
@@ -655,7 +655,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
                 milkJobOutput.addEvent(new BEvent(eventSearchFailed, e, " Exception " + e.getMessage()));
                 milkJobOutput.addReportTableLine(new Object[] { processName, " - ", " - ", getStatusForReport("Search failed " + e.getMessage(), STATUSLEVEL.ERROR) });
 
-                milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
                 StringWriter sw = new StringWriter();
                 e.printStackTrace(new PrintWriter(sw));
                 String exceptionDetails = sw.toString();
@@ -804,7 +804,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
                 milkJobOutput.addEvent(new BEvent(eventDeletionFailed, e, getReportProcessName(processDeploymentInfo) + " Exception " + e.getMessage()));
                 statsResult.status = "Error " + e.getMessage();
             }
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();
@@ -980,7 +980,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
 
         } catch (SearchException | DeletionException e) {
             milkJobOutput.addEvent(new BEvent(eventDeletionCaseFailed, e, "Process[" + processDeploymentInfo.getName() + "(" + processDeploymentInfo.getVersion() + ") ProcessId[" + processDeploymentInfo.getProcessId() + "]"));
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();
@@ -1030,7 +1030,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
             logger.fine(LOGGER_LABEL + " Purge [" + purgeCaseResult.countCasesPurged + "] Archive case in " + getReportProcessName(processDeploymentInfo));
         } catch (Exception e) {
             milkJobOutput.addEvent(new BEvent(eventDeletionArchivedCaseFailed, e, "Process[" + processDeploymentInfo.getName() + "(" + processDeploymentInfo.getVersion() + ") ProcessId[" + processDeploymentInfo.getProcessId() + "] " + e.getMessage()));
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();
@@ -1056,7 +1056,7 @@ public class MilkDeleteProcesses extends MilkPlugIn {
         DelayResult delayRoot = milkJobExecution.getInputDelayParameter( cstParamRootDelay, new Date(), false);
         if (BEventFactory.isError(delayRoot.listEvents)) {
             milkJobOutput.addEvents(delayRoot.listEvents);
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
             return statsResult;
         }
         // search all root cases in this process

@@ -36,7 +36,7 @@ public class MilkJobOutput {
     /**
      * give a simple status execution.
      */
-    public ExecutionStatus executionStatus = ExecutionStatus.NOEXECUTION;
+    private ExecutionStatus executionStatus = ExecutionStatus.NOEXECUTION;
 
     /** save the time need to the execution */
     public Long executionTimeInMs;
@@ -82,6 +82,17 @@ public class MilkJobOutput {
         return listEvents;
     }
 
+    /**
+     * Set the execution status
+     * @param executionStatus
+     */
+    public void setExecutionStatus( ExecutionStatus executionStatus) {
+        this.executionStatus = executionStatus;
+    }
+    public ExecutionStatus getExecutionStatus() {
+        return this.executionStatus;
+    }
+    
     public void setNbItemsProcessed(int nbItemsProcessed) {
         this.nbItemsProcessed = nbItemsProcessed;
     }

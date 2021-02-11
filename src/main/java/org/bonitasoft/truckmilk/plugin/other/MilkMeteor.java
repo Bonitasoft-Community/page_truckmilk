@@ -84,7 +84,7 @@ public class MilkMeteor extends MilkPlugIn {
         {
             // job can't start
             plugTourOutput.addEvent(new BEvent( eventCantStartTest, "Scenario name["+scenarioName+"] : "+(String) resultCommand.get( CmdMeteor.CSTPARAM_RESULTLISTEVENTSST)));
-            plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+            plugTourOutput.setExecutionStatus( ExecutionStatus.ERROR );
             return plugTourOutput;
         }
         // get the status
@@ -107,14 +107,14 @@ public class MilkMeteor extends MilkPlugIn {
 
                 plugTourOutput.addEvent(new BEvent( eventExecutionSuccessfull, "Test executed with success : SimulationId["+simulationId+"] "+total ));
 
-                plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
+                plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
             
             }
             if (MeteorConst.SIMULATIONSTATUS.NOROBOT.toString().equals( statusSimulation ) 
                     || MeteorConst.SIMULATIONSTATUS.NOSIMULATION.toString().equals( statusSimulation )) {
                 stillWait=false;
                 plugTourOutput.addEvent(new BEvent( eventExecutionNoRobot, "Scenario does not have any robot to execute: SimulationId["+simulationId+"] ScenarioName["+scenarioName+"]" ));
-                plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+                plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
             }
             
                 
@@ -128,7 +128,7 @@ public class MilkMeteor extends MilkPlugIn {
         if (jobExecution.isStopRequired())
         {
             plugTourOutput.addEvent(new BEvent( eventExecutionDontFinish, "SimulationId["+simulationId+"] ScenarioName["+scenarioName+"]" ));
-            plugTourOutput.executionStatus = ExecutionStatus.ERROR; // scenarion isn't finish in the expected time, this is an error
+            plugTourOutput.setExecutionStatus( ExecutionStatus.ERROR ); // scenarion isn't finish in the expected time, this is an error
 
         }
         return plugTourOutput;

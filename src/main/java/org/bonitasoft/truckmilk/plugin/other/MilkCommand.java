@@ -87,9 +87,9 @@ public class MilkCommand extends MilkPlugIn {
 
         // call the command
 
-        plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
+        plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESS);
         if (jobExecution.isStopRequired())
-            plugTourOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
+            plugTourOutput.setExecutionStatus(ExecutionStatus.SUCCESSPARTIAL);
 
         return plugTourOutput;
     }

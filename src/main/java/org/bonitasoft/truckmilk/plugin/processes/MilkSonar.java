@@ -181,7 +181,7 @@ public class MilkSonar extends MilkPlugIn {
             maximumArchiveDeletionPerRound = 1000000;
 
         SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, (int) maximumArchiveDeletionPerRound + 1);
-        milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
+        milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
 
         try {
             // ----------------------- Parameters
@@ -191,7 +191,7 @@ public class MilkSonar extends MilkPlugIn {
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
                 milkJobOutput.addEvents(listProcessResult.listEvents);
-                milkJobOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.BADCONFIGURATION );
                 return milkJobOutput;
             }
 
@@ -207,7 +207,7 @@ public class MilkSonar extends MilkPlugIn {
             DelayResult delayResult = milkJobExecution.getInputDelayParameter( cstParamDelay, new Date(), false);
             if (BEventFactory.isError(delayResult.listEvents)) {
                 milkJobOutput.addEvents(delayResult.listEvents);
-                milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
                 return milkJobOutput;
             }
             if (delayResult.delayInMs > 0)
@@ -237,7 +237,7 @@ public class MilkSonar extends MilkPlugIn {
             }
             if (BEventFactory.isError(listEvents)) {
                 milkJobOutput.addEvents(listEvents);
-                milkJobOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.BADCONFIGURATION );
                 return milkJobOutput;
             }
 
@@ -326,17 +326,17 @@ public class MilkSonar extends MilkPlugIn {
                 milkJobOutput.setMeasure(cstMesureRatioCorrectProcess, 0);
 
             if (stats.totalErrorProcess > 0 )
-                milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
 
         } catch (Exception e) {
             milkJobOutput.addEvent(new BEvent(eventErrorExecution, e, "During execution"));
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
         }
         milkJobOutput.addChronometersInReport(false, true);
 
         // it maybe already in error, so don't change it
-        if (milkJobExecution.isStopRequired() && milkJobOutput.executionStatus == ExecutionStatus.SUCCESS)
-            milkJobOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
+        if (milkJobExecution.isStopRequired() && milkJobOutput.getExecutionStatus() == ExecutionStatus.SUCCESS)
+            milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSPARTIAL );
 
         return milkJobOutput;
     }

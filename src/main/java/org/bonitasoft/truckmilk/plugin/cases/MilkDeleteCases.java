@@ -98,7 +98,7 @@ public class MilkDeleteCases extends MilkPlugIn {
         DelayResult delayResult = milkJobExecution.getInputDelayParameter( cstParamDelay, new Date(), false);
         if (BEventFactory.isError(delayResult.listEvents)) {
             milkJobOutput.addEvents(delayResult.listEvents);
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
             return milkJobOutput;
         }
 
@@ -113,7 +113,7 @@ public class MilkDeleteCases extends MilkPlugIn {
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
                 milkJobOutput.addEvents(listProcessResult.listEvents);
-                milkJobOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.BADCONFIGURATION );
                 return milkJobOutput;
             }
             /*
@@ -138,15 +138,15 @@ public class MilkDeleteCases extends MilkPlugIn {
             milkJobOutput.addChronometersInReport(false, true);
 
             if (totalCaseDeleted == 0)
-                milkJobOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
             else if (milkJobExecution.isStopRequired())
-                milkJobOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSPARTIAL );
             else
-                milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
 
         } catch (Exception e1) {
             milkJobOutput.addEvent(new BEvent(eventDeletionFailed, e1, ""));
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
         }
 
         return milkJobOutput;

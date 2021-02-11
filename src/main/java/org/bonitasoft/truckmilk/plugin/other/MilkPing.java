@@ -312,9 +312,9 @@ public class MilkPing extends MilkPlugIn {
         milkJobOutput.addMeasuresInReport(true, false);
 
         milkJobOutput.addEvent(new BEvent(eventPing, parameters));
-        milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
+        milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
         if (milkJobExecution.isStopRequired())
-            milkJobOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSPARTIAL );
 
         return milkJobOutput;
     }

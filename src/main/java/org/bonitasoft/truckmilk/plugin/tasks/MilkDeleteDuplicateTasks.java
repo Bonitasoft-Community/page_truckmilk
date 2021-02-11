@@ -123,7 +123,7 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
                 milkJobOutput.addEvents(listProcessResult.listEvents);
-                milkJobOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.BADCONFIGURATION );
                 return milkJobOutput;
             }
             StringBuilder listProcessesId = new StringBuilder();
@@ -226,11 +226,11 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
                 milkJobOutput.setNbItemsProcessed(countCorrects);
 
                 if (oneErrorDetected)
-                    milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                    milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
                 else if (listResult.size() > jobExecution.getJobStopAfterMaxItems())
-                    milkJobOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
+                    milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSPARTIAL );
                 else
-                    milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
+                    milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
 
                 if (listResult.size() > jobExecution.getJobStopAfterMaxItems())
                     milkJobOutput.addReportInHtml("<td><colspan=\"5\">More objects...</td></tr>");
@@ -242,11 +242,11 @@ public class MilkDeleteDuplicateTasks extends MilkPlugIn {
 
         } catch (SearchException e1) {
             milkJobOutput.addEvent(new BEvent(eventSearchFailed, e1, ""));
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
 
         } catch (Exception e) {
             milkJobOutput.addEvent(new BEvent(eventSearchFailed, e, ""));
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
 
         }
         milkJobOutput.addChronometersInReport(true, false);

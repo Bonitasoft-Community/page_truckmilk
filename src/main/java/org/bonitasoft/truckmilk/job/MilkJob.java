@@ -1364,7 +1364,7 @@ public @Data class MilkJob {
 
         public SavedExecution(MilkJobOutput output) {
             this.executionDate = output.executionDate;
-            this.executionStatus = output.executionStatus;
+            this.executionStatus = output.getExecutionStatus();
             this.listEventSt = BEventFactory.getSyntheticHtml(output.getListEvents());
             this.nbItemsProcessed = output.nbItemsProcessed;
             this.executionTimeInMs = output.executionTimeInMs;
@@ -1480,7 +1480,7 @@ public @Data class MilkJob {
      */
     public void registerExecution(Date currentDate, MilkJobOutput output) {
         trackExecution.lastExecutionDate = output.executionDate;
-        trackExecution.lastExecutionStatus = output.executionStatus;
+        trackExecution.lastExecutionStatus = output.getExecutionStatus();
 
         // check the previous status
         boolean forceSaved = false;
@@ -1488,8 +1488,8 @@ public @Data class MilkJob {
             forceSaved = true;
 
         if ((!forceSaved) && SAVEDEXECUTIONPOLICY.SAVEONLYWORK.equals(savedExecutionPolicy)
-                && (output.executionStatus == ExecutionStatus.SUCCESSNOTHING
-                        || output.executionStatus == ExecutionStatus.NOEXECUTION)) {
+                && (output.getExecutionStatus() == ExecutionStatus.SUCCESSNOTHING
+                        || output.getExecutionStatus() == ExecutionStatus.NOEXECUTION)) {
             return; // no need to save it
         }
 

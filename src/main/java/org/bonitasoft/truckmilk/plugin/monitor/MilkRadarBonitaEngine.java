@@ -103,7 +103,7 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
     public MilkJobOutput executeJob(MilkJobExecution milkJobExecution) {
         MilkJobOutput milkJobOutput = milkJobExecution.getMilkJobOutput();
 
-        milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
+        milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
 
         // we return a SUCCESSNOTHING is nothing is visible on radars
         boolean everythingIsCalm = false;
@@ -112,14 +112,14 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
         // How many flownode do we have to re-execute?
         RadarFactory radarFactory = RadarFactory.getInstance();
         List<RadarPhoto> listPhoto = new ArrayList<>();
-        milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
+        milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
 
         if (Boolean.TRUE.equals(milkJobExecution.getInputBooleanParameter(cstParamMonitorConnector))) {
             RadarTimeTrackerConnector radarTimeTrackerConnector = (RadarTimeTrackerConnector) radarFactory.getInstance(RADAR_NAME_CONNECTORTIMETRACKER, RadarTimeTrackerConnector.CLASS_RADAR_NAME, milkJobExecution.getTenantId(), milkJobExecution.getApiAccessor());
 
             if (radarTimeTrackerConnector == null) {
                 milkJobOutput.addEvent(new BEvent(eventErrorNoRadarTrackerConnector, "Radar Worker[" + RadarWorkers.CLASS_RADAR_NAME + "] not found"));
-                milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
             } else {
 
                 // update the configuration
@@ -173,8 +173,8 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
 
                 }
             }
-            if (everythingIsCalm && milkJobOutput.executionStatus == ExecutionStatus.SUCCESS)
-                milkJobOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+            if (everythingIsCalm && milkJobOutput.getExecutionStatus() == ExecutionStatus.SUCCESS)
+                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
         }
         if (Boolean.TRUE.equals(milkJobExecution.getInputBooleanParameter(cstParamStatisticsProcess))) {
             String[] listRadarsName = new String[] { RadarCase.CLASS_RADAR_NAME, RadarProcess.CLASS_RADAR_NAME };
@@ -182,7 +182,7 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
             DelayResult delayDeploymentResult = milkJobExecution.getInputDelayParameter( cstParamProcessDelayDeployment, new Date(), false);
             if (BEventFactory.isError(delayDeploymentResult.listEvents)) {
                 milkJobOutput.addEvents(delayDeploymentResult.listEvents);
-                milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
                 return milkJobOutput;
             }
             
@@ -195,7 +195,7 @@ public class MilkRadarBonitaEngine extends MilkPlugIn {
 
                 if (radar == null) {
                     milkJobOutput.addEvent(new BEvent(eventErrorNoRadarTrackerConnector, "Radar Worker[" + RadarWorkers.CLASS_RADAR_NAME + "] not found"));
-                    milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                    milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
                     continue;
                 }
                 RadarPhotoResult result = radar.takePhoto( getRadarPhotoParameter(radar,milkJobExecution));

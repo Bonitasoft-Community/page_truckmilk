@@ -175,16 +175,16 @@ public class MilkUnassignTasks extends MilkPlugIn {
             }
 
         } catch (SearchException e) {
-            plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+            plugTourOutput.setExecutionStatus( ExecutionStatus.ERROR );
             plugTourOutput.addEvent(new BEvent(eventTaskNameInvalid, e.getMessage()));
             return plugTourOutput;
         }
 
         logger.fine("Finished checking tasks to unassign");
-        plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
+        plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
 
         if (jobExecution.isStopRequired())
-            plugTourOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
+            plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESSPARTIAL );
 
         return plugTourOutput;
     }

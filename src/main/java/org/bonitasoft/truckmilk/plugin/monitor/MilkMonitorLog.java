@@ -79,7 +79,7 @@ public class MilkMonitorLog extends MilkPlugIn {
 
         MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
 
-        milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
+        milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
 
         long top = jobExecution.getInputLongParameter(cstParamNumberOfErrors);
         boolean onlyErrorInTop = jobExecution.getInputBooleanParameter(cstParamOnlyErrorsInTop);

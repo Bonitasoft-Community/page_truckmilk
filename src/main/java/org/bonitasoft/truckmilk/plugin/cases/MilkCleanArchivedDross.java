@@ -94,7 +94,7 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
         MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
         MilkPlugInDescription plugInDescription = getDefinitionDescription(jobExecution.getMilkJobContext());
 
-        milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
+        milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
 
         String operation = jobExecution.getInputStringParameter(cstParamOperation);
         String perimeter = jobExecution.getInputStringParameter(cstParamPerimeter);
@@ -140,7 +140,7 @@ public class MilkCleanArchivedDross extends MilkPlugIn {
                 milkJobOutput.setMeasure(measure, typeDrossExecution.nbRecords);
                 totalDross += typeDrossExecution.nbRecords;
             }
-            milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
         }
 
         // ----------------------------- Purge now

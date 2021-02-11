@@ -289,13 +289,13 @@ public class MilkMoveArchiveCases extends MilkPlugIn {
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
                 milkJobOutput.addEvents(listProcessResult.listEvents);
-                milkJobOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.BADCONFIGURATION );
                 return milkJobOutput;
             }
             DelayResult delayResult = milkJobExecution.getInputDelayParameter(cstParamDelay, new Date(), false);
             if (BEventFactory.isError(delayResult.listEvents)) {
                 milkJobOutput.addEvents(delayResult.listEvents);
-                milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
                 return milkJobOutput;
             }
 
@@ -353,7 +353,7 @@ public class MilkMoveArchiveCases extends MilkPlugIn {
                         milkJobOutput.endChronometer(processInstanceMarker, listArchivedProcessInstances.size());
                     } catch (Exception e) {
                         milkJobOutput.addEvent(new BEvent(eventDeletionFailed, e, "ListArchiveId: " + listArchivedProcessInstances.toString() + " " + e.getMessage()));
-                        milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                        milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
                         listArchivedProcessInstances.clear(); // do not try to purge them twice at output
                         break;
                     }
@@ -369,23 +369,23 @@ public class MilkMoveArchiveCases extends MilkPlugIn {
                     milkJobOutput.endChronometer(processInstanceMarker, listArchivedProcessInstances.size());
                 } catch (Exception e) {
                     milkJobOutput.addEvent(new BEvent(eventDeletionFailed, e, "ListArchiveId: " + listArchivedProcessInstances.toString() + " " + e.getMessage()));
-                    milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                    milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
                 }
             }
 
             milkJobOutput.addChronometersInReport(true, true);
 
             if (BEventFactory.isError(milkJobOutput.getListEvents())) {
-                milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
             } else {
-                milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
+                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
                 if (milkJobExecution.isStopRequired())
-                    milkJobOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
+                    milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSPARTIAL );
             }
 
         } catch (Exception e) {
             milkJobOutput.addEvent(new BEvent(eventOperationFailed, e, ""));
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
 
         } finally {
             if (connectionResult != null && connectionResult.con != null)

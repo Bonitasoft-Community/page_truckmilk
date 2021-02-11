@@ -150,7 +150,7 @@ public class MilkProcessManagerCategory extends MilkPlugIn {
             milkJobOutput.addReportTableEnd();
         } catch (Exception e) {
             milkJobOutput.addEvent(new BEvent(eventSearchFailed, e, ""));
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();

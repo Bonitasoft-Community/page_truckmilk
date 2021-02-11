@@ -109,14 +109,14 @@ public class MilkReplayFailedTasks extends MilkPlugIn {
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
                 plugTourOutput.addEvents(listProcessResult.listEvents);
-                plugTourOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
+                plugTourOutput.setExecutionStatus( ExecutionStatus.BADCONFIGURATION );
                 return plugTourOutput;
             }
 
             DelayResult delayResult = milkJobExecution.getInputDelayParameter( cstParamDelay, new Date(), false);
             if (BEventFactory.isError(delayResult.listEvents)) {
                 plugTourOutput.addEvents(delayResult.listEvents);
-                plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+                plugTourOutput.setExecutionStatus( ExecutionStatus.ERROR );
                 return plugTourOutput;
             }
             long timeSearch = delayResult.delayDate.getTime();
@@ -128,7 +128,7 @@ public class MilkReplayFailedTasks extends MilkPlugIn {
             SearchResult<ActivityInstance> searchFailedActivityInstance;
             searchFailedActivityInstance = processAPI.searchActivities(searchActBuilder.done());
             if (searchFailedActivityInstance.getCount() == 0) {
-                plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+                plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
                 return plugTourOutput;
             }
             StringBuilder listTasksCases = new StringBuilder();
@@ -176,18 +176,18 @@ public class MilkReplayFailedTasks extends MilkPlugIn {
                 plugTourOutput.addEvent(new BEvent(eventRetryFailed,
                         collectFirstException,
                         "Failed retry/total " + retryFailed + ":" + (retryFailed + retrySuccess) + " (skip after " + maxTentatives + ": " + retrySkip + ")" + (Boolean.TRUE.equals(tasksInReport) ? listTasksCases.toString() : "")));
-                plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+                plugTourOutput.setExecutionStatus( ExecutionStatus.ERROR );
             } else if (retrySkip > 0) {
                 plugTourOutput.addEvent(new BEvent(eventRetrySuccessButSkip, "Retry " + retrySuccess + " (skip after " + maxTentatives + ": " + retrySkip + ")" + (Boolean.TRUE.equals(tasksInReport) ? listTasksCases.toString() : "")));
-                plugTourOutput.executionStatus = ExecutionStatus.WARNING;
+                plugTourOutput.setExecutionStatus( ExecutionStatus.WARNING );
 
             } else {
                 plugTourOutput.addEvent(new BEvent(eventRetrySuccess, "Retry " + retrySuccess + " (skip after " + maxTentatives + ": " + retrySkip + ")" + (Boolean.TRUE.equals(tasksInReport) ? listTasksCases.toString() : "")));
-                plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
+                plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
             }
         } catch (SearchException e1) {
             plugTourOutput.addEvent(new BEvent(eventSearchFailed, e1, ""));
-            plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+            plugTourOutput.setExecutionStatus( ExecutionStatus.ERROR );
         }
 
         return plugTourOutput;

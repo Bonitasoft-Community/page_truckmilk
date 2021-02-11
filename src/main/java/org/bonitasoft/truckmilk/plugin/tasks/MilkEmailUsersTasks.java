@@ -116,7 +116,7 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
         // read profiles
         List<String> listProfilesName = (List<String>) jobExecution.getInputListParameter(cstParamProfilesUser);
         if (listProfilesName.isEmpty() ) {
-            plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+            plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
             return plugTourOutput;
         }
         jobExecution.setAvancementTotalStep(300);
@@ -152,7 +152,7 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
             jobExecution.setAvancementTotalStep(baseAdvancement);
 
             if (listProfileId.isEmpty()) {
-                plugTourOutput.executionStatus = ExecutionStatus.WARNING;
+                plugTourOutput.setExecutionStatus( ExecutionStatus.WARNING );
                 return plugTourOutput;
             }
             //---------------- then search each profiles member
@@ -258,19 +258,19 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
             if (totalMessageOperation.toString().length() == 0) {
                 // No Error !
                 if (numberOfEmailsSent == 0)
-                    plugTourOutput.executionStatus = ExecutionStatus.SUCCESSNOTHING;
+                    plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
                 else
-                    plugTourOutput.executionStatus = ExecutionStatus.SUCCESS;
+                    plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
                 plugTourOutput.addEvent(new BEvent(EVENT_OPERATION_SUCCESS, "Users checks: " + userIdToSendEmail.size() + ", Emails sent: " + numberOfEmailsSent));
             } else {
-                plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+                plugTourOutput.setExecutionStatus( ExecutionStatus.ERROR );
                 String totalMessageOperationSt = totalMessageOperation.toString();
                 if (totalMessageOperationSt.length() > 1000)
                     totalMessageOperationSt = totalMessageOperationSt.substring(0, 1000) + "...";
                 plugTourOutput.addEvent(new BEvent(EVENT_OPERATION_ERROR, "Users checks: " + userIdToSendEmail.size() + ", Emails sent: " + numberOfEmailsSent + ",Error:" + totalMessageOperationSt));
             }
-            if (plugTourOutput.executionStatus == ExecutionStatus.SUCCESS && jobExecution.isStopRequired())
-                plugTourOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
+            if (plugTourOutput.getExecutionStatus() == ExecutionStatus.SUCCESS && jobExecution.isStopRequired())
+                plugTourOutput.setExecutionStatus( ExecutionStatus.SUCCESSPARTIAL );
 
         } catch (Exception e) {
             StringWriter sw = new StringWriter();
@@ -279,7 +279,7 @@ public class MilkEmailUsersTasks extends MilkPlugIn {
 
             logger.severe("MilkEmailUsersTasks exception " + e + " at " + exceptionDetails);
             plugTourOutput.addEvent(new BEvent(EVENT_OPERATION_ERROR, e, ""));
-            plugTourOutput.executionStatus = ExecutionStatus.ERROR;
+            plugTourOutput.setExecutionStatus( ExecutionStatus.ERROR );
         }
         return plugTourOutput;
     }

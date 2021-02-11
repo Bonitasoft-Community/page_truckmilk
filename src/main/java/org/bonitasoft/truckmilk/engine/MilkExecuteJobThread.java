@@ -203,7 +203,7 @@ public class MilkExecuteJobThread extends Thread {
                 if ( BEventFactory.isError(listEvents)) {
                     milkJobOutput = new MilkJobOutput();
                     milkJobOutput.milkJob = milkJob;
-                    milkJobOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
+                    milkJobOutput.setExecutionStatus( ExecutionStatus.BADCONFIGURATION );
                     milkJobOutput.addReportInHtml("Job's Environment is not correct, job can't be start");
                     milkJobOutput.addEvents(listEvents);
                 }
@@ -260,11 +260,11 @@ public class MilkExecuteJobThread extends Thread {
                 logger.info("End Job[" + milkJob.getName() + "] (" + milkJob.getId() + ")" + listEventsSt.toString());
 
                 // force the status ABORD status
-                if (milkJobExecution.isStopRequired() && (milkJobOutput.executionStatus == ExecutionStatus.SUCCESS))
-                    milkJobOutput.executionStatus = ExecutionStatus.SUCCESSPARTIAL;
+                if (milkJobExecution.isStopRequired() && (milkJobOutput.getExecutionStatus() == ExecutionStatus.SUCCESS))
+                    milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSPARTIAL );
                 // if the user ask to stop, then this is a successabort if this is correct (do not change a ERROR)
-                if (milkJob.isAskForStop() && (milkJobOutput.executionStatus == ExecutionStatus.SUCCESS || milkJobOutput.executionStatus == ExecutionStatus.SUCCESSPARTIAL))
-                    milkJobOutput.executionStatus = ExecutionStatus.SUCCESSABORT;
+                if (milkJob.isAskForStop() && (milkJobOutput.getExecutionStatus() == ExecutionStatus.SUCCESS || milkJobOutput.getExecutionStatus() == ExecutionStatus.SUCCESSPARTIAL))
+                    milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSABORT );
             } catch (Exception e) {
 
                 StringWriter sw = new StringWriter();
@@ -274,7 +274,7 @@ public class MilkExecuteJobThread extends Thread {
                 if (milkJobOutput == null) {
                     milkJobOutput = new MilkJobOutput(milkJob);
                     milkJobOutput.addEvent(new BEvent(eventPlugInViolation, "Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + e.getMessage() + " at " + exceptionDetails));
-                    milkJobOutput.executionStatus = ExecutionStatus.CONTRACTVIOLATION;
+                    milkJobOutput.setExecutionStatus( ExecutionStatus.CONTRACTVIOLATION );
                 }
             } catch (Error er) {
                 StringWriter sw = new StringWriter();
@@ -284,7 +284,7 @@ public class MilkExecuteJobThread extends Thread {
                 if (milkJobOutput == null) {
                     milkJobOutput = new MilkJobOutput(milkJob);
                     milkJobOutput.addEvent(new BEvent(eventPlugInViolation, "Job[" + milkJob.getName() + "] (" + milkJob.getId() + "] milkJobExecution.getPlugIn[" + plugIn.getName() + "]  Exception " + er.getMessage() + " at " + exceptionDetails));
-                    milkJobOutput.executionStatus = ExecutionStatus.CONTRACTVIOLATION;
+                    milkJobOutput.setExecutionStatus( ExecutionStatus.CONTRACTVIOLATION );
                 }
             }
             milkJobExecution.end();
@@ -304,20 +304,20 @@ public class MilkExecuteJobThread extends Thread {
         } catch (Exception e) {
             milkJobOutput = new MilkJobOutput(milkJob);
             milkJobOutput.addEvent(new BEvent(eventPlugInError, e, "PlugIn[" + plugIn.getName() + "]"));
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
             logger.severe(" Execution error " + e.getMessage());
         }
         if (milkJobOutput != null) {
             // maybe the plugin forgot to setup the execution ? So set it.
-            if (milkJobOutput.executionStatus == ExecutionStatus.NOEXECUTION)
-                milkJobOutput.executionStatus = ExecutionStatus.SUCCESS;
+            if (milkJobOutput.getExecutionStatus() == ExecutionStatus.NOEXECUTION)
+                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
 
             milkJob.replaceExecution(savedStartExecution, tagTheDate, milkJobOutput);
             listEvents.addAll(milkJobOutput.getListEvents());
         }
         // calculate the next time
         listEvents.addAll(milkJob.calculateNextExecution("End-Of-Execution-recalculate"));
-        milkReportEngine.reportHeartBeatInformation("End Job[" + milkJob.getName() + "] (" + milkJob.getId() + ") Status["+milkJobOutput.executionStatus.toString()+"] NewNextDate["+sdfSynthetic.format(milkJob.getNextExecutionDate())+"]",false, false /* not a heatbreath */);
+        milkReportEngine.reportHeartBeatInformation("End Job[" + milkJob.getName() + "] (" + milkJob.getId() + ") Status["+milkJobOutput.getExecutionStatus().toString()+"] NewNextDate["+sdfSynthetic.format(milkJob.getNextExecutionDate())+"]",false, false /* not a heatbreath */);
 
         milkJob.setImmediateExecution(false);
         milkJob.setAskForStop(false);

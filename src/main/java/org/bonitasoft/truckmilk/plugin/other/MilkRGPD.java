@@ -37,7 +37,7 @@ import org.bonitasoft.truckmilk.job.MilkJobExecution.DelayResult;
 
 public class MilkRGPD extends MilkPlugIn {
 
-    private final static String CSTOPERATION_PURGE = "Clean data";
+    private static final String CSTOPERATION_PURGE = "Clean data";
     private final static String CSTOPERATION_DELETE = "Delete Data";
     private final static String CSTOPERATION_DETECT = "only Detection";
     private static BEvent eventOperationFailed = new BEvent(MilkRGPD.class.getName(), 1, Level.ERROR,
@@ -139,7 +139,7 @@ public class MilkRGPD extends MilkPlugIn {
         DelayResult delayResult = milkJobExecution.getInputDelayParameter(cstParamDelay, new Date(), false);
         if (BEventFactory.isError(delayResult.listEvents)) {
             milkJobOutput.addEvents(delayResult.listEvents);
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
             return milkJobOutput;
         }
 
@@ -174,7 +174,7 @@ public class MilkRGPD extends MilkPlugIn {
                 whereFilter.append(" ) ");                
                 if (count == 0) {
                     milkJobOutput.addEvent(eventBadConfigurationCleanMissing);
-                    milkJobOutput.executionStatus = ExecutionStatus.BADCONFIGURATION;
+                    milkJobOutput.setExecutionStatus( ExecutionStatus.BADCONFIGURATION );
                     return milkJobOutput;
                 }
                 isATransaction = true;
@@ -220,7 +220,7 @@ public class MilkRGPD extends MilkPlugIn {
                 } catch (Exception e) {
                     con.rollback();
                     milkJobOutput.addEvent(new BEvent(eventOperationFailed, e, "SqlRequest[" + sqlRequest + "] "));
-                    milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+                    milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
                 }
             } else {
                 List<Map<String, Object>> listResult = BonitaEngineConnection.executeSqlRequest(sqlRequest.toString(), sqlParam, 100);
@@ -245,7 +245,7 @@ public class MilkRGPD extends MilkPlugIn {
 
         } catch (Exception e) {
             milkJobOutput.addEvent(new BEvent(eventOperationFailed, e, "SqlRequest[" + sqlRequest + "] "));
-            milkJobOutput.executionStatus = ExecutionStatus.ERROR;
+            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
 
         }
 
