@@ -1,10 +1,14 @@
 package org.bonitasoft.truckmilk.plugin.other;
 
+import java.io.ByteArrayInputStream;
+import java.sql.Blob;
+import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -32,6 +36,12 @@ import org.bonitasoft.truckmilk.job.MilkJobExecution;
 import groovy.ui.Console;
 
 import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
+
+/**
+* This plug in in a Labs feature.
+* it copy the Bonita Engine to a external datasource. Idea is to have this datasource in a different database and then translate the bonitaengine from a datasource (MySql) to an another (Postgres)
+* 
+*/
 
 public class MilkDuplicateBase extends MilkPlugIn {
 
@@ -91,31 +101,37 @@ public class MilkDuplicateBase extends MilkPlugIn {
      * the list of tables is given, in the correct order.
      * The copy will follow this order
      */
-    private static String[] listTablesComplete = {
+    private static String[] listTables = {
             "tenant",
+            // organization
             "role",
             "group_",
             "user_",
             "user_login",
+            "user_membership",
+            "custom_usr_inf_val",
+            "custom_usr_inf_def",
+            "user_contactinfo",
 
-            "actor",
-            "actormember",
-            "contract_data",
-            "processcategorymapping",
-            "category",
-            "arch_process_comment",
+            // process
+            "dependency",
             "process_content",
             "process_definition",
+            "dependencymapping",
+            "actor",
+            "actormember",
             "process_comment",
-            "arch_document_mapping",
+            "category",
+            "processcategorymapping",
+            "processsupervisor",
+            "proc_parameter",
+            
+            // process instance
+            "process_instance",
+            "flownode_instance",
+            "contract_data",
             "document",
             "document_mapping",
-            "arch_contract_data",
-            "arch_flownode_instance",
-            "arch_process_instance",
-            "arch_connector_instance",
-            "arch_multi_biz_data",
-            "arch_ref_biz_data_inst",
             "multi_biz_data",
             "ref_biz_data_inst",
             "pending_mapping",
@@ -123,50 +139,48 @@ public class MilkDuplicateBase extends MilkPlugIn {
             "waiting_event",
             "event_trigger_instance",
             "connector_instance",
-            "flownode_instance",
-            "process_instance",
-            "report",
-            "processsupervisor",
-            "business_app_menu",
-            "business_app_page",
-            "business_app",
-            "command",
-            "arch_data_instance",
             "data_instance",
-            "dependencymapping",
-            "dependency",
-            "external_identity_mapping",
-            "user_membership",
-            "custom_usr_inf_val",
-            "custom_usr_inf_def",
-            "user_contactinfo",
-            "queriablelog_p",
-            "queriable_log",
-            "page",
+            
+            // archive
+            "arch_process_comment",
+            "arch_document_mapping",
+            
+            "arch_contract_data",
+            "arch_flownode_instance",
+            "arch_process_instance",
+            "arch_connector_instance",
+            "arch_multi_biz_data",            
+            "arch_ref_biz_data_inst",
+            "arch_data_instance",
+
+            // Portal
+            "report",
+            "page", 
+            "page_mapping", 
+            "form_mapping", // <<= page, pageMapping
+
+            "theme",
+            "business_app",
+            "business_app_page",
+            "business_app_menu",
+            
+            "profile",
             "profilemember",
             "profileentry",
-            "profile",
-            "job_log",
-            "job_param",
-            "job_desc",
-            "theme",
-            "platformCommand",
-            "form_mapping",
-            "page_mapping",
-            "proc_parameter" };
-    private static String[] listTables = {
             
-            "role",
-            "group_",
-            "user_",
-            "user_contactinfo",
-            "user_membership",
-            "user_login",
-            "process_content",
-            "process_definition",
-            "actor",
-            "actormember"
-             };
+            "external_identity_mapping",
+            
+            // Engine
+            "queriablelog_p",
+            "queriable_log",
+            "command",
+            "job_log",
+            "job_desc", // reference job_param
+            "job_param", 
+            
+            "platformCommand"
+};
+  
     @Override
     public MilkJobOutput executeJob(MilkJobExecution milkJobExecution) {
         MilkJobOutput milkJobOutput = milkJobExecution.getMilkJobOutput();
@@ -199,9 +213,8 @@ public class MilkDuplicateBase extends MilkPlugIn {
                     if ("tenant".equals(listTables[ i ]))
                         continue;
                         
-                    if (! purgeTable( listTables[ i ], conDestination, milkJobOutput)) {
+                    if (! purgeTable( listTables[ i ], conDestination, milkJobOutput, milkJobExecution)) {
                         milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR);
-                        break;
                     }
                 }
                 milkJobOutput.addReportTableEnd();
@@ -251,21 +264,29 @@ public class MilkDuplicateBase extends MilkPlugIn {
      * @param milkJobOutput
      * @return
      */
-    private boolean purgeTable(String tableName, Connection conDestination, MilkJobOutput milkJobOutput) {
+    private boolean purgeTable(String tableName, Connection conDestination, MilkJobOutput milkJobOutput, MilkJobExecution milkJobExecution) {
         long countTable = getCount(tableName, conDestination);
+        milkJobExecution.setAvancementInformation("Purge "+tableName+" ("+countTable+" records)");
 
-        String selectSql = "delete from " + tableName;
+        String selectSql = "truncate table " + tableName+" cascade";
         PreparedStatement pstmt = null;
         try {
+            logger.info(LoggerHeader + "Purge with [" + selectSql + "]");
 
             pstmt = conDestination.prepareStatement(selectSql);
             pstmt.executeUpdate();
+            conDestination.commit();
             milkJobOutput.addReportTableLine( new Object[] { tableName, countTable, "OK" });
             return true;
         } catch (SQLException e) {
-            logger.severe(LoggerHeader + " Exception during copy table [" + tableName + "] : " + e.getMessage());
+            logger.severe(LoggerHeader + " Exception during truncate table [" + tableName + "] : " + e.getMessage());
             milkJobOutput.addEvent( new BEvent(eventTableDeletionError, e, e.getMessage()));
             milkJobOutput.addReportTableLine( new Object[] { tableName, countTable, "FAILED"+e.getMessage() });
+            try {
+                conDestination.rollback();
+            } catch (SQLException e1) {
+                logger.severe(LoggerHeader + " Rollback failed during truncate table [" + tableName + "] : " + e1.getMessage());
+            }
             return false;
         } finally {
             if (pstmt != null)
@@ -288,6 +309,7 @@ public class MilkDuplicateBase extends MilkPlugIn {
     private boolean copyTable(String tableName, Connection conSource, Connection conDestination, String copyOption, MilkJobOutput milkJobOutput, MilkJobExecution milkJobExecution) {
 
         long countTable = getCount(tableName, conSource);
+        milkJobExecution.setAvancementInformation("Copy "+tableName+" ("+countTable+" records)");
 
         // not possible to order by tenant : this field does not exist systematically
         String selectSql = "select * from " + tableName + " order by id";
@@ -313,7 +335,6 @@ public class MilkDuplicateBase extends MilkPlugIn {
                 insertDeclaration.append(md.getColumnName(i));
                 insertValue.append("?");
             }
-            //     System.out.print(md.getColumnName(i) + "(" + md.getColumnType(i) + ") "+md.getSchemaName(i)+"."+md.getTableName(i));
             String sqlInsert = "insert into " + tableName + " ( " + insertDeclaration.toString() + ") values (" + insertValue.toString() + ")";
 
             while (rs.next()) {
@@ -328,7 +349,20 @@ public class MilkDuplicateBase extends MilkPlugIn {
                 Long currentId = null;
                 Long currentTenantId = null;
                 for (int i = 1; i <= columnCount; i++) {
-                    pCopystmt.setObject(i, rs.getObject(i));
+                    
+                    if ( md.getColumnType( i ) == Types.CLOB) {
+                        Clob clob = rs.getClob( md.getColumnName(i) );
+                        pCopystmt.setClob(i, clob);
+                    }
+
+                    else if (md.getColumnType( i ) == Types.BLOB || md.getColumnType( i ) == Types.BINARY) {
+                        Blob blob = rs.getBlob( md.getColumnName(i));
+                        pCopystmt.setBlob(i, blob);
+                    }
+                    else 
+                    {
+                        pCopystmt.setObject(i, rs.getObject(i));
+                    }
                     if ("id".equalsIgnoreCase(md.getColumnName(i)))
                         currentId = rs.getLong(i);
                     if ("tenantid".equalsIgnoreCase(md.getColumnName(i)))

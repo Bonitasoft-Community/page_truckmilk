@@ -139,19 +139,38 @@ public class MilkAccessAPI {
         }
 
         // // startup: check the environment   
-        String statusDeployment = "";
+        String statusDeploymentSuccess = "";
+        String statusDeploymentError = "";
         if (deployStatus.newDeployment)
-            statusDeployment = "Command deployed with success;";
+            statusDeploymentSuccess += "Command deployed with success;";
         else if (!deployStatus.alreadyDeployed)
-            statusDeployment = "Command already deployed;";
+            statusDeploymentSuccess += "Command already deployed;";
 
         if (MilkConstantJson.cstEnvironmentStatus_V_ERROR.equals(result.get(MilkConstantJson.cstEnvironmentStatus))) {
-            statusDeployment = "Bad environment;";
-        } else
-            //  second call the command getStatus		    
-            result.putAll(milkCmdControlAPI.getStatus(parameter.commandAPI, parameter.getTenantId()));
+            statusDeploymentError += "Bad environment;";
+        } else {
+         // second, check deployement and scheduler
 
-        result.put(cstJsonDeploimentsuc, statusDeployment);
+            Map<String, Object> schedulerStatus = milkCmdControlAPI.callJobOperation(MilkCmdControl.VERBE.SCHEDULERINIT, new HashMap(), parameter.pageDirectory, parameter.commandAPI, parameter.getTenantId());
+            Boolean isSchedulerReady = (Boolean) schedulerStatus.get( MilkConstantJson.CSTJSON_SCHEDULER_ISSCHEDULERREADY);
+            String message = (String) schedulerStatus.get( MilkConstantJson.CSTJSON_SCHEDULER_MESSAGE);
+            if (Boolean.TRUE.equals( isSchedulerReady) )
+                statusDeploymentSuccess += message;
+            else
+                statusDeploymentError += message;
+                
+            
+            String listEventsInit = (String) schedulerStatus.get( MilkConstantJson.CSTJSON_JOBEXECUTION_LISTEVENTS_ST);
+            // it's started !
+       
+            //  second call the command getStatus		    
+            result.putAll( milkCmdControlAPI.getStatus(parameter.commandAPI, parameter.getTenantId()) );
+            String listEventsStatus = (String) result.get( MilkConstantJson.CSTJSON_JOBEXECUTION_LISTEVENTS_ST);
+            result.put(MilkConstantJson.CSTJSON_JOBEXECUTION_LISTEVENTS_ST, listEventsInit+listEventsStatus);
+
+        }
+        result.put(cstJsonDeploimentsuc, statusDeploymentSuccess);
+        result.put(cstJsonDeploimenterr, statusDeploymentError);
         return result;
     }
 
@@ -484,7 +503,7 @@ public class MilkAccessAPI {
         parametersSt.append("</table>");
         result.put("parameters",parametersSt.toString());
 
-        StringBuffer measureSt = new StringBuffer();
+        StringBuilder measureSt = new StringBuilder();
         measureSt.append("<table class=\"table table-striped table-hover table-condensed\" style=\"width:100%\">");
         measureSt.append("<tr><th>Name</th><th>Explanation</th></tr>");
         for (PlugInMeasurement measure : plugIn.getDescription().getMapMesures().values()) {

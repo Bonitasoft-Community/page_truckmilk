@@ -93,7 +93,7 @@ public class MilkScheduleQuartz extends MilkSchedulerInt {
     /**
      * administrator ask to stop the scheduler
      */
-    public boolean isStarted = true;
+    private boolean isStarted = true;
 
     public MilkScheduleQuartz(MilkSchedulerFactory factory) {
         super(factory);
@@ -137,6 +137,14 @@ public class MilkScheduleQuartz extends MilkSchedulerInt {
             return statusScheduler;
         }
         try {
+            statusScheduler.isSchedulerReady =false;
+        
+         // can access the Job class ?
+            List<BEvent> listEventsCheck= check(tenantId);
+            statusScheduler.listEvents.addAll( listEventsCheck ); 
+            boolean isJarInstalled = ! BEventFactory.isError(listEventsCheck);
+            
+            // quart job ?
             final TenantServiceAccessor tenantAccessor = TenantServiceSingleton.getInstance(tenantId);
             boolean isQuartzJob = tenantAccessor.getUserTransactionService().executeInTransaction(() -> {
                 SchedulerService bonitaScheduler = ServiceAccessorFactory.getInstance().createPlatformServiceAccessor()
@@ -151,16 +159,17 @@ public class MilkScheduleQuartz extends MilkSchedulerInt {
                 }
                 return isQuartzJobInternal;
             }); // end transaction
-            if (isQuartzJob)
-                statusScheduler.status = TypeStatus.STARTED;
-            if (!isQuartzJob)
+            if (! isQuartzJob) 
                 statusScheduler.listEvents.add(EVENT_QUARTZ_NO_JOB);
-            // can access the Job class ?
-            boolean isQuartzClass = false;
-            statusScheduler.listEvents.addAll(check(tenantId));
-            isQuartzClass = !BEventFactory.isError(statusScheduler.listEvents);
-            if (isQuartzJob && isQuartzClass)
+            
+            if (isQuartzJob && isJarInstalled) {
+                statusScheduler.status = TypeStatus.STARTED;
+                statusScheduler.isSchedulerReady =true;
                 statusScheduler.listEvents.add(EVENT_QUARTZ_JOB_UP_AND_RUNNING);
+            }
+            else
+                statusScheduler.status = TypeStatus.UNDEFINED;
+        
         } catch (Exception e) {
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
@@ -203,7 +212,7 @@ public class MilkScheduleQuartz extends MilkSchedulerInt {
     /*                                                                                  */
     /* ******************************************************************************** */
 
-    private final static String QUARTZMILKJOBNAME = "MilktruckJob";
+    private static final String QUARTZMILKJOBNAME = "MilktruckJob";
 
     /**
      * this definition is duplicated in the class MilkQuartzJob and can't be in the same class, 2 Jar
@@ -290,7 +299,7 @@ public class MilkScheduleQuartz extends MilkSchedulerInt {
         return listEvents;
     }
 
-    private final static String CST_CLASSNAME = "org.bonitasoft.truckmilk.schedule.quartz.MilkQuartzJob";
+    private static final String CST_CLASSNAME = "org.bonitasoft.truckmilk.schedule.quartz.MilkQuartzJob";
 
     private class CallDeploimentStatus {
         SJobDescriptor jobDescriptor=null;

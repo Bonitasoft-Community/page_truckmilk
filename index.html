@@ -1610,6 +1610,14 @@ function onLoadIFrame() {
 												</div>
 												&nbsp;INACTIF
 											</div>
+											<div ng-if="ctrl.scheduler.status=='UNDEFINED'" >
+												<div class="label label-warning"  style="display: inline-block">
+													<span class="glyphicon glyphicon glyphicon-ban-circle"> 
+												</div>
+												&nbsp;INSTALLATION ISSUE
+											</div>
+											
+											
 										</h3>
 									</td>
 								</tr>
@@ -1626,6 +1634,7 @@ function onLoadIFrame() {
 													Start Scheduler
 												</button>
 											</td>
+											
 											<td style="padding: 10px;">
 												<button ng-click="ctrl.schedulerMaintenance('reset')" class="btn btn-danger btn-xs" ng-disabled="ctrl.inprogress" title="Reset the scheduler (Shutdown, Started)">
 													Reset Scheduler

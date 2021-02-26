@@ -110,7 +110,7 @@ public class MilkPlugInFactory {
         listPlugIns.add(new MilkMoveArchiveCases() );
         listPlugIns.add(new MilkRGPD() );
         listPlugIns.add(new MilkProcessManagerCategory() );
-        listPlugIns.add(new MilkDuplicateBase() );
+        // Labs feature listPlugIns.add(new MilkDuplicateBase() );
     }
 
     /**

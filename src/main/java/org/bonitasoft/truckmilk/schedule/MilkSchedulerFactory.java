@@ -15,9 +15,9 @@ import org.bonitasoft.truckmilk.engine.MilkSerializeProperties.SerializeOperatio
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt.StatusScheduler;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt.TypeScheduler;
 import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt.TypeStatus;
-import org.bonitasoft.truckmilk.schedule.quartz.MilkQuartzJob;
 import org.bonitasoft.truckmilk.toolbox.MilkLog;
 
+import groovyjarjarantlr.debug.Event;
 import lombok.Data;
 
 /**
@@ -47,11 +47,11 @@ public @Data class MilkSchedulerFactory {
 
     private MilkSchedulerInt currentScheduler = null;
 
-    private Map<String, MilkSchedulerInt> setOfScheduler = new HashMap<String, MilkSchedulerInt>();
+    private Map<String, MilkSchedulerInt> setOfScheduler = new HashMap<>();
 
     private MilkSchedulerFactory() {
-        setOfScheduler.put(TypeScheduler.QUARTZ.toString(), new MilkScheduleQuartz( this ));
-        setOfScheduler.put(TypeScheduler.THREADSLEEP.toString(), new MilkScheduleThreadSleep( this ));
+        setOfScheduler.put(TypeScheduler.QUARTZ.toString(), new MilkScheduleQuartz(this));
+        setOfScheduler.put(TypeScheduler.THREADSLEEP.toString(), new MilkScheduleThreadSleep(this));
     }
 
     public static MilkSchedulerFactory getInstance() {
@@ -74,26 +74,55 @@ public @Data class MilkSchedulerFactory {
         return listEvents;
     }
 
-    /** read in the configuration the information */
-    public List<BEvent> startup(long tenantId) {
-        List<BEvent> listEvents = new ArrayList<>();
+    
+
+    /**
+     * read in the configuration the information
+     * If no scheduler already exist, then we try to start a default scheduler, Quartz
+     * Note: at the end of the startup, the currentScheduler may be null.
+     */
+    public StatusScheduler startup(long tenantId) {
+        StatusScheduler startupResult = new StatusScheduler();
         if (currentScheduler == null) {
             synchronized (this) {
                 // multi thread : check again, because now we are in the mono thread, and object may be created by an another thread
                 if (currentScheduler == null) {
-                    MilkSerializeProperties serializeProperties = new MilkSerializeProperties(tenantId);
-
-                    SerializeOperation serializeOperation = serializeProperties.getCurrentScheduler( this );
-                    listEvents.addAll(serializeOperation.listEvents);
-                    currentScheduler = serializeOperation.scheduler;
+                    logger.info(LOG_HEADER+"No scheduler is defined, so choose and start the QuartzScheduler");
+                    startupResult.message.append("Quart Scheduler choosen;");
+                    MilkSchedulerInt startScheduler = new MilkScheduleQuartz(this);
+                    List<BEvent> listEventsQuartz = startScheduler.check( tenantId);
+                    startupResult.listEvents.addAll(listEventsQuartz);
+                    if (BEventFactory.isError( listEventsQuartz)) {
+                        // Quartz is not installed, do not need to go ones
+                        startupResult.isSchedulerReady = false;
+                        startupResult.status = TypeStatus.UNDEFINED;
+                        startupResult.message.append("Not ready "+getMessageFromListEvents(listEventsQuartz));
+                    } else {
+                        startupResult.isSchedulerReady = true;
+                        startupResult.isNewSchedulerChoosen = true;
+                        // then let's start the Quartz
+                        listEventsQuartz = startScheduler.startup(tenantId, true);
+                        startupResult.listEvents.addAll(listEventsQuartz);
+                        if (BEventFactory.isError( listEventsQuartz)) {
+                            startupResult.status = TypeStatus.UNDEFINED;
+                            startupResult.message.append("Can't start: "+getMessageFromListEvents(listEventsQuartz));                            
+                        }
+                        else {
+                            startupResult.status = TypeStatus.STARTED;
+                            startupResult.message.append("Started");
+                            currentScheduler = startScheduler;
+                        }
+                    }
+                    return startupResult;    
                 }
             }
         }
-        return listEvents;
+        // if we are here, time to get the status
+        return getStatus(tenantId);
     }
 
     public TypeScheduler getTypeScheduler() {
-        return currentScheduler.getType();
+        return currentScheduler==null ? null : currentScheduler.getType();
     }
 
     /**
@@ -141,13 +170,14 @@ public @Data class MilkSchedulerFactory {
             nextDateHeartBeat = currentScheduler.getDateNextHeartBeat(tenantId);
         } else {
             statusScheduler = new StatusScheduler();
+            statusScheduler.status = TypeStatus.UNDEFINED; 
             statusScheduler.listEvents.add(eventNoScheduler);
         }
         if (!BEventFactory.isError(statusScheduler.listEvents)) {
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-            String message = "Last Heart Beat[" + (lastExecution == null ? "undefined" : sdf.format(lastExecution)) + "]";
+            String message = "Last Heart Beat[" + (lastExecution == null ? "next minute" : sdf.format(lastExecution)) + "]";
             if (statusScheduler.status == TypeStatus.STARTED)
-                message += ", Next[" + (nextDateHeartBeat == null ? "undefined" : sdf.format(nextDateHeartBeat)) + "]";
+                message += ", Next[" + (nextDateHeartBeat == null ? "next minute" : sdf.format(nextDateHeartBeat)) + "]";
             else
                 message += "Scheduler stopped;";
 
@@ -164,71 +194,77 @@ public @Data class MilkSchedulerFactory {
      * /*
      */
     /* ******************************************************************************** */
-    public List<BEvent> changeScheduler(String typeSchedulerToChange,  long tenantId, boolean saveNow) {
+    public List<BEvent> changeScheduler(String typeSchedulerToChange, long tenantId, boolean saveNow) {
         List<BEvent> listEvents = new ArrayList<>();
 
-        MilkSchedulerInt newScheduler = getFromType(typeSchedulerToChange, false);
+        MilkSchedulerInt newScheduler = getFromType(typeSchedulerToChange);
         if (newScheduler == null) {
-            listEvents.add(new BEvent(eventUnknowSchedulerType, "Scheduler[" + typeSchedulerToChange + "]"));        
-        } else
-        {
-            if (currentScheduler == null || ! newScheduler.getType().equals(milkSchedulerFactory.getScheduler().getType())) {
+            listEvents.add(new BEvent(eventUnknowSchedulerType, "Scheduler[" + typeSchedulerToChange + "]"));
+        } else {
+            if (currentScheduler == null || !newScheduler.getType().equals(milkSchedulerFactory.getScheduler().getType())) {
                 if (currentScheduler != null) {
                     listEvents.addAll(currentScheduler.shutdown(tenantId));
                 }
                 if (BEventFactory.isError(listEvents)) {
                     // can't change
                     listEvents.add(new BEvent(eventCantChangeScheduler, "Scheduler[" + typeSchedulerToChange + "]"));
-                }
-                else
-                {
+                } else {
                     currentScheduler = newScheduler;
                     listEvents.add(eventSchedulerChanged);
 
                     listEvents.addAll(currentScheduler.startup(tenantId, true));
                 }
             }
-            
+
         }
-        if (currentScheduler==null) {
+        if (currentScheduler == null) {
             listEvents.add(new BEvent(eventCantChangeScheduler, "Scheduler[" + typeSchedulerToChange + "]"));
             return listEvents;
         }
- 
+
         // save the new value?
         if (saveNow)
-            listEvents.addAll( savedScheduler( tenantId) );
+            listEvents.addAll(savedScheduler(tenantId));
         return listEvents;
 
     }
 
     /**
      * saved the current scheduler
+     * 
      * @return
      */
-    public List<BEvent> savedScheduler( long tenantId) {
+    public List<BEvent> savedScheduler(long tenantId) {
         List<BEvent> listEvents = new ArrayList<>();
-
+        
+        if (currentScheduler==null)
+            return listEvents;
+        
         MilkSerializeProperties serializeProperties = new MilkSerializeProperties(tenantId);
         SerializeOperation serializeOperation = serializeProperties.saveCurrentScheduler(currentScheduler);
         listEvents.addAll(serializeOperation.listEvents);
         return listEvents;
     }
-    
+
     /**
      * get the scheduler according the type, if it's exist, else return null
      * 
      * @param typeScheduler
      * @return
      */
-    public MilkSchedulerInt getFromType(String typeScheduler, boolean returnDefaultValueIfUnknow) {
+    public MilkSchedulerInt getFromType(String typeScheduler) {
+        
         if (setOfScheduler.containsKey(typeScheduler))
             return setOfScheduler.get(typeScheduler);
-        if (returnDefaultValueIfUnknow)
-            return new MilkScheduleQuartz( this );
         return null;
-
     }
+
     
+    private String getMessageFromListEvents( List<BEvent> listEvents) {
+        StringBuilder message = new StringBuilder();
+        for (BEvent event : listEvents )
+            message.append( event.getTitle()+" "+event.getParameters()+";");
+        return message.toString();
+    }
    
 }

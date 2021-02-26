@@ -514,11 +514,12 @@ public class MilkSerializeProperties {
         bonitaProperties.setCheckDatabase(false); // we check only when we deploy a new command
         serializeOperation.listEvents.addAll(bonitaProperties.loaddomainName(BONITAPROPERTIES_DOMAINSCHEDULER));
         String valueSt = (String) bonitaProperties.get(BONITAPROPERTIES_SCHEDULER_SCHEDULERTYPE);
-        serializeOperation.scheduler = schedulerFactory.getFromType(valueSt, true);
-
-        Object reportHeart = bonitaProperties.get(BONITAPROPERTIES_SCHEDULER_REPORTLOGHEART);
-        serializeOperation.scheduler.setLogHeartBeat(reportHeart == null ? false : "true".equals(reportHeart.toString()));
-
+        serializeOperation.scheduler = schedulerFactory.getFromType(valueSt);
+        if (serializeOperation.scheduler != null)
+        {
+            Object reportHeart = bonitaProperties.get(BONITAPROPERTIES_SCHEDULER_REPORTLOGHEART);
+            serializeOperation.scheduler.setLogHeartBeat(reportHeart == null ? false : "true".equals(reportHeart.toString()));
+        }
         return serializeOperation;
     }
 

@@ -8,10 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.bonitasoft.log.event.BEvent;
-import org.bonitasoft.truckmilk.toolbox.MilkLog;
-import org.hibernate.bytecode.internal.javassist.FastClass;
-
-import lombok.Data;
+import org.bonitasoft.truckmilk.schedule.MilkSchedulerInt.TypeStatus;
 
 public abstract class MilkSchedulerInt {
  
@@ -34,6 +31,10 @@ public abstract class MilkSchedulerInt {
      * @return
      */
     public abstract boolean isClusterProtected();
+    
+  
+ 
+        
     /**
      * initialize. Then the schedule must call back the engine on the method
      * milkCmdControl.executeOneTime( tenantId );
@@ -52,15 +53,26 @@ public abstract class MilkSchedulerInt {
      * @return
      */
     public enum TypeStatus {
-        STOPPED, SHUTDOWN, STARTED
-    };
-
-    public static class StatusScheduler {
-
-        public TypeStatus status;
-        public List<BEvent> listEvents = new ArrayList<>();
+        STOPPED, SHUTDOWN, STARTED, UNDEFINED
     }
 
+    public static final class StatusScheduler {
+
+        public TypeStatus status;
+        public boolean isSchedulerReady = false;
+        public List<BEvent> listEvents = new ArrayList<>();
+        // short message to give to the user
+        public StringBuilder message = new StringBuilder();
+        
+        /** A new scheduler may be choose */    
+        public boolean isNewSchedulerChoosen = false;
+    }
+    
+    /**
+     * Check is the scheduler is "go to go"
+     * @param tenantId
+     * @return
+     */
     public abstract List<BEvent> check(long tenantId);
 
     public abstract StatusScheduler getStatus(long tenantId);
@@ -72,7 +84,7 @@ public abstract class MilkSchedulerInt {
      */
     public enum TypeScheduler {
         QUARTZ, THREADSLEEP, PROCESS
-    };
+    }
 
     public abstract TypeScheduler getType();
 
@@ -130,7 +142,6 @@ public abstract class MilkSchedulerInt {
      * Saved in database this number of heartBeat
      */
     private long nbSavedHeartBeat = 1;
-    private boolean isInitialised = false;
 
     public long getNbSavedHeartBeat() {
         return nbSavedHeartBeat;
