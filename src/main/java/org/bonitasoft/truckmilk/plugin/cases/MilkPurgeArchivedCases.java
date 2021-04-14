@@ -59,17 +59,24 @@ import lombok.Data;
 public class MilkPurgeArchivedCases extends MilkPlugIn {
 
     static Logger logger = Logger.getLogger(MilkPurgeArchivedCases.class.getName());
-    private final static String LOGGER_LABEL = "MilkPurgeArchive ";
+    private static final String LOGGER_LABEL = "MilkPurgeArchive ";
 
-    public final static String CST_PLUGIN_NAME = "PurgeArchivedCase";
+    public static final String CST_PLUGIN_NAME = "PurgeArchivedCase";
 
-    private final static String CSTOPERATION_GETLIST = "Get List (No operation)";
-    private final static String CSTOPERATION_DIRECT = "Purge";
-    private final static String CSTOPERATION_FROMLIST = "Purge from the CSV list";
+    private static final String CSTOPERATION_GETLIST = "Get List (No operation)";
+    private static final String CSTOPERATION_DIRECT = "Purge";
+    private static final String CSTOPERATION_FROMLIST = "Purge from the CSV list";
 
-    private final static String CSTSCOPE_ROOTPROCESS = "Root process information";
-    private final static String CSTSCOPE_TRANSIENTONLY = "Transient process information (sub process)";
-    private final static String CSTSCOPE_BOTH = "Both";
+    private static final String CSTSCOPE_ROOTPROCESS = "Root process information";
+    private static final String CSTSCOPE_TRANSIENTONLY = "Transient process information (sub process)";
+    private static final String CSTSCOPE_BOTH = "Both";
+
+    private static final String CSTTYPEPURGE_ALL = "all";
+    private static final String CSTTYPEPURGE_PARTIALPURGE = "partial";
+
+    
+    private static final String CST_YES = "yes";
+    private static final String CST_NO = "no";
 
     private static BEvent eventDeletionSuccess = new BEvent(MilkPurgeArchivedCases.class.getName(), 1, Level.SUCCESS,
             "Deletion done with success", "Archived Cases are deleted with success");
@@ -91,7 +98,7 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
     private static BEvent eventReportError = new BEvent(MilkPurgeArchivedCases.class.getName(), 7, Level.APPLICATIONERROR,
             "Error in source file", "The source file is not correct", "Check the source file, caseid is expected inside", "Check the error");
 
-    private final static BEvent eventErrorExecutionQuery = new BEvent(MilkPurgeArchivedCases.class.getName(), 8,
+    private static final BEvent eventErrorExecutionQuery = new BEvent(MilkPurgeArchivedCases.class.getName(), 8,
             Level.ERROR,
             "Error during the SqlQuery", "The SQL Query to detect a stuck flow node failed", "No stick flow nodes can be detected",
             "Check exception");
@@ -99,15 +106,14 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
     private static PlugInParameter cstParamOperation = PlugInParameter.createInstanceListValues("operation", "operation: Build a list of cases to operate, do directly the operation, or do the operation from a list",
             new String[] { CSTOPERATION_GETLIST, CSTOPERATION_DIRECT, CSTOPERATION_FROMLIST }, CSTOPERATION_DIRECT, "Result is a purge, or build a list, or used the uploaded list");
 
+    
     private static PlugInParameter cstParamDelay = PlugInParameter.createInstanceDelay("delayinday", "Delay", DELAYSCOPE.MONTH, 3, "The case must be older than this number, in days. 0 means all archived case is immediately in the perimeter")
             .withMandatory(true)
             .withVisibleConditionParameterValueDiff(cstParamOperation, CSTOPERATION_FROMLIST);
-            // .withVisibleCondition("milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_FROMLIST + "'");
-    
 
     private static PlugInParameter cstParamProcessFilter = PlugInParameter.createInstance("processfilter", "Process Filter", TypeParameter.ARRAYPROCESSNAME, null, "Give a list of process name. Name must be exact, no version is given (all versions will be purged)")
-            .withVisibleCondition("milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_FROMLIST + "'")
-            .withFilterProcess(FilterProcess.ALL);
+            // .withVisibleCondition("milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_FROMLIST + "'")
+            .withVisibleConditionParameterValueDiff(cstParamOperation, CSTOPERATION_FROMLIST).withFilterProcess(FilterProcess.ALL);
 
     private static PlugInParameter cstParamOperationScopeProcess = PlugInParameter.createInstanceListValues("scope", "Partial SubProcess purge",
             new String[] { CSTSCOPE_ROOTPROCESS, CSTSCOPE_TRANSIENTONLY, CSTSCOPE_BOTH }, CSTSCOPE_ROOTPROCESS,
@@ -121,9 +127,44 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
     private static PlugInParameter cstParamListOfCasesDocument = PlugInParameter.createInstanceFile("report", "List of cases", TypeParameter.FILEREADWRITE, null, "List is calculated and saved in this parameter", "ListToPurge.csv", "application/CSV")
             .withVisibleCondition("milkJob.parametersvalue[ 'operation' ] != '" + CSTOPERATION_DIRECT + "'");
 
-    private final static PlugInMeasurement cstMesureCasePurged = PlugInMeasurement.createInstance("CasePurged", "cases purged", "Number of case purged in this execution");
-    private final static PlugInMeasurement cstMesureCaseDetected = PlugInMeasurement.createInstance("CaseDetected", "cases detected", "Number of case detected in the scope");
+    private static final PlugInMeasurement cstMesureCasePurged = PlugInMeasurement.createInstance("CasePurged", "cases purged", "Number of case purged in this execution");
+    private static final PlugInMeasurement cstMesureCaseDetected = PlugInMeasurement.createInstance("CaseDetected", "cases detected", "Number of case detected in the scope");
 
+    private static PlugInParameter cstParamTypePurge= PlugInParameter.createInstanceListValues("typePurge", "Typoe of purge",
+            new String[] { CSTTYPEPURGE_ALL, CSTTYPEPURGE_PARTIALPURGE }, CSTTYPEPURGE_ALL, "Delete the case, or partial infromatino in the case")
+                        .withVisibleConditionParameterValueDiff(cstParamOperation, CSTOPERATION_GETLIST);
+
+    
+   private static PlugInParameter cstParamPurgeContract= PlugInParameter.createInstanceListValues("purgeContract", "Contract",
+            new String[] { CST_YES, CST_NO }, CST_NO, "On a user task, save all information that user provided")
+                        .withVisibleConditionParameterValueEqual(cstParamTypePurge, CSTTYPEPURGE_PARTIALPURGE);
+                        
+   private static PlugInParameter cstParamPurgeDataInstance= PlugInParameter.createInstanceListValues("dateInstance", "Data Instance",
+            new String[] { CST_YES, CST_NO }, CST_NO, "On a case, a process instance saved data (activity data and process data)")
+                        .withVisibleConditionParameterValueEqual(cstParamTypePurge, CSTTYPEPURGE_PARTIALPURGE);
+
+   private static PlugInParameter cstParamPurgeDocument= PlugInParameter.createInstanceListValues("purgeDocument", "Document",
+            new String[] { CST_YES, CST_NO }, CST_NO, "Process instance manipulate and saved data")
+                        .withVisibleConditionParameterValueEqual(cstParamTypePurge, CSTTYPEPURGE_PARTIALPURGE);
+
+   private static PlugInParameter cstParamPurgeActivity= PlugInParameter.createInstanceListValues("purgeActivities", "Activities",
+            new String[] { CST_YES, CST_NO }, CST_NO, "All activities are purged. ")
+                        .withVisibleConditionParameterValueEqual(cstParamTypePurge, CSTTYPEPURGE_PARTIALPURGE);
+
+   private static PlugInParameter cstParamPurgeBusinessAttachement= PlugInParameter.createInstanceListValues("purgeBusinessAttachement", "Business Attachement",
+            new String[] { CST_YES, CST_NO }, CST_NO, "Business Attachement are purged not the business data himself")
+                        .withVisibleConditionParameterValueEqual(cstParamTypePurge, CSTTYPEPURGE_PARTIALPURGE);
+
+   private static PlugInParameter cstParamPurgeComment= PlugInParameter.createInstanceListValues("purgeComment", "Comment",
+            new String[] { CST_YES, CST_NO }, CST_NO, "Purge comment on the case")
+                        .withVisibleConditionParameterValueEqual(cstParamTypePurge, CSTTYPEPURGE_PARTIALPURGE);
+
+   private static PlugInParameter cstParamPurgeSubProcess= PlugInParameter.createInstanceListValues("purgeSubProcess", "Subprocess",
+            new String[] { CST_YES, CST_NO }, CST_NO, "Purge subprocess, andd infomation attached to the subprocess (sub data, sud documents, etc...")
+                        .withVisibleConditionParameterValueEqual(cstParamTypePurge, CSTTYPEPURGE_PARTIALPURGE);
+
+ 
+    
     public MilkPurgeArchivedCases() {
         super(TYPE_PLUGIN.EMBEDED);
     }
@@ -175,6 +216,16 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
 
         plugInDescription.addParameter(cstParamSeparatorCSV);
         plugInDescription.addParameter(cstParamListOfCasesDocument);
+        
+        plugInDescription.addParameter( cstParamTypePurge );
+        plugInDescription.addParameter(cstParamPurgeContract );
+        plugInDescription.addParameter(cstParamPurgeDataInstance );
+        plugInDescription.addParameter(cstParamPurgeDocument );
+        plugInDescription.addParameter(cstParamPurgeActivity );
+        plugInDescription.addParameter(cstParamPurgeBusinessAttachement );
+        plugInDescription.addParameter(cstParamPurgeComment );
+        plugInDescription.addParameter(cstParamPurgeSubProcess );
+    
 
         plugInDescription.addMesure(cstMesureCasePurged);
         plugInDescription.addMesure(cstMesureCaseDetected);
@@ -197,7 +248,7 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
 
         MilkJobOutput milkJobOutput = jobExecution.getMilkJobOutput();
         milkJobOutput.addEvent(new BEvent(eventUnknowOperation, "Operation[" + operation + "]"));
-        milkJobOutput.setExecutionStatus( ExecutionStatus.BADCONFIGURATION );
+        milkJobOutput.setExecutionStatus(ExecutionStatus.BADCONFIGURATION);
         return milkJobOutput;
     }
 
@@ -222,20 +273,20 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
         try {
 
             // List of process ENABLE AND DISABLE
-            ListProcessesResult listProcessResult =  milkJobExecution.getInputArrayProcess( cstParamProcessFilter, false, searchActBuilder, ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, milkJobExecution.getApiAccessor().getProcessAPI());
+            ListProcessesResult listProcessResult = milkJobExecution.getInputArrayProcess(cstParamProcessFilter, false, searchActBuilder, ArchivedProcessInstancesSearchDescriptor.PROCESS_DEFINITION_ID, milkJobExecution.getApiAccessor().getProcessAPI());
 
             if (BEventFactory.isError(listProcessResult.listEvents)) {
                 // filter given, no process found : stop now
                 milkJobOutput.addEvents(listProcessResult.listEvents);
-                milkJobOutput.setExecutionStatus( ExecutionStatus.BADCONFIGURATION );
+                milkJobOutput.setExecutionStatus(ExecutionStatus.BADCONFIGURATION);
                 return milkJobOutput;
             }
 
             // Delay
-            DelayResult delayResult = milkJobExecution.getInputDelayParameter( cstParamDelay, new Date(), false);
+            DelayResult delayResult = milkJobExecution.getInputDelayParameter(cstParamDelay, new Date(), false);
             if (BEventFactory.isError(delayResult.listEvents)) {
                 milkJobOutput.addEvents(delayResult.listEvents);
-                milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
+                milkJobOutput.setExecutionStatus(ExecutionStatus.ERROR);
                 return milkJobOutput;
             }
             if (delayResult.delayInMs == 0) {
@@ -245,10 +296,10 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
                 purgeArchivesWithDelay(listProcessResult, delayResult, milkJobExecution, searchActBuilder, milkJobOutput);
             }
             if (milkJobOutput.nbItemsProcessed == 0 && milkJobOutput.getExecutionStatus() == ExecutionStatus.SUCCESS)
-                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
+                milkJobOutput.setExecutionStatus(ExecutionStatus.SUCCESSNOTHING);
         } catch (SearchException e1) {
             milkJobOutput.addEvent(new BEvent(eventSearchFailed, e1, ""));
-            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
+            milkJobOutput.setExecutionStatus(ExecutionStatus.ERROR);
 
         }
         milkJobOutput.addChronometersInReport(false, false);
@@ -355,8 +406,7 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
                     DeletionItemProcess deletionItemprocess = deletionPerProcess.getDeletionProcessFromProcessId(processId, processAPI);
                     deletionItemprocess.nbCaseDeleted++;
                 }
-                
-              
+
                 managePurgeResult = purgeSubProcess(subProcessOperationCollect.listArchSourceProcessId, jobExecution.getTenantId());
                 milkJobOutput.nbItemsProcessed += managePurgeResult.nbRecords;
                 milkJobOutput.addEvents(managePurgeResult.listEvents);
@@ -365,15 +415,15 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
             milkJobOutput.addReportInHtml(buildTheSQLRequest.toString());
 
             if (BEventFactory.isError(milkJobOutput.getListEvents())) {
-                milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
+                milkJobOutput.setExecutionStatus(ExecutionStatus.ERROR);
             } else if (milkJobOutput.nbItemsProcessed == 0)
-                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
+                milkJobOutput.setExecutionStatus(ExecutionStatus.SUCCESSNOTHING);
             else
-                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
+                milkJobOutput.setExecutionStatus(ExecutionStatus.SUCCESS);
 
         } catch (DeletionException | SearchException e) {
             logger.severe(LOGGER_LABEL + ".purgeNoDelay: Error Delete Archived ProcessDefinition=[" + currentProcessToLog + "] Error[" + e.getMessage() + "]");
-            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
+            milkJobOutput.setExecutionStatus(ExecutionStatus.ERROR);
             milkJobOutput.addEvent(new BEvent(eventDeletionFailed, e, "Purge:" + currentProcessToLog));
         }
         // produce the report now
@@ -400,7 +450,6 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
             buildSelectArchProcessInstance(buildTheSQLRequest, listProcessResult, delayResult.delayDate.getTime(), jobExecution.getTenantId());
             long timeSearch = delayResult.delayDate.getTime();
             ProcessAPI processAPI = jobExecution.getApiAccessor().getProcessAPI();
-
 
             // --------------------- 
             String scopeDetection = jobExecution.getInputStringParameter(cstParamOperationScopeProcess);
@@ -462,13 +511,12 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
                 ManagePurgeResult managePurgeResult = detectPurgeSubProcessOnly(listProcessResult, 0L, jobExecution.getTenantId(), jobExecution.getJobStopAfterMaxItems(), subProcessOperationCollect);
                 milkJobOutput.addEvents(managePurgeResult.listEvents);
                 buildTheSQLRequest.append("Detect transient ProcessInstance:<br>" + managePurgeResult.sqlQuery);
-                
+
                 for (Long processId : subProcessOperationCollect.listArchProcessID) {
                     DeletionItemProcess deletionItemprocess = deletionPerProcess.getDeletionProcessFromProcessId(processId, processAPI);
                     deletionItemprocess.nbCaseDeleted++;
                 }
-                
-                
+
                 managePurgeResult = purgeSubProcess(subProcessOperationCollect.listArchSourceProcessId, jobExecution.getTenantId());
                 milkJobOutput.nbItemsProcessed += managePurgeResult.nbRecords;
                 milkJobOutput.addEvents(managePurgeResult.listEvents);
@@ -477,16 +525,16 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
             milkJobOutput.addReportInHtml(buildTheSQLRequest.toString());
 
             if (milkJobOutput.nbItemsProcessed == 0)
-                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
+                milkJobOutput.setExecutionStatus(ExecutionStatus.SUCCESSNOTHING);
             else
-                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESS );
+                milkJobOutput.setExecutionStatus(ExecutionStatus.SUCCESS);
 
         } catch (SearchException e1) {
             milkJobOutput.addEvent(new BEvent(eventSearchFailed, e1, ""));
-            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
+            milkJobOutput.setExecutionStatus(ExecutionStatus.ERROR);
         } catch (DeletionException e) {
             logger.severe(LOGGER_LABEL + ".purgeArchivesWithDelay: Error Delete Archived ProcessInstance=[" + sourceProcessInstanceIds + "] Error[" + e.getMessage() + "]");
-            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
+            milkJobOutput.setExecutionStatus(ExecutionStatus.ERROR);
             milkJobOutput.addEvent(new BEvent(eventDeletionFailed, e, "Purge:" + sourceProcessInstanceIds));
         }
         deletionPerProcess.addInReport(milkJobOutput);
@@ -593,12 +641,12 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
             Map<Long, ProcessDefinition> cacheProcessDefinition = new HashMap<>();
             CSVOperation csvOperationOuput = new CSVOperation();
             SearchOptionsBuilder searchActBuilder = new SearchOptionsBuilder(0, milkJobExecution.getJobStopAfterMaxItems() + 1);
-            ListProcessesResult listProcessResult =  milkJobExecution.getInputArrayProcess( cstParamProcessFilter, false, searchActBuilder, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
+            ListProcessesResult listProcessResult = milkJobExecution.getInputArrayProcess(cstParamProcessFilter, false, searchActBuilder, ProcessInstanceSearchDescriptor.PROCESS_DEFINITION_ID, processAPI);
             StringBuilder finalReport = new StringBuilder();
-            DelayResult delayResult = milkJobExecution.getInputDelayParameter( cstParamDelay, new Date(), false);
+            DelayResult delayResult = milkJobExecution.getInputDelayParameter(cstParamDelay, new Date(), false);
             if (BEventFactory.isError(delayResult.listEvents)) {
                 milkJobOutput.addEvents(delayResult.listEvents);
-                milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
+                milkJobOutput.setExecutionStatus(ExecutionStatus.ERROR);
                 return milkJobOutput;
             }
             long timeSearch = delayResult.delayDate.getTime();
@@ -612,7 +660,7 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
                 if (BEventFactory.isError(listProcessResult.listEvents)) {
                     // filter given, no process found : stop now
                     milkJobOutput.addEvents(listProcessResult.listEvents);
-                    milkJobOutput.setExecutionStatus( ExecutionStatus.BADCONFIGURATION );
+                    milkJobOutput.setExecutionStatus(ExecutionStatus.BADCONFIGURATION);
                     return milkJobOutput;
                 }
                 finalReport.append("select * from ARCH_PROCESS_INSTANCE where ");
@@ -708,19 +756,19 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
             milkJobOutput.addEvent(new BEvent(eventSynthesisReport, "Total cases in list:" + milkJobOutput.nbItemsProcessed + ", Detected:" + totalCasesDetected));
 
             if (milkJobOutput.nbItemsProcessed == 0) {
-                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
+                milkJobOutput.setExecutionStatus(ExecutionStatus.SUCCESSNOTHING);
                 return milkJobOutput;
             }
 
-            milkJobOutput.setExecutionStatus( milkJobExecution.isStopRequired() ? ExecutionStatus.SUCCESSPARTIAL : ExecutionStatus.SUCCESS );
+            milkJobOutput.setExecutionStatus(milkJobExecution.isStopRequired() ? ExecutionStatus.SUCCESSPARTIAL : ExecutionStatus.SUCCESS);
         }
 
         catch (SearchException e1) {
             milkJobOutput.addEvent(new BEvent(eventSearchFailed, e1, ""));
-            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
+            milkJobOutput.setExecutionStatus(ExecutionStatus.ERROR);
         } catch (Exception e1) {
             milkJobOutput.addEvent(new BEvent(eventWriteReportError, e1, ""));
-            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
+            milkJobOutput.setExecutionStatus(ExecutionStatus.ERROR);
         }
 
         return milkJobOutput;
@@ -780,7 +828,7 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
             statistic.totalLineCsv = csvOperationInput.getCount();
             if (statistic.totalLineCsv == 0) {
                 // no document uploaded
-                milkJobOutput.setExecutionStatus( ExecutionStatus.SUCCESSNOTHING );
+                milkJobOutput.setExecutionStatus(ExecutionStatus.SUCCESSNOTHING);
                 return milkJobOutput;
             }
 
@@ -946,9 +994,9 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
 
             milkJobOutput.addEvent(eventFinal);
 
-            milkJobOutput.setExecutionStatus( (jobExecution.isStopRequired() || statistic.countStillToAnalyse > 0) ? ExecutionStatus.SUCCESSPARTIAL : ExecutionStatus.SUCCESS);
+            milkJobOutput.setExecutionStatus((jobExecution.isStopRequired() || statistic.countStillToAnalyse > 0) ? ExecutionStatus.SUCCESSPARTIAL : ExecutionStatus.SUCCESS);
             if (statistic.countBadDefinition > 0) {
-                milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
+                milkJobOutput.setExecutionStatus(ExecutionStatus.ERROR);
             }
 
         } catch (Exception e) {
@@ -956,7 +1004,7 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
             e.printStackTrace(new PrintWriter(sw));
             String exceptionDetails = sw.toString();
             logger.severe(LOGGER_LABEL + ".fromList: Error Delete Archived ProcessInstance=[" + sourceProcessInstanceIds + "] Error[" + e.getMessage() + "] at " + exceptionDetails);
-            milkJobOutput.setExecutionStatus( ExecutionStatus.ERROR );
+            milkJobOutput.setExecutionStatus(ExecutionStatus.ERROR);
             milkJobOutput.addEvent(new BEvent(eventDeletionFailed, e, "Purge:" + sourceProcessInstanceIds));
 
         }
@@ -1239,7 +1287,7 @@ public class MilkPurgeArchivedCases extends MilkPlugIn {
         }
 
         // we generate a lot of dross : manage them now
-        DrossExecution drossExecution = RadarCleanArchivedDross.deleteDrossAll(tenantId,10000);
+        DrossExecution drossExecution = RadarCleanArchivedDross.deleteDrossAll(tenantId, 10000);
         managePurgeResult.listEvents.addAll(drossExecution.getListEvents());
         return managePurgeResult;
     }
