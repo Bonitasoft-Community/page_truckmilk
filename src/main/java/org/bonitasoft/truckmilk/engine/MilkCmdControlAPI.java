@@ -21,6 +21,8 @@ import org.bonitasoft.truckmilk.toolbox.MilkLog;
  */
 public class MilkCmdControlAPI {
 
+    private static final String BONITA_TRUCKMILK_VERSION = "bonita-truckmilk-2.9.0-Page.jar";
+
     static MilkLog logger = MilkLog.getLogger(MilkCmdControlAPI.class.getName());
 
     /*
@@ -113,7 +115,7 @@ public class MilkCmdControlAPI {
         BonitaCommandDescription commandDescription = new BonitaCommandDescription(MilkCmdControl.cstCommandName, pageDirectory);
         commandDescription.forceDeploy = false;
         commandDescription.mainCommandClassName = MilkCmdControl.class.getName();
-        commandDescription.mainJarFile = "bonita-truckmilk-2.8.0-Page.jar";
+        commandDescription.mainJarFile = BONITA_TRUCKMILK_VERSION;
         commandDescription.commandDescription = MilkCmdControl.cstCommandDescription;
 
 

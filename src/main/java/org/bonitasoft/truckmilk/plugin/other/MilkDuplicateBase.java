@@ -1,6 +1,5 @@
 package org.bonitasoft.truckmilk.plugin.other;
 
-import java.io.ByteArrayInputStream;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Connection;
@@ -13,29 +12,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
-import org.bonitasoft.engine.core.contract.data.SContractDataDeletionException;
 import org.bonitasoft.log.event.BEvent;
-import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.log.event.BEvent.Level;
-import org.bonitasoft.platform.setup.command.configure.DatabaseConfiguration;
+import org.bonitasoft.log.event.BEventFactory;
 import org.bonitasoft.properties.BonitaEngineConnection;
 import org.bonitasoft.properties.DatabaseConnection;
 import org.bonitasoft.properties.DatabaseConnection.ConnectionResult;
 import org.bonitasoft.truckmilk.engine.MilkJobOutput;
 import org.bonitasoft.truckmilk.engine.MilkPlugIn;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.DELAYSCOPE;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.PlugInParameter;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.TYPE_PLUGIN;
-import org.bonitasoft.truckmilk.engine.MilkPlugIn.TypeParameter;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.CATEGORY;
 import org.bonitasoft.truckmilk.engine.MilkPlugInDescription.JOBSTOPPER;
+import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 import org.bonitasoft.truckmilk.job.MilkJobContext;
 import org.bonitasoft.truckmilk.job.MilkJobExecution;
-
-import groovy.ui.Console;
-
-import org.bonitasoft.truckmilk.job.MilkJob.ExecutionStatus;
 
 /**
 * This plug in in a Labs feature.
